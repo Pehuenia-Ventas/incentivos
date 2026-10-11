@@ -445,7 +445,7 @@ function exportBtn(id, name){ return `<button class="btn small" type="button" da
 
 /* ===================== Pestañas ===================== */
 const SOLO = CFG.solo || null;
-const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : []);
+const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
 const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['batalla','Batalla Georgalos']].concat(GTAB, [['reglas','Cómo funciona']]) : [
   ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, [
   ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
@@ -464,7 +464,7 @@ function renderHeader(){
   else { sd.className = 'chip warn'; sd.textContent = 'Sin ventas cargadas todavía'; }
   $('#stDias').textContent = 'Días hábiles: ' + R.diasTrans + ' de ' + R.diasTot + (DQ ? ' · quedan ' + DQ + ' para vender' : '');
   $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
-  $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10'].includes(st.tab);
+  $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp'].includes(st.tab);
   if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
   const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
 }
@@ -928,12 +928,54 @@ function viewP10(){
   return h;
 }
 document.addEventListener('click', e => { const d = e.target.closest('[data-p10dia]'); if (d) { st.p10D = d.dataset.p10dia; saveUI(); render(); return; } const r = e.target.closest('[data-p10v]'); if (r) { st.p10V = r.dataset.p10v; saveUI(); render(); } });
+/* ===== Plan espumantes (septiembre a diciembre): clientes compradores por línea, acumulado del período, contra un objetivo fijo ===== */
+function espDia(cod, k){ if (CFG.dia) return CFG.dia[k] || 0; const b = ((CFG.base || {})[cod] || {})[k]; return b ? b[0] || 0 : 0; }
+function espStats(cod){
+  const E = CFG.esp, mine = ((SNAP && SNAP.esp) || {})[cod] || {}, cli = (E.cli || {})[cod] || {};
+  const real = E.lines.map((l, i) => Object.keys(cli).filter(k => (mine[k] || []).includes(i)).length);
+  const v = (CFG.vend || []).find(x => String(x.cod) === String(cod));
+  return { c: String(cod), nom: v ? v.nom : 'Vendedor ' + cod, obj: (E.obj[cod] || []).slice(), real, U: Object.keys(cli).length };
+}
+function viewEsp(){
+  const E = CFG.esp; if (!E) return '';
+  const cods = Object.keys(E.obj).filter(c => !SOLO || String(c) === String(SOLO));
+  const sel = SOLO ? String(SOLO) : (st.espV && cods.includes(String(st.espV)) ? String(st.espV) : cods[0]);
+  const vs = cods.map(espStats);
+  const LI = E.lines.map((l, i) => i).filter(i => vs.some(v => v.obj[i] > 0));
+  const t0 = Date.parse(E.desde), t1 = Date.parse(E.hasta), tn = Date.parse(HOYAR);
+  const ritmo = Math.max(0, Math.min(1, ((tn - t0) / 864e5 + 1) / ((t1 - t0) / 864e5 + 1)));
+  const ec = p => p >= 1 - 1e-12 ? 'good' : p >= ritmo - 1e-12 ? 'warn' : 'bad';
+  const mode = st.espM || 'pct';
+  const cell = (o, r) => { if (!(o > 0)) return '<span class="cell na">—</span>'; const p = r / o; if (mode === 'real') return `<span class="cell ${ec(p)}">${r} / ${o}</span>`; if (mode === 'falta') return o - r <= 0 ? '<span class="cell good">✓ listo</span>' : `<span class="cell ${ec(p)}">faltan ${o - r}</span>`; return `<span class="cell ${ec(p)}">${p >= 1 - 1e-12 ? '✓ ' : ''}${fmtP(p)}</span>`; };
+  let h = howto('Cómo se lee', [
+    '<b>Plan espumantes</b> de ' + esc(E.label) + ': cuenta los <b>clientes compradores</b> de cada línea acumulados en todo el período. El objetivo es el mismo y no se reinicia cada mes: un cliente que ya compró en septiembre sigue contando.',
+    'Para contar como comprador tiene que llevar en <b>una misma compra al menos ' + E.min.A + ' unidades del mismo producto</b> (autoservicios) o <b>' + E.min.K + ' unidades del mismo producto</b> (almacenes y kioscos). Las latas no cuentan.',
+    'Líneas: ' + E.lines.map((l, i) => '<b>' + esc(l) + '</b> (' + esc(E.arts[i]) + ')').join('; ') + '.',
+    'Los objetivos de autoservicios están repartidos entre los KAF y los de almacenes y kioscos entre los vendedores 1 a 10, según cuántos clientes de ese tipo tiene cada uno en su cartera.',
+    'Ámbar = va en ritmo (esperado a hoy ' + fmtP(ritmo) + ' del período); rojo = va atrasado. Incluye preventa. Es informativo.']);
+  h += `<div class="section" style="margin-top:0"><div class="panel-h"><h3>Avance plan espumantes</h3><span style="flex:1"></span><label for="espM" class="muted" style="font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center">Mostrar <select id="espM"><option value="pct" ${mode==='pct'?'selected':''}>% de cumplimiento</option><option value="real" ${mode==='real'?'selected':''}>Clientes compradores / objetivo</option><option value="falta" ${mode==='falta'?'selected':''}>Clientes que faltan</option></select></label>${exportBtn('tEspA','avance_espumantes')}</div>`;
+  h += `<div class="tw"><table id="tEspA"><thead><tr><th class="l sticky1">Vendedor</th><th>Clientes</th>${LI.map(i => `<th>${esc(E.lines[i])}</th>`).join('')}</tr></thead><tbody>${vs.map(v => `<tr ${SOLO ? '' : `class="click" data-espv="${v.c}"`} ${!SOLO && v.c === sel ? 'style="background:var(--accent-soft)"' : ''}><td class="l name sticky1">${v.c} · ${esc(titleCase(v.nom))}</td><td>${v.U}</td>${LI.map(i => `<td>${cell(v.obj[i], v.real[i])}</td>`).join('')}</tr>`).join('')}</tbody>${vs.length > 1 ? `<tfoot><tr><td class="l sticky1">Equipo</td><td>${vs.reduce((a, v) => a + v.U, 0)}</td>${LI.map(i => `<td>${cell(vs.reduce((a, v) => a + v.obj[i], 0), vs.reduce((a, v) => a + v.real[i], 0))}</td>`).join('')}</tr></tfoot>` : ''}</table></div><p class="note">Acumulado ${esc(E.label)}. ${SOLO ? '' : 'Tocá un vendedor para ver sus clientes abajo.'}</p></div>`;
+  const V = espStats(sel), cli = (E.cli || {})[sel] || {}, mine = ((SNAP && SNAP.esp) || {})[sel] || {};
+  const LV = E.lines.map((l, i) => i).filter(i => V.obj[i] > 0);
+  if (!SOLO) h += `<div class="filters" style="margin-top:20px"><label for="espV">Vendedor <select id="espV">${vs.map(v => `<option value="${v.c}" ${sel === v.c ? 'selected' : ''}>${v.c} · ${esc(titleCase(v.nom))}</option>`).join('')}</select></label></div>`;
+  h += `<div class="kpis">${LV.map(i => { const o = V.obj[i], r = V.real[i], p = o ? r / o : 0; return `<div class="kpi"><span class="eyebrow">${esc(E.lines[i])}</span><span class="v">${r} <span class="muted" style="font-size:20px">/ ${o}</span></span><span class="s">${fmtP(p)} · clientes compradores</span><span>${r >= o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${o - r}</span>`}</span><div class="bar"><i style="width:${Math.min(p, 1) * 100}%"></i><b style="left:${ritmo * 100}%"></b></div></div>`; }).join('')}</div>`;
+  const fil = st.espS || 'todos', dSel = st.espD || 'todos';
+  const TN = { A: 'Autoservicio', D: 'Almacén', K: 'Kiosco' }, DN = {1:'Lu',2:'Ma',3:'Mi',4:'Ju',5:'Vi',6:'Sá'};
+  const rows = Object.keys(cli).map(k => { const s = new Set(mine[k] || []); return { c: k, t: cli[k], has: LV.map(i => s.has(i)), n: LV.filter(i => s.has(i)).length, dia: espDia(sel, k) }; });
+  h += `<div class="filters" style="margin-top:20px"><label for="espS">Mostrar <select id="espS"><option value="todos" ${fil==='todos'?'selected':''}>Todos</option><option value="sin" ${fil==='sin'?'selected':''}>Sin ninguna línea</option><option value="falta" ${fil==='falta'?'selected':''}>Con alguna línea en ✗</option></select></label></div><div class="daychips" role="group" aria-label="Día de visita" style="margin-top:10px">${[['todos','Todos los días']].concat(Object.entries(DIAS).filter(([k]) => k !== '6'), [['0','Sin día']]).map(([k,l]) => `<button type="button" class="daychip" data-espdia="${k}" aria-pressed="${String(dSel)===String(k)}">${l}</button>`).join('')}</div>`;
+  const list = rows.filter(r => (fil !== 'sin' || !r.n) && (fil !== 'falta' || r.n < LV.length) && (dSel === 'todos' || String(r.dia) === String(dSel)));
+  list.sort((a, b) => (a.dia || 9) - (b.dia || 9) || a.n - b.n || (a.c < b.c ? -1 : 1));
+  h += `<div class="panel-h"><span class="muted">${list.length} clientes</span>${exportBtn('tEsp','espumantes_' + sel)}</div><div class="tw"><table id="tEsp"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Nombre</th><th class="l">Tipo</th><th class="l">Día</th>${LV.map(i => `<th style="text-align:center">${esc(E.lines[i])}</th>`).join('')}<th>Líneas</th></tr></thead><tbody>${list.map(r => `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(titleCase(nameOf(r.c)))}</td><td class="l ink2">${TN[r.t] || ''}</td><td class="l ink2">${DN[r.dia] || '—'}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes">✓</span>' : '<span class="bt-no">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${LV.length}</td></tr>`).join('')}</tbody></table></div>`;
+  return h;
+}
+document.addEventListener('click', e => { const d = e.target.closest('[data-espdia]'); if (d) { st.espD = d.dataset.espdia; saveUI(); render(); return; } const r = e.target.closest('[data-espv]'); if (r) { st.espV = r.dataset.espv; saveUI(); render(); } });
+document.addEventListener('change', e => { if (e.target.id === 'espV') { st.espV = e.target.value; saveUI(); render(); } else if (e.target.id === 'espS') { st.espS = e.target.value; saveUI(); render(); } else if (e.target.id === 'espM') { st.espM = e.target.value; saveUI(); render(); } });
 function render(){
   R = compute(CFG, SNAP);
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
