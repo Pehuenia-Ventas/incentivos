@@ -1,0 +1,1118 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"></head><body><title>Incentivo Moto Pehuenia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: barra superior con estado de datos + pestañas; cada pestaña abre con "Cómo se lee" y luego la tabla/tarjetas. */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --surface2:#EAEEF4; --line:#D5DCE6; --ink:#15202C; --ink2:#4A5869; --muted:#738196;
+  --accent:#2448C7; --accent-soft:#DCE4FB; --accent2:#0E8C8C; --accent2-soft:#D3EFEE;
+  --good:#1D7F45; --good-bg:#DDF2E4; --warn:#9A6400; --warn-bg:#FCEFCF; --bad:#B4322A; --bad-bg:#F9DEDB;
+  --ticket-empty:#E1E6EE;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}
+[hidden]{display:none!important}
+.ro .edit-only{display:none!important}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:20px 60px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:34px;font-weight:700;line-height:1.05}
+h2{font-size:26px;font-weight:700}
+h3{font-size:19px;font-weight:600}
+.num,td,th{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .ink2{color:var(--ink2)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Encabezado */
+.top{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.top .ttl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.status{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.need{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}.need.ok{background:var(--good-bg);color:var(--good)}.need.bad{background:var(--bad-bg);color:var(--bad)}.need.late{background:var(--warn-bg);color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.chip.good{background:var(--good-bg);color:var(--good)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0F151D}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0F151D}}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* Pestañas */
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-block:16px 18px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:16px}
+.filters label{font-size:13px;color:var(--muted);font-weight:600;display:flex;gap:8px;align-items:center}
+select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;max-width:100%}
+
+/* Caja explicativa */
+.howto{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:14px 18px;margin-bottom:18px}
+.howto summary{cursor:pointer;font-weight:700;list-style:none;display:flex;gap:8px;align-items:center}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:"▸";color:var(--accent);transition:transform .15s}
+.howto[open] summary::before{transform:rotate(90deg)}
+.howto ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:95ch}
+.howto p{margin:10px 0 0;max-width:95ch}
+
+/* Tarjetas KPI */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1.05}
+.kpi .s{font-size:13px;color:var(--ink2)}
+.bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;position:relative;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.kpis{grid-template-columns:1fr}}
+.stack{display:grid;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+
+/* Tablas */
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--surface);position:sticky;top:0;z-index:1}
+th.l,td.l{text-align:left}
+tbody tr:hover td{background:var(--surface2)}
+tfoot td{font-weight:700;background:var(--surface2)}
+td.name{font-weight:600}
+tr.click{cursor:pointer}
+.sticky1{position:sticky;left:0;background:var(--surface);z-index:2}
+tbody tr:hover td.sticky1{background:var(--surface2)}
+tfoot td.sticky1{background:var(--surface2)}
+th.sticky1{z-index:3}
+.cell{display:inline-block;min-width:58px;padding:2px 6px;border-radius:5px;font-weight:600;text-align:center}
+.cell.good{background:var(--good-bg);color:var(--good)} .cell.warn{background:var(--warn-bg);color:var(--warn)} .cell.bad{background:var(--bad-bg);color:var(--bad)} .cell.na{color:var(--muted);font-weight:400}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink2);margin:10px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* Cupones tipo ticket */
+.tickets{display:inline-flex;gap:3px;vertical-align:middle}
+.tickets i{width:11px;height:16px;border-radius:2px;background:var(--ticket-empty);display:block}
+.tickets i.a{background:var(--accent)} .tickets i.b{background:var(--accent);opacity:.5} .tickets i.c{background:var(--accent2)}
+.big-tickets .tickets i{width:22px;height:32px;border-radius:4px}
+.tot{font-family:var(--f-display);font-size:20px;font-weight:700}
+
+/* Ficha */
+.ficha-head{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.steps{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.step{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.step:last-child{border-bottom:0}
+.step .k{font-weight:700}
+.step .d{font-size:13px;color:var(--ink2);grid-column:1}
+.step .r{grid-row:1 / span 2;grid-column:2;font-family:var(--f-display);font-size:24px;font-weight:700;text-align:right}
+.step.total{background:var(--accent-soft)}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+details.cli{border-top:1px solid var(--line);padding:8px 0}
+details.cli summary{cursor:pointer;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-gap:20px}
+@media (max-width:560px){details.cli ol{columns:1}}
+
+/* Gráfico */
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2}
+.chart .area{fill:var(--accent);opacity:.12}
+.chart .obj{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:5 4;fill:none}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:6px;font-size:13px;z-index:50;white-space:nowrap}
+
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px;background:var(--surface)}
+.empty p{margin:4px 0 0;max-width:70ch;color:var(--ink2)}
+.bt-yes{color:var(--good);font-weight:800;font-size:17px}
+.bt-no{color:var(--bad);font-weight:800;font-size:17px}
+.bt-yes,.bt-no{display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:6px}
+.bt-yes{background:var(--good-bg)} .bt-no{background:var(--bad-bg)}
+.daychips{display:flex;flex-wrap:wrap;gap:6px}
+.daychip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;cursor:pointer;font-size:13px}
+.daychip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
+.prose{max-width:80ch}
+.prose h3{margin-top:22px}
+.prose p,.prose li{color:var(--ink2)}
+.prose ol,.prose ul{padding-left:22px;display:grid;gap:6px}
+.formula{font-family:var(--f-display);font-size:20px;font-weight:600;background:var(--accent-soft);padding:10px 14px;border-radius:8px;color:var(--ink)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.section{margin-top:22px}
+.overlay{position:fixed;inset:0;background:rgba(10,15,22,.55);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
+.modal{background:var(--surface);border-radius:12px;padding:22px;max-width:520px;width:100%;display:grid;gap:12px}
+.spinner{width:22px;height:22px;border:3px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+@media (max-width:560px){h1{font-size:28px}.kpi .v{font-size:28px}.wrap{padding-inline:16px}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <span class="eyebrow">Primeros Productos Pehuenia · Otras marcas + Cobertura Georgalos</span>
+      <h1>Incentivo Moto · <span id="mesLabel"></span><span id="soloName"></span></h1>
+    </div>
+    <div class="status">
+      <span id="stData" class="chip"></span>
+      <span id="stDias" class="chip"></span>
+      <button id="stObj" class="chip" type="button" data-tab="objetivos" style="border:0;cursor:pointer"></button>
+      <button class="btn primary edit-only" id="btnLoad" type="button">Cargar ventas</button>
+      <input type="file" id="file" accept=".xlsx,.xlsm,.xls,.csv" hidden>
+      <input type="file" id="fileObj" accept=".xlsx,.xlsm,.xls,.csv" hidden>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <div class="filters" id="filters">
+    <label for="fSup">Supervisor <select id="fSup"></select></label>
+  </div>
+  <main id="view"></main>
+</div>
+<div id="tip" class="tip" hidden></div>
+<div id="toast" class="toast" hidden></div>
+<div id="overlay" class="overlay" hidden><div class="modal" id="modal"></div></div>
+
+<script>
+const CFG = /*CFG_START*/null/*CFG_END*/;
+/* ===== Núcleo de cálculo (mismo criterio que el Excel "Modelo de incentivo") ===== */
+const GBR = ['Chocolates','Caramelos blandos','Chocolate en polvo','Pasta de maní','Cobertura general'];
+const GSHORT = {'Chocolates':'Chocolates','Caramelos blandos':'Caram. blandos','Chocolate en polvo':'Choc. en polvo','Pasta de maní':'Pasta de maní','Cobertura general':'General Georgalos'};
+function norm(s){ return String(s == null ? '' : s).trim().toUpperCase().replace(/\s+/g,' '); }
+function ceilX(x){ return Math.ceil(+(+x).toFixed(9)); }
+function pad2(n){ return (n<10?'0':'')+n; }
+function toYMD(v){
+  if (v == null || v === '') return null;
+  if (typeof v === 'number' && isFinite(v)) {
+    if (v < 1000) return null;
+    const d = new Date(Math.round((Math.floor(v) - 25569) * 86400000));
+    return d.getUTCFullYear()+'-'+pad2(d.getUTCMonth()+1)+'-'+pad2(d.getUTCDate());
+  }
+  if (v instanceof Date && !isNaN(v)) return v.getFullYear()+'-'+pad2(v.getMonth()+1)+'-'+pad2(v.getDate());
+  const s = String(v).trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (m) return m[1]+'-'+pad2(+m[2])+'-'+pad2(+m[3]);
+  m = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/.exec(s);
+  if (m) return m[3]+'-'+pad2(+m[2])+'-'+pad2(+m[1]);
+  return null;
+}
+function toNum(v){
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  if (v == null || v === '') return 0;
+  let s = String(v).trim();
+  if (/,\d{1,2}$/.test(s) || (s.includes(',') && s.includes('.') && s.lastIndexOf(',') > s.lastIndexOf('.'))) s = s.replace(/\./g,'').replace(',', '.');
+  else s = s.replace(/,/g,'');
+  const n = parseFloat(s); return isFinite(n) ? n : 0;
+}
+
+
+function parseCSV(t, sep){
+  const out=[]; let row=[], f='', q=false, i=0, n=t.length;
+  while(i<n){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){ f+='"'; i+=2; continue; } q=false; i++; continue; } f+=ch; i++; continue; }
+    if(ch==='"' && f===''){ q=true; i++; continue; }
+    if(ch===sep){ row.push(f); f=''; i++; continue; }
+    if(ch==='\r'){ i++; continue; }
+    if(ch==='\n'){ row.push(f); out.push(row); row=[]; f=''; i++; continue; }
+    f+=ch; i++; }
+  if(f!==''||row.length){ row.push(f); out.push(row); }
+  return out;
+}
+
+const REQ = ['Cliente','FechaComprobante','FechaEntrega','TipoDeVenta','CodVendedor','Vendedor','Proveedor','Articulo','CantBase','ImporteNetoItem'];
+
+/* rows: array de arrays (primera fila útil = encabezado). Devuelve el "snapshot" que se guarda. */
+function aggregate(rows, CFG){
+  let h = -1;
+  for (let i = 0; i < Math.min(rows.length, 30); i++) {
+    const r = rows[i] || [];
+    if (r.some(c => norm(c) === 'IMPORTENETOITEM')) { h = i; break; }
+  }
+  if (h < 0) throw new Error('No encontré la columna "ImporteNetoItem". Revisá que el archivo sea el "Detallado de ventas" (o el modelo con la hoja de ventas).');
+  const head = rows[h].map(norm);
+  const ix = {};
+  const miss = [];
+  for (const k of REQ.concat(['RazonSocial'])) { const j = head.indexOf(norm(k)); ix[k] = j; if (j < 0 && REQ.includes(k)) miss.push(k); }
+  if (miss.length) throw new Error('Faltan columnas en el archivo: ' + miss.join(', ') + '.');
+
+  const pref = CFG.mes.y + '-' + pad2(CFG.mes.m);
+  const nb = CFG.brands.length;
+  const bIdx = {}; CFG.brands.forEach((b,i) => bIdx[norm(b.full)] = i);
+  const excl = norm(CFG.excluida);
+  const vCod = {}; CFG.vend.forEach(v => vCod[v.cod] = v);
+  const real = {}; CFG.vend.forEach(v => real[v.cod] = new Array(nb).fill(0));
+  const arts = {}; for (const k in CFG.arts) arts[norm(k)] = CFG.arts[k];
+  const disp = new Set((CFG.display || []).map(norm)), fuera = new Set((CFG.fueraGeneral || []).map(norm));
+  const provG = norm(CFG.provGeorgalos || 'GEORGALOS HNOS S A I C A'), minU = CFG.minUnid || 3;
+  const units = new Map();
+  const otros = {}, daily = {}, dailyV = {};
+  let minD = null, maxD = null, minM = null, maxM = null, nMes = 0, nTot = 0, sinFecha = 0, porEntrega = 0;
+
+  for (let i = h + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const cli = r[ix.Cliente]; if (cli == null || cli === '') continue;
+    nTot++;
+    let f = toYMD(r[ix.FechaComprobante]);
+    if (!f) { f = toYMD(r[ix.FechaEntrega]); if (f) porEntrega++; }
+    if (!f) { sinFecha++; continue; }
+    if (!minD || f < minD) minD = f; if (!maxD || f > maxD) maxD = f;
+    if (f.slice(0,7) !== pref) continue;
+    nMes++;
+    if (!minM || f < minM) minM = f; if (!maxM || f > maxM) maxM = f;
+    const cod = Math.round(toNum(r[ix.CodVendedor]));
+    const vname = norm(r[ix.Vendedor]);
+    // cobertura Georgalos: unidades de venta menos rechazos; un display/estuche vale como el mínimo completo
+    const prov = norm(r[ix.Proveedor]);
+    const tipo = norm(r[ix.TipoDeVenta]);
+    if (tipo === 'VENTA' || tipo.includes('RECHAZO')) {
+      const an = norm(r[ix.Articulo]);
+      const q = toNum(r[ix.CantBase]) * (disp.has(an) ? minU : 1);
+      const add = gb => { const key = vname + '|' + String(cli).trim() + '|' + gb; units.set(key, (units.get(key) || 0) + q); };
+      const g = arts[an]; if (g) add(g);
+      if (prov === provG && !fuera.has(an)) add('Cobertura general');
+    }
+    if (prov === excl) continue;
+    const v = vCod[cod]; if (!v) continue;
+    const imp = toNum(r[ix.ImporteNetoItem]);
+    const bi = bIdx[prov];
+    if (bi != null) real[cod][bi] += imp;
+    else { const pn = String(r[ix.Proveedor] || '(sin proveedor)').trim(); otros[pn] = (otros[pn] || 0) + imp; }
+    daily[f] = (daily[f] || 0) + imp;
+    (dailyV[cod] = dailyV[cod] || {})[f] = (dailyV[cod][f] || 0) + imp;
+  }
+  const cob = {};
+  units.forEach((u, key) => {
+    if (!(u >= minU - 1e-9)) return;
+    const [vn, c, gb] = key.split('|');
+    const o = cob[vn] = cob[vn] || {};
+    (o[gb] = o[gb] || []).push(c);
+  });
+  const r2 = x => Math.round(x * 100) / 100;
+  for (const c in real) real[c] = real[c].map(r2);
+  for (const k in otros) otros[k] = r2(otros[k]);
+  for (const k in daily) daily[k] = r2(daily[k]);
+  for (const c in dailyV) for (const k in dailyV[c]) dailyV[c][k] = r2(dailyV[c][k]);
+  return { mes: pref, minD, maxD, minM, maxM, nMes, nTot, sinFecha, porEntrega, real, otros, cob, dailyV };
+}
+
+/* Cálculo de cupones a partir del snapshot (o vacío si todavía no hay ventas). */
+function compute(CFG, SNAP){
+  const P = CFG.params, nb = CFG.brands.length;
+  const hab = CFG.habiles;
+  let lastD = SNAP && SNAP.maxM ? SNAP.maxM : null;
+  if (lastD && SNAP.hoy && SNAP.hoy < lastD) lastD = SNAP.hoy;
+  const diasTrans = lastD ? hab.filter(d => d <= lastD).length : 0;
+  const diasTot = hab.length;
+  const diasRest = diasTot - diasTrans;
+  const esperado = diasTot ? diasTrans / diasTot : 0;
+  const vs = CFG.vend.map(v => {
+    const real = (SNAP && SNAP.real && SNAP.real[v.cod]) ? SNAP.real[v.cod].slice() : new Array(nb).fill(0);
+    const obj = v.obj;
+    const pctB = obj.map((o,i) => o > 0 ? real[i] / o : null);
+    const conObj = obj.filter(o => o > 0).length;
+    const n100 = pctB.filter(p => p != null && p >= P.cumpl - 1e-12).length;
+    const objT = obj.reduce((a,b) => a + b, 0);
+    const pts = objT > 0 ? 100 * obj.reduce((a,o,i) => a + (pctB[i] != null && pctB[i] >= P.cumpl - 1e-12 ? o : 0), 0) / objT : 0;
+    const A = Math.min(P.cupMarcas, Math.floor(pts / P.ptsCup + 1e-9));
+    const todas = conObj > 0 && n100 === conObj;
+    const realT = real.reduce((a,b) => a + b, 0);
+    const pct = objT > 0 ? realT / objT : 0;
+    const tot100 = objT > 0 && pct >= P.cumpl - 1e-12;
+    const B = todas ? P.cupPlus : 0;
+    const cartera = (CFG.cart[v.nom] || []).length;
+    const cartSet = new Set((CFG.cart[v.nom] || []).map(String));
+    const cobV = SNAP && SNAP.cob ? (SNAP.cob[norm(v.nom)] || {}) : {};
+    const cobList = GBR.map(g => (cobV[g] || []).map(String).filter(c => cartSet.has(c)));
+    const cobCnt = cobList.map(l => l.length);
+    const need = GBR.map(g => ceilX(cartera * CFG.cobObj[g]));
+    const cobPct = cobCnt.map((c,i) => need[i] > 0 ? c / need[i] : null);
+    const nCob = cobPct.filter(p => p != null && p >= 1 - 1e-12).length;
+    const C = nCob * P.cupCob;
+    const sub = A + B + C;
+    const total = Math.min(sub, P.tope);
+    const maxPosible = Math.min(P.cupMarcas + P.cupPlus + GBR.length * P.cupCob, P.tope);
+    const tend = diasTrans > 0 ? realT / diasTrans * diasTot : 0;
+    return { ...v, real, pctB, conObj, n100, pts, todas, A, objT, realT, pct, tot100, B, cartera, cobList, cobCnt, need, cobPct, nCob, C, sub, total, maxPosible, tend, tendPct: objT > 0 ? tend / objT : 0 };
+  });
+  const sumV = vs.reduce((a,v) => a + v.total, 0);
+  const sups = [...new Set(CFG.vend.map(v => v.sup))].map(s => {
+    const mine = vs.filter(v => v.sup === s);
+    const obj = new Array(nb).fill(0), real = new Array(nb).fill(0);
+    mine.forEach(v => v.obj.forEach((o,i) => { obj[i] += o; real[i] += v.real[i]; }));
+    const pctB = obj.map((o,i) => o > 0 ? real[i] / o : null);
+    const conObj = obj.filter(o => o > 0).length;
+    const n100 = pctB.filter(p => p != null && p >= P.cumpl - 1e-12).length;
+    const objT = obj.reduce((a,b) => a + b, 0), realT = real.reduce((a,b) => a + b, 0);
+    const pts = conObj > 0 ? 100 * n100 / conObj : 0; // supervisores: todas las marcas valen lo mismo
+    const A = Math.min(P.cupMarcas, Math.floor(pts / (P.ptsCupSup || P.ptsCup) + 1e-9));
+    const todas = conObj > 0 && n100 === conObj;
+    const pct = objT > 0 ? realT / objT : 0;
+    const tot100 = objT > 0 && pct >= P.cumpl - 1e-12;
+    const B = todas ? P.cupPlus : 0;
+    const cartera = mine.reduce((a,v) => a + v.cartera, 0);
+    const cobCnt = GBR.map((g,i) => mine.reduce((a,v) => a + v.cobCnt[i], 0));
+    const need = GBR.map(g => ceilX(cartera * CFG.cobObj[g]));
+    const cobPct = cobCnt.map((c,i) => need[i] > 0 ? c / need[i] : null);
+    const nCob = cobPct.filter(p => p != null && p >= 1 - 1e-12).length;
+    const C = nCob * P.cupCob;
+    const sub = A + B + C, total = Math.min(sub, P.tope);
+    const tend = diasTrans > 0 ? realT / diasTrans * diasTot : 0;
+    return { sup: s, vendedores: mine.length, conCupones: mine.filter(v => v.total > 0).length, obj, real, pctB, conObj, n100, pts, todas, A, objT, realT, pct, tot100, B, cartera, cobCnt, need, cobPct, nCob, C, sub, total, tend, tendPct: objT > 0 ? tend / objT : 0 };
+  });
+  const sumS = sups.reduce((a,s) => a + s.total, 0);
+  vs.forEach(v => { v.prob = sumV > 0 ? v.total / sumV : null; v.probConj = (sumV + sumS) > 0 ? v.total / (sumV + sumS) : null; });
+  sups.forEach(s => { s.prob = (sumV + sumS) > 0 ? s.total / (sumV + sumS) : null; });
+  return { vs, sups, sumV, sumS, diasTrans, diasTot, diasRest, esperado, lastD };
+}
+
+
+</script>
+<script>
+/* ===================== Estado y utilidades ===================== */
+const cuse = n => (window.claude && typeof window.claude.use === 'function') ? window.claude.use(n) : Promise.resolve(null);
+const EMBED = /*EMBED_START*/null/*EMBED_END*/;
+const EMBED_OBJ = /*EMBEDOBJ_START*/null/*EMBEDOBJ_END*/;
+let SNAP = EMBED, META = null, R = null, OBJ = EMBED_OBJ;
+CFG.vend.forEach(v => v.objProv = v.obj.slice());
+const COB_PROV = Object.assign({}, CFG.cobObj);
+function applyObj(){
+  CFG.vend.forEach(v => { const o = OBJ && OBJ.vend && OBJ.vend[v.cod]; v.obj = o ? CFG.brands.map((b,i) => +o[i] || 0) : v.objProv.slice(); });
+  Object.assign(CFG.cobObj, COB_PROV, (OBJ && OBJ.cobObj) || {});
+}
+if (CFG.params && CFG.params.ptsCupSup == null) Object.assign(CFG.params, { cupMarcas: 5, ptsCup: 15, ptsCupSup: 10, cupPlus: 5, tope: 15, bono: 0 });
+const P = CFG.params;
+const st = { tab: 'resumen', sup: 'todos', ven: CFG.vend[0].cod };
+try { const s = JSON.parse(localStorage.getItem('im_ui') || '{}'); Object.assign(st, s); } catch(e) {}
+function saveUI(){ try { localStorage.setItem('im_ui', JSON.stringify(st)); } catch(e) {} }
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtM = n => '$ ' + Math.round(n).toLocaleString('es-AR');
+const fmtMk = n => { const a = Math.abs(n); if (a >= 1e6) return '$ ' + (n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1}) + ' M'; if (a >= 1e3) return '$ ' + Math.round(n/1e3).toLocaleString('es-AR') + ' mil'; return '$ ' + Math.round(n).toLocaleString('es-AR'); };
+const fmtP = (p, d=0) => p == null ? '—' : (p*100).toLocaleString('es-AR',{maximumFractionDigits:d, minimumFractionDigits:d}) + '%';
+const fmtN = n => Math.round(n).toLocaleString('es-AR');
+/* Días hábiles que quedan para vender (desde hoy; después de las 16 h cuenta desde mañana) y etiquetas de "cuánto traer por día" */
+const HOYAR = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+const HORAAR = (+new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false })) % 24;
+const DQ = CFG.habiles.filter(d => HORAAR >= 16 ? d > HOYAR : d >= HOYAR).length, DJ = CFG.habiles.length - DQ;
+let RPV = null;
+const pvOf = v => (RPV && RPV.vs.find(x => String(x.cod) === String(v.cod))) || v;
+function needTag(obj, conPV, money){ const f = obj - conPV; if (!(obj > 0)) return '<span class="muted">—</span>'; if (f <= 0) return '<span class="need ok">✓ cumplido</span>'; if (!DQ) return '<span class="need bad">mes cerrado</span>'; const pd = f / DQ; const atras = conPV < obj * DJ / CFG.habiles.length; const n = Math.ceil(pd - 1e-9); return `<span class="need ${atras ? 'late' : ''}" title="${atras ? 'Va atrasado contra el ritmo del mes' : 'Va en ritmo'}">${money ? fmtMk(pd) + ' por día' : (pd < 1 ? '1 cliente cada ' + Math.max(2, Math.floor(1 / pd)) + ' días' : n + (n === 1 ? ' cliente' : ' clientes') + ' por día')}</span>`; }
+const pvTxt = (d, money) => d > 0 ? `<span class="muted">+${money ? fmtMk(d) : d} preventa</span>` : '';
+const supName = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+const titleCase = s => String(s).toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+const fmtDate = ymd => { if (!ymd) return '—'; const [y,m,d] = ymd.split('-'); return d + '/' + m; };
+const SUPS = [...new Set(CFG.vend.map(v => v.sup))];
+const nameOf = c => CFG.names[c] || (SNAP && SNAP.nuevosNombres && SNAP.nuevosNombres[c]) || '';
+
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 4200); }
+
+/* Estado de un % frente al ritmo esperado del mes */
+function cls(p){
+  if (p == null) return 'na';
+  if (p >= 1 - 1e-12) return 'good';
+  if (!R || R.diasTrans === 0) return 'bad';
+  return p >= R.esperado ? 'warn' : 'bad';
+}
+function cellP(p){ return p == null ? '<span class="cell na">—</span>' : `<span class="cell ${cls(p)}">${p >= 1 - 1e-12 ? '✓ ' : ''}${fmtP(p)}</span>`; }
+function tickets(v){
+  let h = '<span class="tickets" aria-label="' + v.total + ' de ' + P.tope + ' cupones">';
+  let a = Math.min(v.A, P.tope), b = Math.min(v.B, P.tope - a), c = Math.min(v.C, P.tope - a - b);
+  for (let i = 0; i < P.tope; i++) h += '<i class="' + (i < a ? 'a' : i < a + b ? 'b' : i < a + b + c ? 'c' : '') + '"></i>';
+  return h + '</span>';
+}
+const ticketLegend = '<div class="legend"><span><i class="sw" style="background:var(--accent)"></i>A · puntos por marcas al 100%</span><span><i class="sw" style="background:var(--accent);opacity:.5"></i>B · plus todas las marcas al 100%</span><span><i class="sw" style="background:var(--accent2)"></i>C · cobertura Georgalos</span><span><i class="sw" style="background:var(--ticket-empty)"></i>lugar libre (tope ' + P.tope + ')</span></div>';
+const statusLegend = () => '<div class="legend"><span><span class="cell good">✓ 100%</span> cumplido: ya suma el cupón</span><span><span class="cell warn">' + fmtP(R.esperado) + '</span> va en ritmo (igual o arriba del ' + fmtP(R.esperado) + ' esperado a hoy)</span><span><span class="cell bad">40%</span> va atrasado respecto del ritmo</span><span><span class="cell na">—</span> sin objetivo: no da cupón</span></div>';
+function howto(title, items, open){
+  return `<details class="howto" ${open ? 'open' : ''}><summary>${esc(title)}</summary><ul>${items.map(i => '<li>' + i + '</li>').join('')}</ul></details>`;
+}
+function vendFiltered(){ return R.vs.filter(v => st.sup === 'todos' || v.sup === st.sup); }
+function exportBtn(id, name){ return `<button class="btn small" type="button" data-export="${id}" data-name="${esc(name)}">Exportar a Excel (CSV)</button>`; }
+
+/* ===================== Pestañas ===================== */
+const SOLO = CFG.solo || null;
+const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : []);
+const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['batalla','Batalla Georgalos']].concat(GTAB, [['reglas','Cómo funciona']]) : [
+  ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, [
+  ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
+]);
+if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
+function renderTabs(){
+  $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join('');
+}
+
+/* ===================== Encabezado ===================== */
+function renderHeader(){
+  $('#mesLabel').textContent = CFG.mes.label;
+  const sd = $('#stData');
+  if (SNAP && SNAP.nMes > 0) { sd.className = 'chip good'; sd.textContent = 'Actualizado ' + (SNAP.cuando ? new Date(SNAP.cuando).toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires'}) : fmtDate(SNAP.maxM)); sd.title = 'Ventas con fecha hasta el ' + fmtDate(SNAP.maxM); }
+  else if (SNAP) { sd.className = 'chip warn'; sd.textContent = 'Sin ventas de ' + CFG.mes.label + ' en el último archivo'; }
+  else { sd.className = 'chip warn'; sd.textContent = 'Sin ventas cargadas todavía'; }
+  $('#stDias').textContent = 'Días hábiles: ' + R.diasTrans + ' de ' + R.diasTot + (DQ ? ' · quedan ' + DQ + ' para vender' : '');
+  $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
+  $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10'].includes(st.tab);
+  if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
+  const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
+}
+function objBanner(){
+  if (OBJ) return '';
+  return `<div class="empty" style="border-color:var(--warn)"><div><h3>Objetivos de ${CFG.mes.label} pendientes</h3><p>Mientras tanto se usan los objetivos del modelo (venta base de septiembre) como <b>provisorios</b>: los cupones y porcentajes son orientativos hasta que se carguen los definitivos.</p></div>${SOLO ? '' : '<button class="btn" type="button" data-tab="objetivos">Ver objetivos</button>'}</div>`;
+}
+function emptyBanner(){
+  const ob = st.tab === 'objetivos' ? '' : objBanner();
+  if (SNAP && SNAP.nMes > 0) return ob;
+  const extra = SNAP ? `El último archivo cargado tenía ventas del ${fmtDate(SNAP.minD)} al ${fmtDate(SNAP.maxD)}, pero ninguna de ${CFG.mes.label}.` : 'Los objetivos y la cartera de cada vendedor ya están cargados; falta la venta del mes.';
+  return ob + `<div class="empty"><div><h3>Todavía no hay ventas de ${CFG.mes.label}</h3><p>${extra} Todo arranca en 0 y se completa a medida que entran las ventas.</p></div><button class="btn primary edit-only" type="button" data-action="load">Cargar ventas</button></div>`;
+}
+
+/* ===================== Resumen ===================== */
+function viewResumen(){
+  const vs = vendFiltered();
+  const objT = vs.reduce((a,v) => a + v.objT, 0), realT = vs.reduce((a,v) => a + v.realT, 0);
+  const pct = objT ? realT / objT : 0;
+  const cup = vs.reduce((a,v) => a + v.total, 0);
+  const conCup = vs.filter(v => v.total > 0).length, tope = vs.filter(v => v.total >= P.tope).length;
+  const tend = R.diasTrans ? realT / R.diasTrans * R.diasTot : 0;
+  const realPV = vs.reduce((a,v) => a + pvOf(v).realT, 0);
+  const falta = Math.max(objT - realT, 0);
+  const marcasOk = vs.reduce((a,v) => a + v.n100, 0), marcasTot = vs.reduce((a,v) => a + v.conObj, 0);
+  const cobOk = vs.reduce((a,v) => a + v.nCob, 0);
+  let h = emptyBanner();
+  h += howto('Cómo se lee esta pantalla', [
+    '<b>Facturación</b>: lo vendido en el mes de todas las marcas del concurso (todas menos Pepsico), importe neto sin IVA, contra la suma de los objetivos por marca.',
+    '<b>Avance esperado</b>: la porción del mes que ya pasó, en días hábiles (' + R.diasTrans + ' de ' + R.diasTot + ' = ' + fmtP(R.esperado) + '). Si la barra azul pasa la rayita negra, el equipo va en ritmo.',
+    '<b>Tendencia</b>: a cuánto se llegaría a fin de mes si se sigue vendiendo al mismo promedio diario que hasta hoy.',
+    '<b>Cupones</b>: cada cupón es una chance en el sorteo de la moto. Se ganan por puntos de marcas al 100%, por el plus de tener todas las marcas al 100% y por cobertura Georgalos (ver pestaña "Cómo funciona"). Máximo ' + P.tope + ' por persona.'
+  ], !SNAP || !SNAP.nMes);
+  h += `<div class="kpis">
+    <div class="kpi"><span class="eyebrow">Facturación del mes</span><span class="v">${fmtMk(realT)}</span><span class="s">de ${fmtMk(objT)} de objetivo · <b>${fmtP(pct)}</b></span><div class="bar"><i style="width:${Math.min(pct,1)*100}%"></i><b style="left:${R.esperado*100}%"></b></div></div>
+    <div class="kpi"><span class="eyebrow">Tendencia al cierre</span><span class="v">${R.diasTrans ? fmtP(objT ? tend/objT : 0) : '—'}</span><span class="s">${R.diasTrans ? 'proyecta ' + fmtMk(tend) + ' a fin de mes' : 'se calcula con el primer día de ventas'}</span></div>
+    <div class="kpi"><span class="eyebrow">Falta vender</span><span class="v">${fmtMk(falta)}</span><span class="s">${realPV - realT > 0 ? fmtMk(realPV - realT) + ' de preventa cargada · ' : ''}${DQ ? 'en los ' + DQ + ' días hábiles que quedan' : 'mes cerrado'}</span><span>${needTag(objT, realPV, true)}</span></div>
+    <div class="kpi"><span class="eyebrow">Cupones en juego</span><span class="v">${fmtN(cup)}</span><span class="s">${conCup} de ${vs.length} vendedores con cupones · ${tope} en el tope</span></div>
+    <div class="kpi"><span class="eyebrow">Marcas al 100%</span><span class="v">${marcasOk} <span class="muted" style="font-size:20px">/ ${marcasTot}</span></span><span class="s">sumando todas las marcas con objetivo de cada vendedor</span></div>
+    <div class="kpi"><span class="eyebrow">Coberturas Georgalos logradas</span><span class="v">${cobOk} <span class="muted" style="font-size:20px">/ ${vs.length * 5}</span></span><span class="s">4 líneas + cobertura general por vendedor</span></div>
+  </div>`;
+  h += `<div class="stack">
+    <div class="panel"><div class="panel-h"><h3>Facturación acumulada del mes</h3><span class="muted" style="font-size:13px">línea punteada = ritmo para llegar al objetivo</span></div>${chartSVG(vs)}</div>
+    <div class="panel"><div class="panel-h"><h3>Ranking de cupones</h3><span class="muted" style="font-size:13px">tocá un nombre para ver su ficha</span></div>${rankingList(vs)}</div>
+  </div>`;
+  return h;
+}
+function rankingList(vs){
+  const s = vs.slice().sort((a,b) => b.total - a.total || b.pct - a.pct);
+  return '<div class="tw" style="border:0"><table><thead><tr><th>#</th><th class="l">Vendedor</th><th class="l">Supervisor</th><th class="l">Cupones</th><th>Total</th><th>A</th><th>B</th><th>C</th><th>% facturación</th><th>Tendencia</th><th>Prob.</th></tr></thead><tbody>' +
+    s.map((v,i) => `<tr class="click" data-ven="${v.cod}"><td class="muted">${i+1}</td><td class="l name">${esc(titleCase(v.nom))}</td><td class="l ink2">${esc(supName(v.sup))}</td><td class="l">${tickets(v)}</td><td class="tot">${v.total}</td><td>${v.A}</td><td>${v.B}</td><td>${v.C}</td><td>${cellP(v.objT ? v.pct : null)}</td><td>${R.diasTrans ? fmtP(v.tendPct) : '—'}</td><td>${fmtP(v.prob,1)}</td></tr>`).join('') +
+    '</tbody></table></div>' + ticketLegend;
+}
+function chartSVG(vs){
+  const cods = new Set(vs.map(v => String(v.cod)));
+  const objT = vs.reduce((a,v) => a + v.objT, 0);
+  const days = CFG.habiles;
+  const W = 1100, H = 300, L = 62, Rr = 14, T = 14, B = 30;
+  let cum = 0; const pts = [];
+  if (SNAP && SNAP.dailyV) {
+    const all = {};
+    for (const c in SNAP.dailyV) if (cods.has(c)) for (const d in SNAP.dailyV[c]) all[d] = (all[d] || 0) + SNAP.dailyV[c][d];
+    const ds = Object.keys(all).sort();
+    days.forEach((d,i) => { if (!R.lastD || d > R.lastD) return; ds.filter(x => x <= d && (i === 0 || x > days[i-1])).forEach(x => cum += all[x]); pts.push([i, cum, d]); });
+    if (pts.length) { const lp = pts[pts.length-1]; ds.filter(x => x > lp[2]).forEach(x => lp[1] += all[x]); cum = lp[1]; }
+  }
+  const maxY = Math.max(objT, cum) * 1.05 || 1;
+  const x = i => L + (W - L - Rr) * (days.length > 1 ? i / (days.length - 1) : 0);
+  const y = v => T + (H - T - B) * (1 - v / maxY);
+  const step = maxY > 4e8 ? 1e8 : maxY > 1.5e8 ? 5e7 : maxY > 4e7 ? 1e7 : 5e6;
+  let g = '';
+  for (let v = 0; v <= maxY; v += step) g += `<line class="grid" x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${v === 0 ? '0' : (v/1e6).toLocaleString('es-AR') + ' M'}</text>`;
+  days.forEach((d,i) => { if (i % 3 === 0 || i === days.length - 1) g += `<text x="${x(i)}" y="${H-10}" text-anchor="middle">${fmtDate(d)}</text>`; });
+  g += `<line class="obj" x1="${x(0)}" y1="${y(objT/days.length)}" x2="${x(days.length-1)}" y2="${y(objT)}"/><text x="${W-Rr}" y="${y(objT)-6}" text-anchor="end">Objetivo ${fmtMk(objT)}</text>`;
+  if (pts.length) {
+    const line = pts.map((p,k) => (k ? 'L' : 'M') + x(p[0]) + ',' + y(p[1])).join(' ');
+    g += `<path class="area" d="${line} L${x(pts[pts.length-1][0])},${y(0)} L${x(pts[0][0])},${y(0)} Z"/><path class="line" d="${line}"/>`;
+    const lp = pts[pts.length-1];
+    g += `<circle cx="${x(lp[0])}" cy="${y(lp[1])}" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
+  } else {
+    g += `<text x="${(L+W)/2}" y="${H/2}" text-anchor="middle" style="font-size:14px">La curva aparece con la primera carga de ventas</text>`;
+  }
+  const data = encodeURIComponent(JSON.stringify(pts.map(p => [p[0], p[1], p[2], objT / days.length * (p[0] + 1)])));
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" data-pts="${data}" data-geo="${L},${W-Rr},${days.length}" role="img" aria-label="Facturación acumulada contra objetivo">${g}<rect x="${L}" y="${T}" width="${W-L-Rr}" height="${H-T-B}" fill="transparent" class="hit"/></svg>`;
+}
+
+/* ===================== Cupones ===================== */
+function viewCupones(){
+  const vs = vendFiltered();
+  let h = emptyBanner();
+  h += howto('Cómo se calculan los cupones de cada vendedor', [
+    '<b>A · Puntos por marca</b>: cada marca que llega al 100% de su objetivo suma puntos según su peso en el objetivo total del vendedor (ej.: si Peñaflor es el 20% del objetivo, suma 20 puntos). <b>Cada ' + P.ptsCup + ' puntos, 1 cupón</b>, hasta ' + P.cupMarcas + ' cupones.',
+    '<b>B · Plus todas las marcas</b>: si llega al 100% en <b>todas</b> las marcas con objetivo, suma ' + P.cupPlus + ' cupones más.',
+    '<b>C · Cobertura Georgalos</b>: ' + P.cupCob + ' cupón por cada línea Georgalos (Chocolates, Caramelos blandos, Chocolate en polvo, Pasta de maní) en la que se llega a la cantidad de clientes pedida, y 1 más (el 5.º) por la cobertura general de todos los productos Georgalos.',
+    '<b>Total</b> = A + B + C, con un máximo de ' + P.tope + '. Lo que pase el tope no cuenta.',
+    '<b>Probabilidad</b> = cupones del vendedor ÷ total de cupones de los vendedores. Si los supervisores entran en la misma urna, baja un poco (se ve en "Supervisores").',
+    '<b>Máx. posible</b>: cuántos cupones podría llegar a tener si cumple todo lo que tiene objetivo.'
+  ]);
+  h += `<div class="panel-h"><span class="muted">${vs.length} vendedores · tocá una fila para ver qué le falta</span>${exportBtn('tCup','cupones_vendedores')}</div>`;
+  h += `<div class="tw"><table id="tCup"><thead><tr><th class="l sticky1">Vendedor</th><th class="l">Supervisor</th><th>Marcas al 100%</th><th>Puntos</th><th>A · cupones marcas</th><th>% objetivo total</th><th>B · plus todas</th><th>Georgalos cubiertas</th><th>C · cupones cobertura</th><th>A+B+C</th><th class="l">Cupones (tope ${P.tope})</th><th>Total</th><th>Máx. posible</th><th>Prob. de ganar</th></tr></thead><tbody>`;
+  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td class="l ink2">${esc(supName(v.sup))}</td><td>${v.n100} / ${v.conObj}</td><td>${Math.round(v.pts)}</td><td>${v.A}</td><td>${cellP(v.objT ? v.pct : null)}</td><td>${v.B}</td><td>${v.nCob} / 5</td><td>${v.C}</td><td>${v.sub}</td><td class="l">${tickets(v)}</td><td class="tot">${v.total}</td><td class="muted">${v.maxPosible}</td><td>${fmtP(v.prob,1)}</td></tr>`;
+  const t = k => vs.reduce((a,v) => a + v[k], 0);
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td><td>${t('n100')} / ${t('conObj')}</td><td></td><td>${t('A')}</td><td></td><td>${t('B')}</td><td>${t('nCob')}</td><td>${t('C')}</td><td>${t('sub')}</td><td></td><td class="tot">${t('total')}</td><td></td><td>${R.sumV ? fmtP(t('total')/R.sumV,1) : '—'}</td></tr></tfoot></table></div>`;
+  h += ticketLegend;
+  return h;
+}
+
+/* ===================== Marcas ===================== */
+function viewMarcas(){
+  const vs = vendFiltered();
+  const mode = st.mMode || 'pct';
+  const used = CFG.brands.map((b,i) => i).filter(i => vs.some(v => v.obj[i] > 0));
+  let h = emptyBanner();
+  h += howto('Cómo se lee el avance por marca', [
+    'Cada celda es <b>lo facturado en el mes ÷ el objetivo de esa marca</b> para ese vendedor. Al llegar al 100% la marca suma puntos según su peso en el objetivo total (A: cada ' + P.ptsCup + ' puntos, 1 cupón, hasta ' + P.cupMarcas + ').',
+    'El color compara contra el avance esperado a hoy (' + fmtP(R.esperado) + ' del mes hábil): así se ve qué marcas hay que empujar antes de que sea tarde.',
+    'Con el selector podés ver el %, lo facturado, <b>cuánto falta</b> en pesos o <b>cuánto traer por día</b>: lo que falta (descontando la preventa ya cargada) dividido los ' + DQ + ' días hábiles que quedan. En ámbar si va atrasado contra el ritmo del mes.',
+    'Las marcas en las que el vendedor no tiene objetivo aparecen con "—" (no dan cupón). Peñaflor, New PGA y Pilares solo tienen objetivo en el equipo de Juan Armandola.'
+  ]);
+  h += `<div class="filters" style="margin-bottom:10px"><label for="mMode">Mostrar <select id="mMode"><option value="pct" ${mode==='pct'?'selected':''}>% de cumplimiento</option><option value="falta" ${mode==='falta'?'selected':''}>Cuánto falta ($)</option><option value="real" ${mode==='real'?'selected':''}>Facturado ($)</option><option value="obj" ${mode==='obj'?'selected':''}>Objetivo ($)</option><option value="dia" ${mode==='dia'?'selected':''}>Cuánto traer por día (con preventa)</option></select></label><span style="flex:1"></span>${exportBtn('tMar','avance_por_marca')}</div>`;
+  h += statusLegend();
+  h += `<div class="tw"><table id="tMar"><thead><tr><th class="l sticky1">Vendedor</th>${used.map(i => `<th>${esc(CFG.brands[i].short)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+  const cell = (o, r, rp) => {
+    if (!(o > 0)) return '<span class="cell na">—</span>';
+    if (mode === 'dia') return needTag(o, rp == null ? r : rp, true);
+    if (mode === 'pct') return cellP(r / o);
+    if (mode === 'real') return fmtMk(r);
+    if (mode === 'obj') return fmtMk(o);
+    const f = o - r; return f <= 0 ? '<span class="cell good">✓ listo</span>' : `<span class="cell ${cls(r/o)}">${fmtMk(f)}</span>`;
+  };
+  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td>${used.map(i => `<td>${cell(v.obj[i], v.real[i], pvOf(v).real[i])}</td>`).join('')}<td>${cell(v.objT, v.realT, pvOf(v).realT)}</td></tr>`;
+  const so = i => vs.reduce((a,v) => a + v.obj[i], 0), sr = i => vs.reduce((a,v) => a + v.real[i], 0), sp = i => vs.reduce((a,v) => a + pvOf(v).real[i], 0);
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td>${used.map(i => `<td>${cell(so(i), sr(i), sp(i))}</td>`).join('')}<td>${cell(vs.reduce((a,v)=>a+v.objT,0), vs.reduce((a,v)=>a+v.realT,0), vs.reduce((a,v)=>a+pvOf(v).realT,0))}</td></tr></tfoot></table></div>`;
+  if (SNAP && SNAP.otros && Object.keys(SNAP.otros).length) {
+    const o = Object.entries(SNAP.otros).filter(([k,v]) => Math.abs(v) > 1).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+    if (o.length) h += `<p class="note">Facturación que no entra en ninguna marca del concurso (proveedor nuevo o renglones sin proveedor, como ajustes): ${o.map(([k,v]) => esc(k) + ' ' + fmtMk(v)).join(' · ')}. No suma a ningún objetivo.</p>`;
+  }
+  return h;
+}
+
+/* ===================== Cobertura ===================== */
+function viewCobertura(){
+  const vs = vendFiltered();
+  let h = emptyBanner();
+  h += howto('Cómo se mide la cobertura Georgalos', [
+    '<b>Cliente cubierto</b>: cliente de la cartera del vendedor que en el mes le compró <b>al menos ' + (CFG.minUnid || 3) + ' unidades</b> de la línea, sumando todos sus artículos. Los rechazos restan.',
+    '<b>Displays y estuches</b> (Flynn Paff, Palitos, Lengüetazo, Chocolatín, Sin azúcares, Mantecol bocado/barra/bañado, etc.): 1 display o estuche ya cubre al cliente.',
+    '<b>Cobertura general</b>: lo mismo, pero con todos los productos Georgalos juntos (alfajores, galletitas, Flow, etc.). La línea Fiestas no cuenta.',
+    '<b>Clientes a alcanzar</b> = cartera × el % de cada línea (' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + '), redondeado hacia arriba. Ej.: cartera de 260 clientes con 10% → 26 clientes.',
+    'Cada línea en la que se llega a esa cantidad suma 1 cupón (C), y la cobertura general suma el 5.º: hasta 5 cupones por cobertura.',
+    'Cada línea tiene su lista de artículos (está en "Cómo funciona"). Si sale un artículo nuevo, hay que agregarlo a la lista.',
+    'En la <b>Ficha del vendedor</b> está la lista de clientes que compraron cada marca en septiembre y todavía no en octubre: es la lista para salir a buscar.'
+  ]);
+  h += `<div class="panel-h"><span class="muted">Celda: clientes con compra / clientes a alcanzar</span>${exportBtn('tCob','cobertura_georgalos')}</div>`;
+  h += statusLegend();
+  h += `<div class="tw"><table id="tCob"><thead><tr><th class="l sticky1">Vendedor</th><th>Cartera</th><th>A alcanzar</th>${GBR.map(g => `<th>${GSHORT[g]}</th>`).join('')}<th>Marcas cubiertas</th></tr></thead><tbody>`;
+  const c = (n, need, np) => { const p = need ? n / need : null; return `<span class="cell ${cls(p)}">${p >= 1 ? '✓ ' : ''}${n} / ${need}</span>${np > n ? '<br><span class="muted" style="font-size:12px">+' + (np - n) + ' preventa</span>' : ''}${p < 1 ? '<br>' + needTag(need, np, false) : ''}`; };
+  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td>${v.cartera}</td><td>${v.need[0]}</td>${GBR.map((g,i) => `<td>${c(v.cobCnt[i], v.need[i], pvOf(v).cobCnt[i])}</td>`).join('')}<td class="tot">${v.nCob}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
+/* ===================== Supervisores ===================== */
+function viewSupervisores(){
+  let h = emptyBanner();
+  h += howto('Cómo ganan cupones los supervisores', [
+    'Mismas reglas que los vendedores (A, B, C y tope de ' + P.tope + '), pero sobre el <b>total de su equipo</b>. En A, para los supervisores <b>todas las marcas valen lo mismo</b> (100 ÷ marcas con objetivo) y <b>cada ' + P.ptsCupSup + ' puntos es 1 cupón</b> (hasta ' + P.cupMarcas + '): para el máximo tienen que crecer en muchas marcas, no en una sola.',
+    'Objetivo por marca del equipo = suma de los objetivos de sus vendedores. Facturación del equipo = suma de lo que facturó cada uno.',
+    'Cobertura del equipo = clientes con compra de todo el equipo ÷ (cartera total del equipo × el % de cada línea, redondeado hacia arriba).',
+    'Vendedores y supervisores entran en <b>el mismo sorteo</b>: probabilidad = cupones propios ÷ (cupones de vendedores + cupones de supervisores).'
+  ]);
+  h += `<div class="panel-h"><span class="muted">Sorteo conjunto: ${R.sumV} cupones de vendedores + ${R.sumS} de supervisores = <b>${R.sumV + R.sumS}</b></span>${exportBtn('tSup','supervisores')}</div>`;
+  h += `<div class="tw"><table id="tSup"><thead><tr><th class="l">Supervisor</th><th>Vendedores</th><th>Objetivo total</th><th>Facturado</th><th>% total</th><th>Tendencia</th><th>Marcas al 100%</th><th>Puntos</th><th>A</th><th>B · plus</th><th>Georgalos cubiertas</th><th>C</th><th class="l">Cupones</th><th>Total</th><th>Prob. (sorteo conjunto)</th></tr></thead><tbody>`;
+  for (const s of R.sups) h += `<tr><td class="l name">${esc(supName(s.sup))}</td><td>${s.vendedores} <span class="muted">(${s.conCupones} con cupones)</span></td><td>${fmtMk(s.objT)}</td><td>${fmtMk(s.realT)}</td><td>${cellP(s.pct)}</td><td>${R.diasTrans ? fmtP(s.tendPct) : '—'}</td><td>${s.n100} / ${s.conObj}</td><td>${Math.round(s.pts)}</td><td>${s.A}</td><td>${s.B}</td><td>${s.nCob} / 5</td><td>${s.C}</td><td class="l">${tickets(s)}</td><td class="tot">${s.total}</td><td>${fmtP(s.prob,1)}</td></tr>`;
+  h += '</tbody></table></div>';
+  h += `<div class="section"><h3 style="margin-bottom:8px">Avance por marca de cada equipo</h3>${statusLegend()}<div class="tw"><table><thead><tr><th class="l sticky1">Supervisor</th>${CFG.brands.map(b => `<th>${esc(b.short)}</th>`).join('')}</tr></thead><tbody>`;
+  for (const s of R.sups) h += `<tr><td class="l name sticky1">${esc(supName(s.sup))}</td>${s.pctB.map(p => `<td>${cellP(p)}</td>`).join('')}</tr>`;
+  h += '</tbody></table></div></div>';
+  h += `<div class="section"><h3 style="margin-bottom:8px">Cobertura Georgalos de cada equipo</h3><div class="tw"><table><thead><tr><th class="l">Supervisor</th><th>Cartera</th><th>A alcanzar</th>${GBR.map(g => `<th>${GSHORT[g]}</th>`).join('')}</tr></thead><tbody>`;
+  for (const s of R.sups) h += `<tr><td class="l name">${esc(supName(s.sup))}</td><td>${s.cartera}</td><td>${s.need[0]}</td>${GBR.map((g,i) => `<td><span class="cell ${cls(s.cobPct[i])}">${s.cobCnt[i]} / ${s.need[i]}</span></td>`).join('')}</tr>`;
+  h += '</tbody></table></div></div>';
+  return h;
+}
+
+/* ===================== Ficha ===================== */
+function viewFicha(){
+  const v = R.vs.find(x => x.cod == st.ven) || R.vs[0];
+  let h = SOLO ? '' : `<div class="filters"><label for="fVen">Vendedor <select id="fVen">${SUPS.map(s => `<optgroup label="${esc(supName(s))}">${R.vs.filter(x => x.sup === s).map(x => `<option value="${x.cod}" ${x.cod===v.cod?'selected':''}>${esc(titleCase(x.nom))}</option>`).join('')}</optgroup>`).join('')}</select></label></div>`;
+  h += emptyBanner();
+  h += `<div class="ficha-head"><div><span class="eyebrow">${esc(supName(v.sup))} · código ${v.cod} · cartera ${v.cartera} clientes</span><h2>${esc(titleCase(v.nom))}</h2></div><div class="big-tickets" style="display:flex;gap:14px;align-items:center">${tickets(v)}<span class="tot" style="font-size:30px">${v.total}<span class="muted" style="font-size:18px"> / ${P.tope}</span></span></div></div>`;
+  const faltaT = Math.max(v.objT - v.realT, 0);
+  h += `<div class="grid2"><div class="steps">
+    <div class="step"><span class="k">A · Puntos por marcas al 100%</span><span class="d">${v.n100} de ${v.conObj} marcas al 100% = ${Math.round(v.pts)} de 100 puntos · cada ${P.ptsCup} puntos, 1 cupón (hasta ${P.cupMarcas})</span><span class="r">${v.A}</span></div>
+    <div class="step"><span class="k">¿Llegó al 100% del objetivo total?</span><span class="d">${fmtMk(v.realT)} de ${fmtMk(v.objT)} (${fmtP(v.pct)})${faltaT > 0 ? ' · faltan ' + fmtMk(faltaT) : ''}</span><span class="r">${v.tot100 ? 'Sí' : 'No'}</span></div>
+    <div class="step"><span class="k">B · Plus todas las marcas al 100%</span><span class="d">${v.todas ? 'Todas sus marcas llegaron al 100%' : 'Faltan ' + (v.conObj - v.n100) + ' marcas para el plus de ' + P.cupPlus + ' cupones'}</span><span class="r">${v.B}</span></div>
+    <div class="step"><span class="k">C · Cobertura Georgalos</span><span class="d">${v.nCob} de 5 coberturas cumplidas (4 líneas + general)</span><span class="r">${v.C}</span></div>
+    <div class="step"><span class="k">Subtotal A + B + C</span><span class="d">${v.sub > P.tope ? 'Pasa el tope: lo que excede no cuenta' : 'Sin tope'}</span><span class="r">${v.sub}</span></div>
+    <div class="step total"><span class="k">Total de cupones</span><span class="d">El menor entre el subtotal y ${P.tope} · probabilidad ${fmtP(v.prob,1)}</span><span class="r">${v.total}</span></div>
+  </div>
+  <div class="panel"><h3>Ritmo del mes</h3>
+    <div class="steps" style="margin-top:10px;border:0">
+      <div class="step"><span class="k">Tendencia al cierre</span><span class="d">${R.diasTrans ? 'Al promedio diario actual llegaría a ' + fmtMk(v.tend) : 'Se calcula con el primer día de ventas'}</span><span class="r">${R.diasTrans ? fmtP(v.tendPct) : '—'}</span></div>
+      <div class="step"><span class="k">Necesita por día hábil</span><span class="d">${DQ > 0 ? 'Para llegar al 100% del total en los ' + DQ + ' días que quedan' + (pvOf(v).realT > v.realT ? ', descontando ' + fmtMk(pvOf(v).realT - v.realT) + ' de preventa ya cargada' : '') : 'Mes cerrado'}</span><span class="r" style="font-size:20px">${DQ > 0 && v.objT > pvOf(v).realT ? fmtMk((v.objT - pvOf(v).realT) / DQ) : (DQ ? '✓' : '—')}</span></div>
+      <div class="step"><span class="k">Cupones posibles</span><span class="d">Si cumple todas sus marcas y las 5 coberturas</span><span class="r">${v.maxPosible}</span></div>
+    </div></div></div>`;
+  // marcas
+  const rows = CFG.brands.map((b,i) => ({ b, o: v.obj[i], r: v.real[i], rp: pvOf(v).real[i] })).filter(x => x.o > 0).sort((a,b) => (a.r/a.o >= 1) - (b.r/b.o >= 1) || b.o - a.o);
+  h += `<div class="section"><div class="panel-h"><h3>Qué le falta por marca</h3>${exportBtn('tFm','marcas_' + v.nom)}</div>${statusLegend()}<div class="tw"><table id="tFm"><thead><tr><th class="l">Marca</th><th>Objetivo</th><th>Facturado</th><th>% </th><th>Preventa</th><th>Falta</th><th>Traer por día</th><th class="l">Cupón</th></tr></thead><tbody>`;
+  for (const x of rows) { const f = x.o - x.r; h += `<tr><td class="l name">${esc(x.b.short)}</td><td>${fmtM(x.o)}</td><td>${fmtM(x.r)}</td><td>${cellP(x.r/x.o)}</td><td>${x.rp > x.r ? fmtM(x.rp - x.r) : '—'}</td><td>${x.o - x.rp > 0 ? fmtM(x.o - x.rp) : '—'}</td><td>${needTag(x.o, x.rp, true)}</td><td class="l">${f <= 0 ? '<span class="chip good">Ganado</span>' : '<span class="chip">Pendiente</span>'}</td></tr>`; }
+  h += '</tbody></table></div></div>';
+  // cobertura
+  h += `<div class="section"><h3 style="margin-bottom:6px">Cobertura Georgalos: clientes para salir a buscar</h3><p class="note" style="margin-top:0">Clientes cubiertos que necesita (cartera ${v.cartera}): ${GBR.map((g,i) => GSHORT[g] + ' ' + v.need[i]).join(' · ')}. La lista muestra clientes de su cartera que compraron la marca en septiembre y todavía no en ${CFG.mes.label}.</p><div class="cols3">`;
+  GBR.forEach((g,i) => {
+    const got = new Set((v.cobList[i] || []).map(String));
+    const prev = ((CFG.sep[v.nom] || {})[g] || []).map(String).filter(c => !got.has(c));
+    const faltan = Math.max(v.need[i] - v.cobCnt[i], 0);
+    h += `<div class="panel"><div class="panel-h"><h3>${g}</h3><span class="cell ${cls(v.cobPct[i])}">${v.cobCnt[i]} / ${v.need[i]}</span></div>
+      <div class="bar"><i style="width:${Math.min(v.cobPct[i]||0,1)*100}%;background:var(--accent2)"></i></div>
+      <p class="ink2" style="margin:8px 0">${faltan ? 'Faltan <b>' + faltan + '</b> clientes para el cupón.' : '<b>Cupón ganado.</b>'} ${pvTxt(pvOf(v).cobCnt[i] - v.cobCnt[i], false)} ${faltan ? needTag(v.need[i], pvOf(v).cobCnt[i], false) : ''}</p>
+      <details class="cli"><summary><span>Compraron en septiembre, no en octubre</span><span class="muted">${prev.length}</span></summary>${prev.length ? '<ol>' + prev.map(c => `<li>${esc(c)}${nameOf(c) ? ' · ' + esc(titleCase(nameOf(c))) : ''}</li>`).join('') + '</ol>' : '<p class="note">Sin clientes pendientes de septiembre.</p>'}</details></div>`;
+  });
+  h += '</div></div>';
+  return h;
+}
+
+
+
+/* ===================== Batalla Georgalos ===================== */
+const DIAS = {1:'Lunes',2:'Martes',3:'Miércoles',4:'Jueves',5:'Viernes',6:'Sábado'};
+function viewBatalla(){
+  const vSel = st.bVen || 'todos', dSel = st.bDia || 'todos', solo = st.bSolo || 'todos';
+  const pool = R.vs.filter(v => vSel === 'todos' || String(v.cod) === String(vSel));
+  let h = emptyBanner();
+  h += howto('Cómo se usa la batalla', [
+    'Una fila por cliente de la cartera y una columna por línea Georgalos más la cobertura general. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = ya está cubierto este mes (al menos ' + (CFG.minUnid || 3) + ' unidades de la línea, o 1 display/estuche; los rechazos restan). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no la compró.',
+    'Filtrá por <b>vendedor</b> y por <b>día de visita</b> para armar la recorrida del día: los clientes con más ✗ arriba.',
+    'El día de visita sale de la ruta de preventa de cada cliente en septiembre (ruta terminada en 1 = lunes, 2 = martes, … 5 = viernes). Los clientes sin compras en septiembre quedan como "Sin día".',
+    'Arriba de cada marca: clientes con ✓ sobre los que hacen falta para el cupón de cobertura (cartera × el % de cada línea: ' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + ').'
+  ]);
+  h += `<div class="filters" style="margin-bottom:10px">${SOLO ? '' : `<label for="bVen">Vendedor <select id="bVen"><option value="todos">Todos</option>${SUPS.map(s => `<optgroup label="${esc(supName(s))}">${R.vs.filter(x => x.sup === s).map(x => `<option value="${x.cod}" ${String(x.cod)===String(vSel)?'selected':''}>${esc(titleCase(x.nom))}</option>`).join('')}</optgroup>`).join('')}</select></label>`}
+    <div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(Object.entries(DIAS).filter(([k]) => k !== '6'), [['0','Sin día']]).map(([k,l]) => `<button type="button" class="daychip" data-bdia="${k}" aria-pressed="${String(dSel)===String(k)}">${l}</button>`).join('')}</div>
+    <label for="bSolo">Mostrar <select id="bSolo"><option value="todos" ${solo==='todos'?'selected':''}>Todos los clientes</option><option value="falta" ${solo==='falta'?'selected':''}>Solo con alguna ✗</option><option value="cero" ${solo==='cero'?'selected':''}>Sin ninguna marca</option></select></label></div>`;
+  const rows = [];
+  for (const v of pool) {
+    const sets = v.cobList.map(l => new Set(l));
+    for (const c of (CFG.cart[v.nom] || []).map(String)) {
+      const d = CFG.dia[c] || 0;
+      if (dSel !== 'todos' && String(d) !== String(dSel)) continue;
+      const has = sets.map(s => s.has(c)); const n = has.filter(Boolean).length;
+      if (solo === 'falta' && n === GBR.length) continue;
+      if (solo === 'cero' && n > 0) continue;
+      rows.push({ c, v, d, has, n });
+    }
+  }
+  rows.sort((a,b) => (a.d || 9) - (b.d || 9) || a.n - b.n || a.v.nom.localeCompare(b.v.nom) || (+a.c) - (+b.c));
+  const tot = GBR.map((g,i) => rows.filter(r => r.has[i]).length);
+  const need = GBR.map((g,i) => pool.reduce((a,v) => a + v.need[i], 0));
+  const have = GBR.map((g,i) => pool.reduce((a,v) => a + v.cobCnt[i], 0));
+  h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${GBR.map((g,i) => `<div class="kpi"><span class="eyebrow">${GSHORT[g]}</span><span class="v" style="font-size:28px">${have[i]} <span class="muted" style="font-size:18px">/ ${need[i]}</span></span><span class="s">${have[i] >= need[i] ? '<b style="color:var(--good)">Cupón logrado</b>' : 'faltan <b>' + (need[i] - have[i]) + '</b> clientes'}${vSel === 'todos' ? ' (suma de vendedores)' : ''}</span></div>`).join('')}</div>`;
+  h += `<div class="panel-h"><span class="muted">${rows.length.toLocaleString('es-AR')} clientes${dSel !== 'todos' ? ' · ' + (DIAS[dSel] || 'Sin día') : ''} · en la lista: ${GBR.map((g,i) => GSHORT[g] + ' ' + tot[i]).join(' · ')}</span>${exportBtn('tBat','batalla_georgalos')}</div>`;
+  const shown = rows.slice(0, 1500);
+  h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Nombre</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${GBR.map(g => `<th style="text-align:center">${GSHORT[g]}</th>`).join('')}<th>Coberturas</th></tr></thead><tbody>`;
+  for (const r of shown) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(titleCase(nameOf(r.c)) || '—')}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.d] || 'Sin día'}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes" title="Compró">✓</span>' : '<span class="bt-no" title="No compró">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / 5</td></tr>`;
+  h += '</tbody></table></div>';
+  if (rows.length > shown.length) h += `<p class="note">Se muestran los primeros ${shown.length.toLocaleString('es-AR')} clientes; filtrá por vendedor o día para ver el resto (la exportación incluye solo los visibles).</p>`;
+  return h;
+}
+
+/* ===================== Objetivos ===================== */
+function viewObjetivos(){
+  const fuente = OBJ ? `Cargados ${OBJ.cuando ? 'el ' + new Date(OBJ.cuando).toLocaleString('es-AR',{dateStyle:'short',timeStyle:'short'}) : ''}${OBJ.fuente ? ' desde <b>' + esc(OBJ.fuente) + '</b>' : ''}.` : 'Todavía no se cargaron: se muestran los del modelo como provisorios.';
+  let h = `<div class="ficha-head"><div><span class="eyebrow">${OBJ ? (OBJ.estimativo ? 'Estimativos' : 'Definitivos') : 'Provisorios'}</span><h2>Objetivos de ${CFG.mes.label}</h2><p class="ink2" style="margin:4px 0 0">${fuente}</p></div><button class="btn primary edit-only" type="button" data-action="loadobj">Cargar objetivos desde Excel</button></div>`;
+  const used = CFG.brands.map((b,i) => i).filter(i => CFG.vend.some(v => v.obj[i] > 0));
+  h += `<div class="panel-h"><span class="muted">Objetivo por vendedor y marca (importe neto sin IVA)</span>${exportBtn('tObj','objetivos')}</div>`;
+  h += `<div class="tw"><table id="tObj"><thead><tr><th class="l sticky1">Vendedor</th><th>Cód.</th>${used.map(i => `<th>${esc(CFG.brands[i].short)}</th>`).join('')}<th>Total</th><th>Marcas con objetivo</th></tr></thead><tbody>`;
+  for (const s of SUPS) {
+    h += `<tr><td class="l sticky1 eyebrow" colspan="2" style="padding-top:14px">${esc(supName(s))}</td>${used.map(() => '<td></td>').join('')}<td></td><td></td></tr>`;
+    for (const v of CFG.vend.filter(x => x.sup === s)) { const tot = v.obj.reduce((a,b) => a + b, 0); h += `<tr><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td class="muted">${v.cod}</td>${used.map(i => `<td>${v.obj[i] > 0 ? fmtM(v.obj[i]) : '<span class="muted">—</span>'}</td>`).join('')}<td><b>${fmtM(tot)}</b></td><td>${v.obj.filter(o => o > 0).length}</td></tr>`; }
+  }
+  const tb = i => CFG.vend.reduce((a,v) => a + v.obj[i], 0);
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td>${used.map(i => `<td>${fmtM(tb(i))}</td>`).join('')}<td>${fmtM(CFG.vend.reduce((a,v) => a + v.obj.reduce((x,y) => x + y, 0), 0))}</td><td></td></tr></tfoot></table></div>`;
+  h += `<p class="note">Cobertura Georgalos: objetivo ${GBR.map(g => g + ' ' + fmtP(CFG.cobObj[g])).join(' · ')} de la cartera.</p>`;
+  return h;
+}
+function parseObjetivos(sheets){
+  const bm = {}; CFG.brands.forEach((b,i) => { bm[norm(b.full)] = i; bm[norm(b.short)] = i; });
+  const codSet = new Set(CFG.vend.map(v => v.cod)); const byName = {}; CFG.vend.forEach(v => byName[norm(v.nom)] = v.cod);
+  let best = null;
+  for (const rows of sheets) {
+    for (let i = 0; i < rows.length; i++) {
+      const r = (rows[i] || []).map(norm);
+      const bcols = []; r.forEach((c,j) => { if (bm[c] != null) bcols.push([j, bm[c]]); });
+      if (bcols.length < 3) continue;
+      const codC = r.findIndex(c => c === 'CÓD.' || c === 'COD.' || c === 'CÓD' || c === 'COD' || c === 'CODIGO' || c === 'CÓDIGO' || c === 'CODVENDEDOR');
+      const nomC = r.findIndex(c => c === 'VENDEDOR');
+      if (codC < 0 && nomC < 0) continue;
+      let prio = 1;
+      for (let k = Math.max(0, i - 3); k < i; k++) { const f = norm((rows[k] || []).find(x => x != null && String(x).trim() !== '')); if (/^4\s*[—-]/.test(f)) prio = 3; else if (/^5\s*[—-]/.test(f) && prio < 2) prio = 2; }
+      const vend = {}; let n = 0;
+      for (let k = i + 1; k < rows.length; k++) {
+        const row = rows[k] || [];
+        let cod = codC >= 0 ? Math.round(toNum(row[codC])) : null;
+        if (!codSet.has(cod) && nomC >= 0) cod = byName[norm(row[nomC])];
+        if (row.slice(0, 4).some(x => norm(x) === 'TOTAL') || /^\d+\s*[—-]/.test(norm(row[0]))) break;
+        if (!codSet.has(cod)) continue;
+        const o = new Array(CFG.brands.length).fill(0); bcols.forEach(([j, bi]) => o[bi] = Math.round(toNum(row[j]) * 100) / 100);
+        vend[cod] = o; n++;
+      }
+      if (n && (!best || prio > best.prio || (prio === best.prio && n > best.n))) best = { vend, n, prio };
+    }
+  }
+  if (!best) throw new Error('No encontré una tabla de objetivos. Tiene que tener una fila de encabezado con "Cód." o "Vendedor" y columnas con los nombres de las marcas.');
+  return best;
+}
+async function handleObjFile(file){
+  modal(`<h3><span class="spinner"></span> Leyendo objetivos de ${esc(file.name)}</h3><p class="ink2" id="prog">Abriendo el archivo…</p>`);
+  try {
+    await loadXLSX(); await tick();
+    const buf = await file.arrayBuffer();
+    const names = XLSX.read(new Uint8Array(buf), { type: 'array', bookSheets: true }).SheetNames;
+    const pick = names.filter(n => !/ventas|detallado|base clientes/i.test(n));
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', sheets: pick, dense: true });
+    const sheets = pick.map(n => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: null }));
+    const res = parseObjetivos(sheets);
+    const vend = Object.assign({}, (OBJ && OBJ.vend) || {}, res.vend);
+    const doc = { vend, fuente: file.name, cuando: new Date().toISOString(), cobObj: (OBJ && OBJ.cobObj) || null };
+    const faltan = CFG.vend.filter(v => !res.vend[v.cod]).map(v => titleCase(v.nom));
+    const db = await cuse('db'); let saved = false;
+    if (db) { try { await db.doc(ODOC).set(doc); saved = true; } catch (e) {} }
+    OBJ = doc; applyObj(); render();
+    modal(`<h3>Objetivos cargados</h3><p class="ink2">${res.n} vendedores tomados de ${esc(file.name)}.${faltan.length ? ' Sin cambios (no estaban en el archivo): ' + esc(faltan.join(', ')) + '.' : ''}</p><p class="ink2">${saved ? 'Quedaron guardados para todos.' : 'Se ven solo en esta pantalla: no se pudieron guardar (hace falta permiso de edición).'}</p><div><button class="btn primary" type="button" data-action="close">Listo</button></div>`);
+  } catch (err) {
+    modal(`<h3>No se pudieron leer los objetivos</h3><p class="ink2">${esc(err.message || err)}</p><div><button class="btn" type="button" data-action="close">Cerrar</button></div>`);
+  }
+}
+
+/* ===================== Reglas ===================== */
+function viewReglas(){
+  const meta = SNAP ? `Última carga${SNAP.origen === 'automatico' ? ' (automática)' : ''}: <b>${esc(SNAP.archivo || '')}</b>, ${SNAP.nTot.toLocaleString('es-AR')} renglones (del ${fmtDate(SNAP.minD)} al ${fmtDate(SNAP.maxD)}), ${SNAP.nMes.toLocaleString('es-AR')} de ${CFG.mes.label}${SNAP.porEntrega ? ', ' + SNAP.porEntrega.toLocaleString('es-AR') + ' tomados por fecha de entrega porque todavía no tenían fecha de comprobante' : ''}. ${SNAP.cuando ? 'Cargado el ' + new Date(SNAP.cuando).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : ''}<span id="byWho"></span>.` : 'Todavía no se cargó ningún archivo de ventas.';
+  return `<div class="prose">
+  <h2>Cómo funciona el concurso</h2>
+  <p>Cada vendedor y cada supervisor junta cupones durante el mes según su cumplimiento. A fin de mes se sortea la moto entre todos los cupones: cuantos más cupones, más chances. <b>Pepsico no participa</b>; todas las demás marcas (incluidas Peñaflor y New PGA) cuentan.</p>
+  <p class="formula">Total de cupones = A (hasta ${P.cupMarcas}) + B (${P.cupPlus}) + C (hasta 5) · máximo ${P.tope}</p>
+  <h3>A · Puntos por marca (hasta ${P.cupMarcas} cupones)</h3>
+  <p>Cada marca que llega al objetivo del mes (real ÷ objetivo ≥ ${fmtP(P.cumpl)}) suma puntos según su <b>peso en el objetivo total</b> del vendedor: puntos de la marca = objetivo de la marca ÷ objetivo total × 100. Así, las marcas más importantes valen más. Con todas las marcas al 100% se llega a 100 puntos. <b>Cada ${P.ptsCup} puntos, 1 cupón</b> (redondeado para abajo), hasta ${P.cupMarcas} cupones: el máximo se alcanza con ${P.ptsCup * P.cupMarcas} puntos. Si una marca no tiene objetivo (o está en 0) no suma.</p>
+  <p class="note">Ejemplo: objetivo total $ 20 M; Peñaflor $ 6 M (30 puntos), Georgalos $ 4 M (20 puntos), Ledesma $ 2 M (10 puntos). Si llega al 100% en esas tres, junta 60 puntos = 4 cupones.</p>
+  <h3>B · Plus por todas las marcas al 100% (${P.cupPlus} cupones)</h3>
+  <p>Si llega al 100% en <b>todas</b> las marcas en las que tiene objetivo, suma ${P.cupPlus} cupones más.</p>
+  <h3>C · Cupones por cobertura Georgalos</h3>
+  <p>${P.cupCob} cupón por cada línea Georgalos en la que los clientes cubiertos del mes llegan al objetivo, y 1 más por la cobertura general de todos los productos Georgalos:</p>
+  <div class="tw"><table><thead><tr><th class="l">Marca</th><th>Objetivo % cartera</th><th class="l">Ejemplo: cartera de 260 clientes</th></tr></thead><tbody>${GBR.map(g => `<tr><td class="l name">${g}</td><td>${fmtP(CFG.cobObj[g])}</td><td class="l">Necesita ${ceilX(260 * CFG.cobObj[g])} clientes con compra</td></tr>`).join('')}</tbody></table></div>
+  <p class="note">Cliente cubierto = cliente de la cartera del vendedor que en el mes compró al menos ${CFG.minUnid || 3} unidades de la línea (o 1 display/estuche), vendidas por ese vendedor. Cuentan las ventas menos los rechazos. La cobertura general toma todos los productos de Georgalos salvo la línea Fiestas.</p>
+  ${Object.keys(CFG.cobObj).filter(g => g !== 'Cobertura general').map(g => `<details class="cli"><summary><span>Artículos de ${esc(g)}</span><span class="muted">${Object.entries(CFG.arts).filter(([a,l]) => l === g).length}</span></summary><ol>${Object.entries(CFG.arts).filter(([a,l]) => l === g).map(([a]) => `<li>${esc(a)}${(CFG.display || []).includes(a) ? ' · <b>display</b>' : ''}</li>`).join('')}</ol></details>`).join('')}
+  <h3>Supervisores</h3>
+  <p>Mismas reglas, calculadas sobre el total de su equipo. En A, para los supervisores <b>todas las marcas valen lo mismo</b>: cada marca del equipo al 100% suma 100 ÷ cantidad de marcas con objetivo (con 19 marcas, unos 5 puntos cada una), y <b>cada ${P.ptsCupSup} puntos es 1 cupón</b> (hasta ${P.cupMarcas}). Así, para el máximo hace falta crecer en la mitad de las marcas o más. Supervisores y vendedores participan del mismo sorteo.</p>
+  <h3>Probabilidad de ganar</h3>
+  <p>Cada cupón es una chance. Si en total hay 190 cupones y un vendedor tiene 10, su probabilidad es 10 ÷ 190 = 5,3%.</p>
+  <h3>Parámetros vigentes</h3>
+  <div class="tw"><table><thead><tr><th class="l">Parámetro</th><th>Valor</th></tr></thead><tbody>
+    <tr><td class="l">Cumplimiento mínimo para ganar cupón</td><td>${fmtP(P.cumpl)}</td></tr>
+    <tr><td class="l">Puntos de marcas por cupón</td><td>${P.ptsCup}</td></tr>
+    <tr><td class="l">Puntos de marcas por cupón (supervisores)</td><td>${P.ptsCupSup}</td></tr>
+    <tr><td class="l">Máximo de cupones por puntos de marcas</td><td>${P.cupMarcas}</td></tr>
+    <tr><td class="l">Plus por todas las marcas al 100%</td><td>${P.cupPlus}</td></tr>
+    <tr><td class="l">Cupones por línea Georgalos (y general) con cobertura</td><td>${P.cupCob}</td></tr>
+    <tr><td class="l">Tope de cupones por persona</td><td>${P.tope}</td></tr>
+    <tr><td class="l">Días hábiles de ${CFG.mes.label}</td><td>${R.diasTot} (lunes a viernes, sin el feriado del 12/10)</td></tr>
+  </tbody></table></div>
+  <p><b>Qué venta cuenta:</b> la venta facturada por fecha de comprobante del 1 al 31 de ${CFG.mes.label}, <b>más la preventa</b> ya cargada con entrega en el mes (cuenta con su fecha de entrega; si después hay rechazos, se descuentan). Se toma el importe neto (sin IVA) e incluye devoluciones y ajustes.</p>
+  <p><b>Objetivos:</b> hasta que estén los de ${CFG.mes.label} se usan los del modelo como provisorios.</p>
+  <p><b>Qué viene fijo del modelo</b> (Modelo de incentivo Oct 26): la cartera de clientes de cada vendedor (${Object.values(CFG.cart).reduce((a,c) => a + c.length, 0).toLocaleString('es-AR')} clientes), la lista de artículos Georgalos y los parámetros.</p>
+  <h3>Cuánto traer por día</h3><p>Las etiquetas "por día" toman lo que falta para el 100% del objetivo, le descuentan la <b>preventa ya cargada</b> que todavía no se facturó (pedidos a entregar este mes) y lo dividen por los días hábiles que quedan (${DQ} hoy; después de las 16 h se cuenta desde el día siguiente). En ámbar si va atrasado contra el ritmo del mes. La preventa no suma cupones hasta que se factura.</p>
+  <p class="note">${meta}</p>
+  </div>`;
+}
+
+/* ===================== Render principal ===================== */
+/* ===== Gaona: $ por caja sobre el objetivo, solo si todos cumplen ===== */
+const fmtK = fmtMk;
+const fmtC = n => (Math.round((n || 0) * 10) / 10).toLocaleString('es-AR', {maximumFractionDigits:1});
+function viewGaona(){
+  const G = SNAP && SNAP.gaona, GC = CFG.gaona || { obj: {}, pago: 0 }; let h = '';
+  h += howto('Cómo funciona Gaona', ['Cada vendedor tiene un <b>objetivo de cajas</b> de Gaona para ' + CFG.mes.label + '.', '<b>Cada caja que supere su objetivo paga ' + fmtM(GC.pago) + '</b>, sin límite.', '<b>Pero todos tienen que cumplir su objetivo, si no no cobra ninguno.</b> Es importante que cada uno llegue al suyo.', 'No participan ' + esc(GC.excl || 'Fiestas y Familia a la Mesa') + ': no suman cajas.', 'Cajas = unidades netas (venta menos rechazos) ÷ unidades por caja del nombre del artículo (ej. 40X110G = 40).'], true);
+  const nm = c => titleCase((G && G.nom[c]) || ('Vendedor ' + c));
+  const cods = Object.keys(GC.obj).map(Number);
+  const rows = cods.map(c => { const o = GC.obj[c], cj = G && G.v[c] ? G.v[c][0] : 0, ex = G && G.v[c] ? G.v[c][2] : 0; return { c, o, cj, ex, p: o ? cj / o : null, falta: Math.max(0, o - cj), exc: Math.max(0, cj - o), ok: cj >= o - 1e-9 }; }).sort((x,y) => (x.ok - y.ok) || (y.falta - x.falta) || (y.exc - x.exc));
+  const nOk = rows.filter(r => r.ok).length, todos = nOk === rows.length;
+  const totO = rows.reduce((a,r) => a + r.o, 0), totC = rows.reduce((a,r) => a + r.cj, 0), totExc = rows.reduce((a,r) => a + r.exc, 0);
+  const porDia = f => !DQ ? '<span class="need bad">mes cerrado</span>' : f <= 0 ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">${fmtC(f / DQ)} cajas por día</span>`;
+  if (SOLO) { const me = rows.find(r => String(r.c) === String(SOLO)); if (me) h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Mis cajas Gaona</span><span class="v">${fmtC(me.cj)} <span class="muted" style="font-size:20px">/ ${me.o}</span></span><span class="s">${me.ok ? 'objetivo cumplido · ' + fmtC(me.exc) + ' cajas de más' : 'faltan <b>' + fmtC(me.falta) + '</b> cajas'}</span><span>${porDia(me.falta)}</span><div class="bar"><i style="width:${Math.min(me.p||0,1)*100}%"></i><b style="left:${R.esperado*100}%"></b></div></div><div class="kpi"><span class="eyebrow">Si todos cumplen cobrás</span><span class="v">${fmtM(me.exc * GC.pago)}</span><span class="s">${fmtC(me.exc)} cajas sobre el objetivo × ${fmtM(GC.pago)}</span></div><div class="kpi"><span class="eyebrow">Equipo</span><span class="v">${nOk} <span class="muted" style="font-size:20px">/ ${rows.length}</span></span><span class="s">${todos ? '<b style="color:var(--good)">todos cumplieron: se paga</b>' : 'todavía no cumplieron todos: <b>no se paga</b>'}</span></div></div>`; }
+  h += `<div class="empty" style="border-color:${todos ? 'var(--good)' : 'var(--warn)'}"><div><h3>${todos ? '✓ Todos cumplieron su objetivo: se paga' : nOk + ' de ' + rows.length + ' vendedores cumplieron su objetivo'}</h3><p>${todos ? 'Cada caja sobre el objetivo paga ' + fmtM(GC.pago) + '.' : 'Faltan <b>' + (rows.length - nOk) + '</b> vendedores. Si no cumplen todos, no cobra ninguno. Hoy se pagarían ' + fmtM(totExc * GC.pago) + ' en total (' + fmtC(totExc) + ' cajas de más).'}</p></div></div>`;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Cajas del equipo</span><span class="v">${fmtC(totC)} <span class="muted" style="font-size:20px">/ ${totO}</span></span><span class="s">${fmtP(totO ? totC / totO : null)} del objetivo total</span><div class="bar"><i style="width:${Math.min(totO ? totC / totO : 0,1)*100}%"></i><b style="left:${R.esperado*100}%"></b></div></div><div class="kpi"><span class="eyebrow">Cajas sobre objetivo</span><span class="v">${fmtC(totExc)}</span><span class="s">${fmtM(totExc * GC.pago)} si todos cumplen</span></div><div class="kpi"><span class="eyebrow">Ventas hasta</span><span class="v">${fmtDate(G && G.maxF)}</span><span class="s">${DQ ? 'quedan ' + DQ + ' días hábiles' : 'mes cerrado'}</span></div></div>`;
+  h += `<div class="panel"><div class="panel-h"><h3>Objetivo de cajas por vendedor</h3>${exportBtn('tGaV','gaona_vendedores')}</div><div class="tw" style="border:0"><table id="tGaV"><thead><tr><th class="l">Vendedor</th><th>Objetivo</th><th>Cajas</th><th>Cumplimiento</th><th>Faltan</th><th class="l">Por día</th><th>Cajas de más</th><th>Cobraría</th><th>No suman</th></tr></thead><tbody>${(SOLO ? rows.filter(r => String(r.c) === String(SOLO)) : rows).map(r => `<tr ${String(r.c) === String(SOLO) && !SOLO ? 'style="background:var(--accent-soft)"' : ''}><td class="l name">${r.c} · ${esc(nm(r.c))}</td><td>${r.o}</td><td class="tot">${fmtC(r.cj)}</td><td>${cellP(r.p, 0.7)}</td><td>${r.falta ? fmtC(r.falta) : '—'}</td><td class="l">${porDia(r.falta)}</td><td>${r.exc ? fmtC(r.exc) : '—'}</td><td>${r.exc ? fmtM(r.exc * GC.pago) : '—'}</td><td class="muted">${r.ex ? fmtC(r.ex) : '—'}</td></tr>`).join('')}</tbody>${SOLO ? '' : `<tfoot><tr><td class="l">Total</td><td>${totO}</td><td>${fmtC(totC)}</td><td>${fmtP(totO ? totC / totO : null)}</td><td>${fmtC(rows.reduce((a,r) => a + r.falta, 0))}</td><td></td><td>${fmtC(totExc)}</td><td>${fmtM(totExc * GC.pago)}</td><td></td></tr></tfoot>`}</table></div><p class="note">"No suman" = cajas de Fiestas y Familia a la Mesa, que no cuentan para el objetivo ni para el pago.</p></div>`;
+  if (G && G.n) {
+    const all = Object.keys(G.v).map(Number).filter(c => !SOLO || String(c) === String(SOLO)).sort((a,b) => a - b);
+    const arts = Object.keys(G.art).map(a => ({ a, u: G.art[a].u, x: G.art[a].x, v: G.art[a].v, t: Object.values(G.art[a].v).reduce((s,x) => s + x, 0) })).map(x => SOLO ? { ...x, t: x.v[SOLO] || 0 } : x).filter(x => !SOLO || x.t).sort((a,b) => (a.x - b.x) || (b.t - a.t));
+    h += `<div class="section"><div class="panel-h"><h3>Detalle de cajas por artículo${SOLO ? '' : ' · todos los vendedores'}</h3>${exportBtn('tGaA','gaona_detalle')}</div><div class="tw"><table id="tGaA"><thead><tr><th class="l sticky1">Artículo</th><th>U. x caja</th>${all.map(c => `<th title="${esc(nm(c))}">${c}</th>`).join('')}<th>Total</th></tr></thead><tbody>${arts.map(x => `<tr ${x.x ? 'class="muted"' : ''}><td class="l sticky1 name">${esc(x.a)}${x.x ? ' <span class="chip">no suma</span>' : ''}</td><td>${x.u}</td>${all.map(c => `<td>${x.v[c] ? fmtC(x.v[c]) : '<span class="muted">·</span>'}</td>`).join('')}<td class="tot">${fmtC(x.t)}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Cajas que suman</td><td></td>${all.map(c => `<td>${fmtC(G.v[c][0])}</td>`).join('')}<td>${fmtC(all.reduce((a,c) => a + G.v[c][0], 0))}</td></tr></tfoot></table></div>${SOLO ? '' : `<p class="note">Columnas = código de vendedor: ${all.map(c => c + ' ' + esc(nm(c))).join(' · ')}.</p>`}</div>`;
+  }
+  return h;
+}
+/* ===== Litros (solo informativo) ===== */
+function viewLitros(){
+  const LC = CFG.lit, LV = (SNAP && SNAP.lit && SNAP.lit.v) || {}; if (!LC) return '';
+  const fL = n => Math.round(n || 0).toLocaleString('es-AR');
+  const cods = Object.keys(LC.obj).filter(c => !SOLO || String(c) === String(SOLO));
+  const nomOf = c => { const v = (CFG.vend || []).find(x => String(x.cod) === String(c)); return (LC.nom && LC.nom[c]) || (v ? titleCase(v.nom) : 'Vendedor ' + c); };
+  const sel = st.litV && cods.includes(String(st.litV)) ? String(st.litV) : (SOLO ? String(SOLO) : 'todos');
+  const pool = sel === 'todos' ? cods : [sel];
+  const obj = LC.cats.map(k => pool.reduce((a,c) => a + (LC.obj[c][k] || 0), 0)), real = LC.cats.map(k => pool.reduce((a,c) => a + ((LV[c] || {})[k] || 0), 0)), sep = LC.cats.map(k => pool.reduce((a,c) => a + (((LC.sep || {})[c] || {})[k] || 0), 0));
+  const tO = obj.reduce((a,b) => a + b, 0), tR = real.reduce((a,b) => a + b, 0), tS = sep.reduce((a,b) => a + b, 0);
+  const porDia = f => !DQ ? '<span class="need bad">mes cerrado</span>' : f <= 0 ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">${fL(f / DQ)} L por día</span>`;
+  let h = howto('Cómo se lee el avance en litros', ['Litros netos de Peñaflor del mes (venta menos rechazos, con preventa), por categoría.', 'El objetivo de cada vendedor sale del objetivo de octubre de la empresa por categoría multiplicado por su participación en los litros de septiembre. En mayoristas regionales solo cuenta Distribuidora Santa María.', 'Es informativo: no suma puntos ni cupones.']);
+  if (!SOLO) h += `<div class="filters"><label for="litV">Vendedor <select id="litV"><option value="todos">Todos</option>${cods.map(c => `<option value="${c}" ${sel === String(c) ? 'selected' : ''}>${c} · ${esc(nomOf(c))}</option>`).join('')}</select></label></div>`;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Litros del mes</span><span class="v">${fL(tR)} <span class="muted" style="font-size:20px">/ ${fL(tO)}</span></span><span class="s">${fmtP(tO ? tR / tO : null)} del objetivo</span><span>${porDia(tO - tR)}</span><div class="bar"><i style="width:${Math.min(tO ? tR / tO : 0, 1) * 100}%"></i><b style="left:${R.esperado * 100}%"></b></div></div><div class="kpi"><span class="eyebrow">Septiembre</span><span class="v">${fL(tS)}</span><span class="s">litros · objetivo ${fmtP(tS ? tO / tS - 1 : null)} vs septiembre</span></div><div class="kpi"><span class="eyebrow">Faltan</span><span class="v">${fL(Math.max(0, tO - tR))}</span><span class="s">litros · quedan ${DQ} días hábiles</span></div></div>`;
+  h += `<div class="tw"><table id="tLit"><thead><tr><th class="l">Categoría</th><th>Sept.</th><th>Objetivo</th><th>Litros</th><th>Avance</th><th>Faltan</th><th class="l">Por día</th></tr></thead><tbody>${LC.cats.map((k,i) => obj[i] || real[i] ? `<tr><td class="l name">${esc(k)}</td><td class="muted">${fL(sep[i])}</td><td>${fL(obj[i])}</td><td class="tot">${fL(real[i])}</td><td>${cellP(obj[i] ? real[i] / obj[i] : null, 0.7)}</td><td>${obj[i] - real[i] > 0 ? fL(obj[i] - real[i]) : '—'}</td><td class="l">${porDia(obj[i] - real[i])}</td></tr>` : '').join('')}</tbody><tfoot><tr><td class="l">Total</td><td>${fL(tS)}</td><td>${fL(tO)}</td><td>${fL(tR)}</td><td>${fmtP(tO ? tR / tO : null)}</td><td>${fL(Math.max(0, tO - tR))}</td><td></td></tr></tfoot></table></div>`;
+  if (!SOLO && sel === 'todos') h += `<div class="section"><h3>Por vendedor</h3><div class="tw"><table><thead><tr><th class="l">Vendedor</th><th>Objetivo</th><th>Litros</th><th>Avance</th><th>Faltan</th></tr></thead><tbody>${cods.map(c => { const o = LC.cats.reduce((a,k) => a + (LC.obj[c][k] || 0), 0), r = LC.cats.reduce((a,k) => a + ((LV[c] || {})[k] || 0), 0); return `<tr><td class="l name">${c} · ${esc(nomOf(c))}</td><td>${fL(o)}</td><td class="tot">${fL(r)}</td><td>${cellP(o ? r / o : null, 0.7)}</td><td>${o - r > 0 ? fL(o - r) : '—'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  return h;
+}
+/* ===== Peñaflor vendedores 1 a 10: CCC y batalla de marcas (informativo) ===== */
+function p10Stats(c){
+  const PC = CFG.p10, PV = (SNAP && SNAP.p10) || {}, B = PC.brands;
+  const v = (CFG.vend || []).find(x => String(x.cod) === String(c)); const nom = v ? v.nom : '';
+  const cart = ((CFG.cart || {})[nom] || []).map(String).filter(k => PC.sub[k]); const mine = PV[c] || {};
+  const A = cart.filter(k => PC.sub[k] === 'A'), D = cart.filter(k => PC.sub[k] === 'D');
+  const real = [A.filter(k => (mine[k] || [0])[0]).length, D.filter(k => (mine[k] || [0,0])[1]).length].concat(B.map((b,i) => cart.filter(k => ((mine[k] || [0,0,[]])[2] || []).includes(i)).length));
+  const ym = CFG.mes.y + '-' + String(CFG.mes.m).padStart(2,'0'), MM = PC.meses || [], mi = MM.indexOf(ym), MO = (PC.marcas || {})[c];
+  const obj = (PC.obj[c] || [0,0]).slice(0,2).concat(B.map((b,i) => MO && mi >= 0 ? MM.slice(0, mi + 1).reduce((a,m) => a + ((MO[m] || [])[i] || 0), 0) : 0));
+  return { c: String(c), nom, real, obj };
+}
+function viewP10Avance(cods, sel){
+  const PC = CFG.p10, mode = st.p10M || 'pct';
+  const COLS = ['CCC autoserv. (mes)', 'CCC almacenes (trim.)'].concat(PC.brands);
+  const vs = cods.map(p10Stats);
+  const cell = (o, r) => { if (!(o > 0)) return '<span class="cell na">—</span>'; if (mode === 'dia') return needTag(o, r, false); if (mode === 'pct') return cellP(r / o); if (mode === 'real') return `<span class="cell ${cls(r/o)}">${r} / ${o}</span>`; return o - r <= 0 ? '<span class="cell good">✓ listo</span>' : `<span class="cell ${cls(r/o)}">faltan ${o - r}</span>`; };
+  let h = `<div class="section" style="margin-top:0"><div class="panel-h"><h3>Avance por marca</h3><span style="flex:1"></span><label for="p10M" class="muted" style="font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center">Mostrar <select id="p10M"><option value="pct" ${mode==='pct'?'selected':''}>% de cumplimiento</option><option value="real" ${mode==='real'?'selected':''}>Clientes con compra / objetivo</option><option value="falta" ${mode==='falta'?'selected':''}>Clientes que faltan</option><option value="dia" ${mode==='dia'?'selected':''}>Cuántos traer por día</option></select></label>${exportBtn('tP10A','avance_marcas_penaflor')}</div><div class="legend"><span><span class="cell good">✓ 100%</span> cumplido</span><span><span class="cell warn">${fmtP(R.esperado)}</span> va en ritmo (esperado a hoy ${fmtP(R.esperado)})</span><span><span class="cell bad">40%</span> va atrasado</span><span><span class="cell na">—</span> sin objetivo</span></div>`;
+  h += `<div class="tw"><table id="tP10A"><thead><tr><th class="l sticky1">Vendedor</th>${COLS.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${vs.map(v => `<tr ${SOLO ? '' : `class="click" data-p10v="${v.c}"`} ${!SOLO && v.c === sel ? 'style="background:var(--accent-soft)"' : ''}><td class="l name sticky1">${v.c} · ${esc(titleCase(v.nom))}</td>${COLS.map((c,i) => `<td>${cell(v.obj[i], v.real[i])}</td>`).join('')}</tr>`).join('')}</tbody>${vs.length > 1 ? `<tfoot><tr><td class="l sticky1">Equipo</td>${COLS.map((c,i) => `<td>${cell(vs.reduce((a,v) => a + v.obj[i], 0), vs.reduce((a,v) => a + v.real[i], 0))}</td>`).join('')}</tr></tfoot>` : ''}</table></div><p class="note">Marcas: clientes de la cartera con compra en el trimestre (${esc(PC.trim)}), autoservicios y almacenes juntos, contra el objetivo acumulado hasta ${esc(CFG.mes.label)}. ${SOLO ? '' : 'Tocá un vendedor para ver sus clientes abajo.'}</p></div>`;
+  return h;
+}
+function viewP10(){
+  const PC = CFG.p10; if (!PC) return '';
+  const PV = (SNAP && SNAP.p10) || {};
+  const cods = Object.keys(PC.obj).filter(c => !SOLO || String(c) === String(SOLO));
+  const sel = SOLO ? String(SOLO) : (st.p10V && cods.includes(String(st.p10V)) ? String(st.p10V) : cods[0]);
+  const v = (CFG.vend || []).find(x => String(x.cod) === sel); const nom = v ? v.nom : 'Vendedor ' + sel;
+  const cart = ((CFG.cart || {})[nom] || []).map(String).filter(k => PC.sub[k]);
+  const mine = PV[sel] || {};
+  const B = PC.brands; const fil = st.p10S || 'todos', tip = st.p10T || 'todos';
+  const rows = cart.map(k => { const e = mine[k] || [0, 0, []]; const set = new Set(e[2]); return { c: k, sub: PC.sub[k], ccc: e[0], trim: e[1], has: B.map((b,i) => set.has(i)), n: set.size, dia: (CFG.dia || {})[k] || 0 }; });
+  const A = rows.filter(r => r.sub === 'A'), D = rows.filter(r => r.sub === 'D');
+  const cA = A.filter(r => r.ccc).length, cD = D.filter(r => r.trim).length; const [oA, oD] = PC.obj[sel];
+  const tag = (o, r) => r >= o ? '<span class="need ok">✓ cumplido</span>' : !DQ ? '<span class="need bad">mes cerrado</span>' : `<span class="need">faltan ${o - r}</span>`;
+  let h = howto('Cómo se lee', ['<b>CCC autoservicios</b>: autoservicios de tu cartera que compraron Peñaflor en ' + CFG.mes.label + ' (descontando rechazos).', '<b>CCC almacenes (trimestral)</b>: almacenes de tu cartera con compra Peñaflor entre ' + esc(PC.trim) + '.', '<b>Marcas</b> (las 11 de Peñaflor): cuentan acumuladas en el trimestre (' + esc(PC.trim) + '), sumando autoservicios y almacenes. Autoservicios: ' + esc(PC.reglas.A) + '. Almacenes: ' + esc(PC.reglas.D) + '.', 'El objetivo de cada marca se va sumando mes a mes y da lo mismo si se cumple con autoservicios o con almacenes; el de CCC es el mismo los tres meses.', 'Incluye preventa. Es informativo: no suma cupones de la moto.']);
+  h += viewP10Avance(cods, sel);
+  if (!SOLO) h += `<div class="filters" style="margin-top:20px"><label for="p10V">Vendedor <select id="p10V">${cods.map(c => { const x = (CFG.vend || []).find(y => String(y.cod) === String(c)); return `<option value="${c}" ${sel === String(c) ? 'selected' : ''}>${c} · ${esc(titleCase(x ? x.nom : c))}</option>`; }).join('')}</select></label></div>`;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">CCC autoservicios · ${esc(CFG.mes.label)}</span><span class="v">${cA} <span class="muted" style="font-size:20px">/ ${oA}</span></span><span class="s">${fmtP(oA ? cA / oA : null)} · ${A.length} autoservicios en cartera</span><span>${tag(oA, cA)}</span><div class="bar"><i style="width:${Math.min(oA ? cA / oA : 0, 1) * 100}%"></i><b style="left:${R.esperado * 100}%"></b></div></div><div class="kpi"><span class="eyebrow">CCC almacenes · trimestre</span><span class="v">${cD} <span class="muted" style="font-size:20px">/ ${oD}</span></span><span class="s">${fmtP(oD ? cD / oD : null)} · ${D.length} almacenes en cartera</span><span>${tag(oD, cD)}</span></div><div class="kpi"><span class="eyebrow">Clientes con marcas · trimestre</span><span class="v">${rows.filter(r => r.n).length}</span><span class="s">de ${rows.length} clientes (autoservicios y almacenes)</span></div></div>`;
+  h += `<div class="filters" style="margin-top:20px"><label for="p10T">Tipo <select id="p10T"><option value="todos" ${tip==='todos'?'selected':''}>Autoservicios y almacenes</option><option value="A" ${tip==='A'?'selected':''}>Solo autoservicios</option><option value="D" ${tip==='D'?'selected':''}>Solo almacenes</option></select></label><label for="p10S">Mostrar <select id="p10S"><option value="todos" ${fil==='todos'?'selected':''}>Todos</option><option value="sin" ${fil==='sin'?'selected':''}>Sin compra Peñaflor este mes</option><option value="falta" ${fil==='falta'?'selected':''}>Con alguna marca en ✗</option></select></label></div>`;
+  let list = rows.filter(r => (tip === 'todos' || r.sub === tip) && (fil !== 'sin' || !r.ccc) && (fil !== 'falta' || r.n < B.length));
+  list.sort((a,b) => (a.dia || 9) - (b.dia || 9) || (a.sub < b.sub ? -1 : a.sub > b.sub ? 1 : 0) || a.n - b.n);
+  const DN = {1:'Lu',2:'Ma',3:'Mi',4:'Ju',5:'Vi',6:'Sá'};
+  h += `<div class="panel-h"><span class="muted">${list.length} clientes</span>${exportBtn('tP10','batalla_penaflor_' + sel)}</div><div class="tw"><table id="tP10"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Nombre</th><th class="l">Tipo</th><th class="l">Día</th><th style="text-align:center">CCC mes</th>${B.map(b => `<th style="text-align:center">${esc(b)}</th>`).join('')}<th>Marcas</th></tr></thead><tbody>${list.map(r => `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(titleCase((CFG.names || {})[r.c] || ''))}</td><td class="l ink2">${r.sub === 'A' ? 'Autoservicio' : 'Almacén'}</td><td class="l ink2">${DN[r.dia] || '—'}</td><td style="text-align:center">${r.ccc ? '<span class="bt-yes">✓</span>' : (r.trim ? '<span class="bt-yes" style="background:transparent;border:2px dashed var(--good)" title="Compró en el trimestre, no este mes">✓</span>' : '<span class="bt-no">✗</span>')}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes">✓</span>' : '<span class="bt-no">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${B.length}</td></tr>`).join('')}</tbody></table></div>`;
+  return h;
+}
+document.addEventListener('click', e => { const r = e.target.closest('[data-p10v]'); if (r) { st.p10V = r.dataset.p10v; saveUI(); render(); } });
+function render(){
+  R = compute(CFG, SNAP);
+  RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
+  if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
+  renderHeader(); renderTabs();
+  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  $('#view').innerHTML = v();
+  if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab]'); if (t) { st.tab = t.dataset.tab; saveUI(); render(); window.scrollTo({top:0}); return; }
+  const vr = e.target.closest('[data-ven]'); if (vr) { st.ven = +vr.dataset.ven; st.tab = 'ficha'; saveUI(); render(); window.scrollTo({top:0}); return; }
+  const ex = e.target.closest('[data-export]'); if (ex) { exportTable(ex.dataset.export, ex.dataset.name); return; }
+  if (e.target.closest('[data-action="load"]') || e.target.closest('#btnLoad')) { $('#file').click(); return; }
+  const bd = e.target.closest('[data-bdia]'); if (bd) { st.bDia = bd.dataset.bdia; saveUI(); render(); return; }
+  if (e.target.closest('[data-action="loadobj"]')) { $('#fileObj').click(); return; }
+  if (e.target.closest('[data-action="close"]')) { $('#overlay').hidden = true; }
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'litV') { st.litV = e.target.value; saveUI(); render(); return; }
+  if (e.target.id === 'p10V') { st.p10V = e.target.value; saveUI(); render(); return; }
+  if (e.target.id === 'p10T') { st.p10T = e.target.value; saveUI(); render(); return; }
+  if (e.target.id === 'p10S') { st.p10S = e.target.value; saveUI(); render(); return; }
+  if (e.target.id === 'p10M') { st.p10M = e.target.value; saveUI(); render(); return; }
+  if (e.target.id === 'fSup') { st.sup = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'fVen') { st.ven = +e.target.value; saveUI(); render(); }
+  if (e.target.id === 'bVen') { st.bVen = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'bSolo') { st.bSolo = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'mMode') { st.mMode = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'file' && e.target.files[0]) { handleFile(e.target.files[0]); e.target.value = ''; }
+  if (e.target.id === 'fileObj' && e.target.files[0]) { handleObjFile(e.target.files[0]); e.target.value = ''; }
+});
+/* Tooltip del gráfico */
+document.addEventListener('mousemove', e => {
+  const tip = $('#tip');
+  const svg = e.target.closest && e.target.closest('svg.chart');
+  if (!svg) { tip.hidden = true; return; }
+  const pts = JSON.parse(decodeURIComponent(svg.dataset.pts || '[]')); if (!pts.length) { tip.hidden = true; return; }
+  const [L, Rx, n] = svg.dataset.geo.split(',').map(Number);
+  const rect = svg.getBoundingClientRect(); const sx = (e.clientX - rect.left) * 1100 / rect.width;
+  const i = Math.round((sx - L) / (Rx - L) * (n - 1));
+  const p = pts.find(q => q[0] === i) || (i > pts[pts.length-1][0] ? pts[pts.length-1] : null);
+  if (!p) { tip.hidden = true; return; }
+  tip.innerHTML = `<b>${fmtDate(p[2])}</b> · acumulado ${fmtMk(p[1])} · ritmo objetivo ${fmtMk(p[3])}`;
+  tip.hidden = false; tip.style.left = Math.min(e.clientX + 12, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY - 40) + 'px';
+});
+
+/* ===================== Exportar ===================== */
+async function exportTable(id, name){
+  const tbl = document.getElementById(id); if (!tbl) return;
+  const lines = [...tbl.querySelectorAll('tr')].map(tr => [...tr.children].map(td => '"' + td.textContent.replace(/^✓$/,'Sí').replace(/^✗$/,'No').replace(/✓\s?/g,'').replace(/\s+/g,' ').trim().replace(/"/g,'""') + '"').join(';'));
+  const csv = '﻿' + lines.join('\r\n');
+  const dl = await cuse('downloads');
+  if (!dl) { toast('La descarga no está disponible en esta vista.'); return; }
+  try { await dl.save({ filename: name.replace(/[^\w\-]+/g,'_').toLowerCase() + '_' + CFG.mes.y + '-' + CFG.mes.m + '.csv', data: new Blob([csv], {type:'text/csv'}) }); }
+  catch (err) { if (err && err.code !== 'cancelled' && err.code !== 'declined') toast('No se pudo descargar: ' + (err.message || err.code || err)); }
+}
+
+/* ===================== Carga de ventas ===================== */
+function modal(html){ $('#modal').innerHTML = html; $('#overlay').hidden = false; }
+function loadXLSX(){
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = res; s.onerror = () => rej(new Error('No se pudo cargar el lector de Excel. Revisá la conexión y probá de nuevo.')); document.head.appendChild(s); });
+}
+const tick = () => new Promise(r => setTimeout(r, 30));
+async function handleFile(file){
+  modal(`<h3><span class="spinner"></span> Procesando ${esc(file.name)}</h3><p class="ink2" id="prog">Leyendo el archivo…</p>`);
+  const prog = m => { const p = document.getElementById('prog'); if (p) p.textContent = m; };
+  try {
+    await loadXLSX(); await tick();
+    const buf = await file.arrayBuffer();
+    prog('Buscando la hoja de ventas…'); await tick();
+    let rows;
+    if (/\.csv$/i.test(file.name)) {
+      let text; try { text = new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch (e) { text = new TextDecoder('windows-1252').decode(buf); }
+      const head = text.slice(0, 3000);
+      rows = parseCSV(text, head.split(';').length >= head.split(',').length ? ';' : ',');
+    } else {
+      const names = XLSX.read(new Uint8Array(buf), { type: 'array', bookSheets: true }).SheetNames;
+      const pick = names.find(n => /ventas|detallado/i.test(n)) || names[0];
+      prog('Leyendo la hoja "' + pick + '" (puede tardar un poco)…'); await tick();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array', sheets: [pick], dense: true });
+      rows = XLSX.utils.sheet_to_json(wb.Sheets[pick], { header: 1, raw: true, defval: null });
+    }
+    prog('Calculando ' + rows.length.toLocaleString('es-AR') + ' renglones…'); await tick();
+    const snap = aggregate(rows, CFG);
+    snap.archivo = file.name; snap.cuando = new Date().toISOString(); snap.origen = 'manual';
+    snap.hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const user = await cuse('user');
+    try { snap.por = user ? await user.id() : null; } catch(e) { snap.por = null; }
+    SNAP = snap; render();
+    const saved = await saveSnap(snap);
+    const tail = snap.nMes ? `${snap.nMes.toLocaleString('es-AR')} renglones de ${CFG.mes.label}, hasta el ${fmtDate(snap.maxM)}.` : `El archivo no tiene ventas de ${CFG.mes.label} (va del ${fmtDate(snap.minD)} al ${fmtDate(snap.maxD)}).`;
+    modal(`<h3>${snap.nMes ? 'Ventas cargadas' : 'Revisá el archivo'}</h3><p class="ink2">${tail}${snap.porEntrega ? ' ' + snap.porEntrega.toLocaleString('es-AR') + ' renglones sin fecha de comprobante se tomaron por fecha de entrega.' : ''}</p><p class="ink2">${saved ? 'Quedó guardado: todos los que abran el tablero ven esta carga.' : 'Se ve solo en esta pantalla: no se pudo guardar para el resto (hace falta permiso de edición del tablero).'}</p><div><button class="btn primary" type="button" data-action="close">Listo</button></div>`);
+  } catch (err) {
+    modal(`<h3>No se pudo procesar el archivo</h3><p class="ink2">${esc(err.message || err)}</p><div><button class="btn" type="button" data-action="close">Cerrar</button></div>`);
+  }
+}
+
+/* ===================== Datos compartidos ===================== */
+const DOC = 'seguimiento/' + CFG.mes.y + '-' + pad2(CFG.mes.m);
+const ODOC = 'objetivos/' + CFG.mes.y + '-' + pad2(CFG.mes.m);
+let dbRef = null;
+async function saveSnap(snap){
+  const db = await cuse('db'); if (!db) return false;
+  try { await db.doc(DOC).set(snap); return true; } catch (e) { return false; }
+}
+async function showWho(id){
+  const user = await cuse('user'); if (!user) return;
+  try { const ps = await user.profiles([id]); const n = ps && ps[id] && ps[id].name; const el = document.getElementById('byWho'); if (el && n) el.textContent = ' por ' + n; } catch (e) {}
+}
+document.documentElement.classList.add('ro');
+const newer = (a, b) => !b || !a || !b.cuando || (a.cuando && a.cuando >= b.cuando);
+(async function boot(){
+  applyObj(); render();
+  cuse('user').then(async u => { try { if (u && await u.canEdit()) document.documentElement.classList.remove('ro'); } catch (e) {} });
+  const db = await cuse('db');
+  if (!db) return;
+  db.doc(DOC).onSnapshot(s => { if (s.exists && newer(s.data(), EMBED)) { SNAP = s.data(); render(); } }, () => {});
+  db.doc(ODOC).onSnapshot(s => { if (s.exists && newer(s.data(), EMBED_OBJ)) { OBJ = s.data(); applyObj(); render(); } }, () => {});
+})();
+</script>
+<script>
+function geoNombre(c){ return nameOf(c); }
+function geoFicha(c){
+  const chip = (t, ok, pr) => `<span class="gc${ok ? ' ok' : ''}${pr ? ' pr' : ''}">${ok ? '✓ ' : ''}${esc(t)}</span>`;
+  const ord = a => a.sort((x, y) => (x.ok - y.ok) || (y.pr - x.pr));
+  const v = R.vs.find(x => (CFG.cart[x.nom] || []).map(String).includes(c)); if (!v) return '';
+  let h = `<p class="gmu">${esc(titleCase(v.nom))} · visita ${(DIAS[CFG.dia[c]] || 'sin día').toLowerCase()}</p>`;
+  const G = ord(GBR.map((g, i) => ({ t: GSHORT[g], ok: v.cobList[i].includes(c), pr: v.cobCnt[i] < v.need[i] })));
+  const fG = G.filter(x => !x.ok).length;
+  h += `<div class="gsec"><h4>Georgalos · ${fG ? fG + ' para sumar' : 'todo cubierto'}</h4><p class="gmu">Cubre con ${CFG.minUnid || 3} unidades de la línea (o 1 display). Con borde: líneas en las que todavía no llegás al cupón.</p><div class="gch">${G.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
+  const PC = CFG.p10;
+  if (PC && PC.sub && PC.sub[c] && SNAP && SNAP.p10) {
+    const e = (SNAP.p10[v.cod] || {})[c] || [0, 0, []], set = new Set(e[2] || []), sub = PC.sub[c];
+    const st = p10Stats(v.cod);
+    const B = ord(PC.brands.map((b, i) => ({ t: b, ok: set.has(i), pr: st.obj[i + 2] > st.real[i + 2] })));
+    const fB = B.filter(x => !x.ok).length;
+    h += `<div class="gsec"><h4>Peñaflor · ${sub === 'A' ? 'autoservicio' : 'almacén'} · ${fB} marcas para sumar</h4><div class="gch">${sub === 'A' ? chip('CCC del mes', !!e[0]) : chip('CCC del trimestre', !!e[1])}</div><p class="gmu">${esc(PC.reglas[sub])}. Con borde: marcas en las que todavía no llegás al objetivo.</p><div class="gch">${B.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
+  }
+  return h;
+}
+/* ===== 📍 Estoy en un cliente: ubica al vendedor con el GPS del celular y muestra las oportunidades del cliente más cercano de su cartera ===== */
+const GEO = /*GEO_START*/null/*GEO_END*/;
+(function(){
+  if (!GEO || !Object.keys(GEO).length || !navigator.geolocation) return;
+  const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const TC = s => String(s || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+  const dist = (a, b, c, d) => { const r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r; return Math.sqrt(x * x + y * y) * 6371000; };
+  const fmtD = m => m < 1000 ? Math.round(m) + ' m' : (m / 1000).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' km';
+  const st = document.createElement('style');
+  st.textContent = '#geoBtn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:55;border:0;border-radius:999px;padding:13px 18px;font:600 15px var(--f-body,system-ui);background:var(--accent,#2448C7);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);cursor:pointer}'
+    + '#geoOv{position:fixed;inset:0;z-index:80;background:rgba(10,15,22,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}'
+    + '#geoOv .gm{background:var(--surface,#fff);color:var(--ink,#15202C);border-radius:14px;width:100%;max-width:560px;max-height:86vh;overflow:auto;padding:18px 18px 20px;display:grid;gap:12px;font:15px/1.45 var(--f-body,system-ui)}'
+    + '#geoOv h3{margin:0;font:700 21px var(--f-display,system-ui)} #geoOv h4{margin:6px 0 2px;font:700 16px var(--f-display,system-ui)} #geoOv p{margin:0}'
+    + '#geoOv .gmu{color:var(--muted,#738196);font-size:13px} #geoOv .gch{display:flex;flex-wrap:wrap;gap:6px}'
+    + '#geoOv .gc{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--bad-bg,#F9DEDB);color:var(--bad,#B4322A)} #geoOv .gc.ok{background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45)} #geoOv .gc.pr{outline:2px solid var(--bad,#B4322A)}'
+    + '#geoOv .gb{border:1px solid var(--line,#D5DCE6);background:var(--surface,#fff);color:inherit;border-radius:10px;padding:10px 12px;text-align:left;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:10px;width:100%} #geoOv .gx{border:0;background:var(--surface2,#EAEEF4);color:inherit;border-radius:8px;padding:10px 14px;font:600 14px var(--f-body,system-ui);cursor:pointer}'
+    + '#geoOv .gsec{border-top:1px solid var(--line,#D5DCE6);padding-top:10px;display:grid;gap:6px}';
+  document.head.appendChild(st);
+  const b = document.createElement('button'); b.id = 'geoBtn'; b.type = 'button'; b.textContent = '📍 Estoy en un cliente'; document.body.appendChild(b);
+  let ov = null;
+  const show = h => { if (!ov) { ov = document.createElement('div'); ov.id = 'geoOv'; ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-gclose]')) { ov.remove(); ov = null; return; } const g = e.target.closest('[data-gcli]'); if (g) ficha(g.dataset.gcli, +g.dataset.gd); }); document.body.appendChild(ov); } ov.innerHTML = '<div class="gm" role="dialog" aria-modal="true">' + h + '</div>'; };
+  const cerrar = '<div><button type="button" class="gx" data-gclose>Cerrar</button></div>';
+  const nombre = c => TC(window.geoNombre ? geoNombre(c) : '') || 'Cliente ' + c;
+  function ficha(c, d){
+    let body = '';
+    try { body = window.geoFicha ? geoFicha(String(c)) : ''; } catch (e) { body = '<p class="gmu">No se pudo armar el detalle de este cliente.</p>'; }
+    show(`<div><h3>${E(nombre(c))}</h3><p class="gmu">Cliente ${E(c)}${d != null && isFinite(d) ? ' · a ' + fmtD(d) : ''}</p></div>${body || '<p class="gmu">Sin oportunidades cargadas para este cliente.</p>'}${cerrar}`);
+  }
+  b.onclick = () => {
+    show('<div><h3>Buscando tu ubicación…</h3><p class="gmu">Si el celular lo pide, permití el acceso a la ubicación.</p></div>' + cerrar);
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: la, longitude: lo, accuracy: ac } = pos.coords;
+      const L = Object.entries(GEO).map(([c, p]) => ({ c, d: dist(la, lo, p[0], p[1]) })).sort((x, y) => x.d - y.d);
+      const R = Math.max(120, Math.min(300, (ac || 0) + 60));
+      const cerca = L.filter(x => x.d <= R).slice(0, 8);
+      if (cerca.length === 1) return ficha(cerca[0].c, cerca[0].d);
+      if (cerca.length > 1) return show(`<div><h3>¿En qué cliente estás?</h3><p class="gmu">Hay ${cerca.length} clientes de tu cartera a menos de ${fmtD(R)}.</p></div><div style="display:grid;gap:8px">${cerca.map(x => `<button type="button" class="gb" data-gcli="${E(x.c)}" data-gd="${x.d}"><span><b>${E(nombre(x.c))}</b> <span class="gmu">· ${E(x.c)}</span></span><span class="gmu">${fmtD(x.d)}</span></button>`).join('')}</div>${cerrar}`);
+      const n = L.slice(0, 3);
+      show(`<div><h3>No hay un cliente tuyo acá</h3><p class="gmu">No encontramos clientes de tu cartera a menos de ${fmtD(R)}${ac ? ' (precisión del GPS: ' + fmtD(ac) + ')' : ''}. Los más cercanos:</p></div><div style="display:grid;gap:8px">${n.map(x => `<button type="button" class="gb" data-gcli="${E(x.c)}" data-gd="${x.d}"><span><b>${E(nombre(x.c))}</b> <span class="gmu">· ${E(x.c)}</span></span><span class="gmu">${fmtD(x.d)}</span></button>`).join('')}</div>${cerrar}`);
+    }, err => {
+      show(`<div><h3>No pudimos ver tu ubicación</h3><p class="gmu">${err && err.code === 1 ? 'El celular no dio permiso. Activá la ubicación para el navegador y volvé a tocar el botón.' : 'Probá de nuevo al aire libre o con el GPS activado.'}</p></div>${cerrar}`);
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 });
+  };
+})();
+</script>
+</body></html>

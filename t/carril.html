@@ -1,0 +1,405 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Carrileros PPP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: barra superior con estado de datos + pestañas; cada pestaña abre con "Cómo se lee" y luego la tabla/tarjetas. */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --surface2:#EAEEF4; --line:#D5DCE6; --ink:#15202C; --ink2:#4A5869; --muted:#738196;
+  --accent:#2448C7; --accent-soft:#DCE4FB; --accent2:#0E8C8C; --accent2-soft:#D3EFEE;
+  --good:#1D7F45; --good-bg:#DDF2E4; --warn:#9A6400; --warn-bg:#FCEFCF; --bad:#B4322A; --bad-bg:#F9DEDB;
+  --ticket-empty:#E1E6EE;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}
+[hidden]{display:none!important}
+.ro .edit-only{display:none!important}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:20px 60px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:34px;font-weight:700;line-height:1.05}
+h2{font-size:26px;font-weight:700}
+h3{font-size:19px;font-weight:600}
+.num,td,th{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .ink2{color:var(--ink2)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Encabezado */
+.top{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.top .ttl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.status{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.need{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}.need.ok{background:var(--good-bg);color:var(--good)}.need.bad{background:var(--bad-bg);color:var(--bad)}.need.late{background:var(--warn-bg);color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.chip.good{background:var(--good-bg);color:var(--good)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0F151D}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0F151D}}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* Pestañas */
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-block:16px 18px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:16px}
+.filters label{font-size:13px;color:var(--muted);font-weight:600;display:flex;gap:8px;align-items:center}
+select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;max-width:100%}
+
+/* Caja explicativa */
+.howto{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:14px 18px;margin-bottom:18px}
+.howto summary{cursor:pointer;font-weight:700;list-style:none;display:flex;gap:8px;align-items:center}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:"▸";color:var(--accent);transition:transform .15s}
+.howto[open] summary::before{transform:rotate(90deg)}
+.howto ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:95ch}
+.howto p{margin:10px 0 0;max-width:95ch}
+
+/* Tarjetas KPI */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1.05}
+.kpi .s{font-size:13px;color:var(--ink2)}
+.bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;position:relative;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.kpis{grid-template-columns:1fr}}
+.stack{display:grid;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+
+/* Tablas */
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--surface);position:sticky;top:0;z-index:1}
+th.l,td.l{text-align:left}
+tbody tr:hover td{background:var(--surface2)}
+tfoot td{font-weight:700;background:var(--surface2)}
+td.name{font-weight:600}
+tr.click{cursor:pointer}
+.sticky1{position:sticky;left:0;background:var(--surface);z-index:2}
+tbody tr:hover td.sticky1{background:var(--surface2)}
+tfoot td.sticky1{background:var(--surface2)}
+th.sticky1{z-index:3}
+.cell{display:inline-block;min-width:58px;padding:2px 6px;border-radius:5px;font-weight:600;text-align:center}
+.cell.good{background:var(--good-bg);color:var(--good)} .cell.warn{background:var(--warn-bg);color:var(--warn)} .cell.bad{background:var(--bad-bg);color:var(--bad)} .cell.na{color:var(--muted);font-weight:400}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink2);margin:10px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* Cupones tipo ticket */
+.tickets{display:inline-flex;gap:3px;vertical-align:middle}
+.tickets i{width:11px;height:16px;border-radius:2px;background:var(--ticket-empty);display:block}
+.tickets i.a{background:var(--accent)} .tickets i.b{background:var(--accent);opacity:.5} .tickets i.c{background:var(--accent2)}
+.big-tickets .tickets i{width:22px;height:32px;border-radius:4px}
+.tot{font-family:var(--f-display);font-size:20px;font-weight:700}
+
+/* Ficha */
+.ficha-head{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.steps{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.step{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.step:last-child{border-bottom:0}
+.step .k{font-weight:700}
+.step .d{font-size:13px;color:var(--ink2);grid-column:1}
+.step .r{grid-row:1 / span 2;grid-column:2;font-family:var(--f-display);font-size:24px;font-weight:700;text-align:right}
+.step.total{background:var(--accent-soft)}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+details.cli{border-top:1px solid var(--line);padding:8px 0}
+details.cli summary{cursor:pointer;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-gap:20px}
+@media (max-width:560px){details.cli ol{columns:1}}
+
+/* Gráfico */
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2}
+.chart .area{fill:var(--accent);opacity:.12}
+.chart .obj{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:5 4;fill:none}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:6px;font-size:13px;z-index:50;white-space:nowrap}
+
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px;background:var(--surface)}
+.empty p{margin:4px 0 0;max-width:70ch;color:var(--ink2)}
+.bt-yes{color:var(--good);font-weight:800;font-size:17px}
+.bt-no{color:var(--bad);font-weight:800;font-size:17px}
+.bt-yes,.bt-no{display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:6px}
+.bt-yes{background:var(--good-bg)} .bt-no{background:var(--bad-bg)}
+.daychips{display:flex;flex-wrap:wrap;gap:6px}
+.daychip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;cursor:pointer;font-size:13px}
+.daychip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
+.prose{max-width:80ch}
+.prose h3{margin-top:22px}
+.prose p,.prose li{color:var(--ink2)}
+.prose ol,.prose ul{padding-left:22px;display:grid;gap:6px}
+.formula{font-family:var(--f-display);font-size:20px;font-weight:600;background:var(--accent-soft);padding:10px 14px;border-radius:8px;color:var(--ink)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.section{margin-top:22px}
+.overlay{position:fixed;inset:0;background:rgba(10,15,22,.55);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
+.modal{background:var(--surface);border-radius:12px;padding:22px;max-width:520px;width:100%;display:grid;gap:12px}
+.spinner{width:22px;height:22px;border:3px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+@media (max-width:560px){h1{font-size:28px}.kpi .v{font-size:28px}.wrap{padding-inline:16px}}
+</style>
+</head><body>
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <span class="eyebrow">Primeros Productos Pehuenia · Innovaciones Peñaflor · merchand</span>
+      <h1>Carrileros PPP · <span id="mesLabel"></span><span id="soloName"></span></h1>
+    </div>
+    <div class="status"><span id="stData" class="chip"></span><span id="stDias" class="chip"></span><span id="stCopas" style="display:contents"></span></div>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <main id="view"></main>
+</div>
+<script>
+const CFG = /*CFG_START*/null/*CFG_END*/;
+/* Carrileros PPP: cobertura de líneas de innovación (alguna compra desde 01/02/25 con 6 u. netas del mismo SKU en una boleta) por merchand */
+function ptsLinea(p, pb, P){ if (p == null || p < P.minLinea - 1e-12) return 0; if (p < 1 - 1e-12) return pb * (P.pctMin + (1 - P.pctMin) * (p - P.minLinea) / (1 - P.minLinea)); return Math.min(p, P.tope) * pb; }
+function escalaCar(P){ const out = []; for (let i = 1; i <= P.cupMax; i++) out.push({ nivel: i, desde: i * P.ptsCup, cup: i }); return out; }
+function copasCar(ms){ const nl = ms[0] ? ms[0].lin.length : 0, w = ms.map(() => 0); for (let i = 0; i < nl; i++) { const p = ms.map(m => m.U ? (m.lin[i].n - m.lin[i].n0) / m.U : 0); const mx = Math.max(...p); if (mx > 0) p.forEach((x, k) => { if (x === mx) w[k]++; }); } return w; }
+function computeCar(CFG, Q){
+  const P = CFG.params, L = CFG.lines, nl = L.length, pb = P.ptsLineas / nl, esc = escalaCar(P);
+  Q = Q || {};
+  const ms = CFG.merch.map((m, mi) => {
+    const clientes = [];
+    for (const code in CFG.cli) { const x = CFG.cli[code]; if (x[3] !== mi) continue;
+      const q = Q[code] || {}; const tot = L.map((l, i) => Math.max(x[5][i] || 0, +q[i] || 0)); // mejor compra (boleta) del cliente en la línea
+      const has = L.map((l, i) => tot[i] >= l.u - 1e-9), had = L.map((l, i) => (x[5][i] || 0) >= l.u - 1e-9);
+      clientes.push({ c: code, nom: x[0], dir: x[1], dia: x[2], ven: x[4], tot, has, had, nuevo: has.map((h, i) => h && !had[i]), n: has.filter(Boolean).length }); }
+    const U = clientes.length;
+    const lin = L.map((l, i) => { const o = Math.ceil(l.obj * U - 1e-9); const n = clientes.filter(c => c.has[i]).length, n0 = clientes.filter(c => c.had[i]).length; const p = o ? n / o : null; return { o, n, n0, nuevos: n - n0, faltan: Math.max(0, o - n), p, pct: U ? n / U : 0, pts: ptsLinea(p, pb, P), ok: n >= o }; });
+    const ptsL = lin.reduce((a, x) => a + x.pts, 0); const pleno = U > 0 && lin.every(x => x.ok); const total = ptsL;
+    const cupL = pleno ? P.cupMax : Math.min(P.cupMax, Math.floor(ptsL / P.ptsCup + 1e-9)), plus = pleno ? P.cupPlus : 0; // todas las líneas en objetivo = máximo por puntos
+    const next = cupL < P.cupMax ? { desde: (cupL + 1) * P.ptsCup, cup: cupL + 1 } : null;
+    return { i: mi, nom: m.nom, U, clientes, lin, ptsL, pleno, total, cupL, plus, nivel: cupL, next, ok: lin.filter(x => x.ok).length, nuevos: lin.reduce((a, x) => a + x.nuevos, 0) };
+  });
+  // Duelo: copa = línea en la que el merchand sumó más clientes nuevos en el mes (sobre su universo); quien junta más copas suma P.cupDuelo (empate: todos los empatados)
+  const EXM = CFG.solo != null && CFG.ext && CFG.ext.ms ? CFG.ext.ms.map(x => ({ U: x.U, lin: x.lin.map(l => ({ n: l[0], n0: l[2] })) })) : null; // en la página de cada merchand, los otros vienen del publicador
+  const copas = (CFG.solo != null && CFG.ext && CFG.ext.copas) ? CFG.ext.copas : copasCar(EXM || ms); const mxC = Math.max(0, ...copas);
+  ms.forEach((m, k) => { m.copas = copas[k] || 0; m.duelo = mxC > 0 && m.copas === mxC ? P.cupDuelo : 0; m.cup = m.cupL + m.plus + m.duelo; });
+  const sum = (CFG.solo != null && CFG.ext && CFG.ext.sum != null) ? CFG.ext.sum : ms.reduce((a, m) => a + m.cup, 0); ms.forEach(m => m.prob = sum ? m.cup / sum : null);
+  return { ms, esc, sum, pb, copas };
+}
+
+const EMBED = /*EMBED_START*/null/*EMBED_END*/;
+const EMBED_OBJ = /*EMBEDOBJ_START*/null/*EMBEDOBJ_END*/;
+const SNAP = EMBED || { q: {} };
+const P = CFG.params, L = CFG.lines, SOLO = CFG.solo == null ? null : CFG.solo;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtP = (p, d=0) => p == null ? '—' : (p*100).toLocaleString('es-AR',{maximumFractionDigits:d, minimumFractionDigits:d}) + '%';
+const fmt1 = n => (Math.round(n * 10) / 10).toLocaleString('es-AR', {maximumFractionDigits:1, minimumFractionDigits:1});
+const titleCase = s => String(s).toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+const fmtDate = ymd => { if (!ymd) return '—'; const [y,m,d] = ymd.split('-'); return d + '/' + m; };
+const st = { tab: SOLO != null ? 'ficha' : 'resumen', m: SOLO != null ? SOLO : 0, solo: 'todos', lin: 'todas' };
+try { Object.assign(st, JSON.parse(localStorage.getItem('car_ui') || '{}')); if (SOLO != null) st.m = SOLO; } catch (e) {}
+function saveUI(){ try { localStorage.setItem('car_ui', JSON.stringify(st)); } catch(e) {} }
+const HOYAR = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+const HORAAR = (+new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false })) % 24;
+const DQ = CFG.habiles.filter(d => HORAAR >= 16 ? d > HOYAR : d >= HOYAR).length, DJ = CFG.habiles.length - DQ;
+if (CFG.params && (CFG.params.ptsCup !== 20 || CFG.params.cupMax !== 10)) Object.assign(CFG.params, { ptsCup: 20, cupMax: 10, cupPlus: 5, cupDuelo: 2 });
+const R = computeCar(CFG, SNAP.q), RPV = SNAP.pv ? computeCar(CFG, SNAP.pv) : null;
+const EXT = CFG.ext || null;
+// Resumen de los 3 (en las páginas individuales viene calculado por el publicador)
+const ALL = (function(){
+  const A0 = EXT ? EXT.ms : R.ms.map(m => ({ nom: m.nom, U: m.U, total: m.total, cup: m.cup, cupL: m.cupL, plus: m.plus, duelo: m.duelo, copas: m.copas, pleno: m.pleno, ok: m.ok, nuevos: m.nuevos, lin: m.lin.map(x => [x.n, x.o, x.n0]) }));
+  if (A0.every(m => m.copas != null)) return A0;
+  // datos generados con la regla anterior: se recalculan copas y cupones con la regla nueva
+  const cop = copasCar(A0.map(x => ({ U: x.U, lin: x.lin.map(l => ({ n: l[0], n0: l[2] })) }))), mx = Math.max(0, ...cop);
+  return A0.map((m, k) => { const pleno = m.U > 0 && m.ok === L.length, pts = m.total - (pleno ? (P.bonus || 0) : 0); const cupL = pleno ? P.cupMax : Math.min(P.cupMax, Math.floor(pts / P.ptsCup + 1e-9)), plus = pleno ? P.cupPlus : 0, duelo = mx > 0 && cop[k] === mx ? P.cupDuelo : 0; return { ...m, total: pts, cupL, plus, duelo, copas: cop[k], pleno, cup: cupL + plus + duelo }; });
+})();
+const SUM = ALL.reduce((a, m) => a + (m.cup || 0), 0);
+const CUPTOT = P.cupMax + P.cupPlus + P.cupDuelo, MXC = Math.max(0, ...ALL.map(m => m.copas || 0));
+let ME = null, MEPV = null;
+function tickets(n){ let h = '<span class="tickets" aria-label="' + n + ' cupones">'; for (let i = 0; i < CUPTOT; i++) h += '<i class="' + (i < n ? 'a' : '') + '"></i>'; return h + '</span>'; }
+function howto(title, items, open){ return `<details class="howto" ${open ? 'open' : ''}><summary>${esc(title)}</summary><ul>${items.map(i => '<li>' + i + '</li>').join('')}</ul></details>`; }
+function clsP(p){ if (p == null) return 'na'; if (p >= 1 - 1e-12) return 'good'; if (p >= P.minLinea - 1e-12) return 'warn'; return 'bad'; }
+function cellP(p){ return p == null ? '<span class="cell na">—</span>' : `<span class="cell ${clsP(p)}">${p >= 1 - 1e-12 ? '✓ ' : ''}${fmtP(p)}</span>`; }
+function needTag(faltan, faltanPV){ if (faltan <= 0) return '<span class="need ok">✓ cumplido</span>'; const f = faltanPV; if (f <= 0) return '<span class="need ok">✓ con preventa</span>'; if (!DQ) return '<span class="need bad">mes cerrado</span>'; const pd = f / DQ; return `<span class="need">${pd < 1 ? '1 cliente cada ' + Math.max(2, Math.floor(1 / pd)) + ' días' : Math.ceil(pd - 1e-9) + ' clientes por día'}</span>`; }
+function ptsBar(total){ const mx = P.ptsLineas * 1.3; const w = x => Math.min(x / mx, 1) * 100; return `<div class="bar" style="height:10px;margin:0"><i style="width:${w(total)}%;background:${total >= R.esc[0].desde ? 'var(--accent)' : 'var(--bad)'}"></i>${R.esc.map(e => `<b style="left:${w(e.desde)}%;opacity:.35"></b>`).join('')}</div>`; }
+const TABS = SOLO != null ? [['ficha','Mis cupones'], ['lineas','Avance por línea'], ['batalla','Batalla de líneas'], ['duelo','Duelo de merchand'], ['reglas','Cómo funciona']]
+  : [['resumen','Resumen'], ['duelo','Duelo de merchand'], ['ficha','Ficha del merchand'], ['lineas','Avance por línea'], ['batalla','Batalla de líneas'], ['reglas','Cómo funciona']];
+function renderHeader(){
+  $('#mesLabel').textContent = CFG.mes.label; if (SOLO != null) $('#soloName').textContent = ' · ' + titleCase(ME.nom);
+  const sd = $('#stData'); if (SNAP.n) { sd.className = 'chip good'; sd.textContent = 'Actualizado ' + (SNAP.cuando ? new Date(SNAP.cuando).toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires'}) : fmtDate(SNAP.maxF)); } else { sd.className = 'chip warn'; sd.textContent = 'Sin ventas de ' + CFG.mes.label + ' todavía'; }
+  $('#stDias').textContent = 'Días hábiles: ' + DJ + ' de ' + CFG.habiles.length + (DQ ? ' · quedan ' + DQ : '');
+  $('#stCopas').innerHTML = ALL.map(m => `<span class="chip ${MXC > 0 && m.copas === MXC ? 'good' : ''}" title="Copas del duelo: líneas en las que sumó más clientes nuevos en el mes${MXC > 0 && m.copas === MXC ? ' · va ganando el duelo (+' + P.cupDuelo + ' cupones)' : ''}">🏆 ${esc(titleCase(m.nom.split(' ')[0]))} ${m.copas || 0}</span>`).join('');
+  $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join('');
+}
+const selM = () => SOLO != null ? '' : `<label for="mSel">Merchand <select id="mSel">${R.ms.map(m => `<option value="${m.i}" ${m.i===ME.i?'selected':''}>${esc(m.nom)}</option>`).join('')}</select></label>`;
+function rankingTbl(){
+  const s = ALL.map((m, i) => ({ ...m, i })).sort((a,b) => b.total - a.total);
+  return '<div class="tw" style="border:0"><table><thead><tr><th>#</th><th class="l">Merchand</th><th>Clientes</th><th>Líneas en objetivo</th><th>Clientes nuevos en líneas</th><th>Puntos</th><th class="l">Puntaje</th><th>🏆 Copas</th><th class="l">Cupones</th><th>Prob.</th></tr></thead><tbody>' +
+    s.map((m, k) => `<tr ${SOLO == null ? `class="click" data-m="${m.i}"` : ''}><td class="muted">${k+1}</td><td class="l name">${esc(m.nom)}</td><td>${m.U}</td><td>${m.ok} / ${L.length}</td><td>${m.nuevos}</td><td class="tot">${fmt1(m.total)}</td><td class="l" style="min-width:150px">${ptsBar(m.total)}</td><td>${m.copas || 0}${MXC > 0 && m.copas === MXC ? ' <span class="need ok">+' + P.cupDuelo + '</span>' : ''}</td><td class="l">${tickets(m.cup)} <b>${m.cup}</b></td><td>${fmtP(SUM ? m.cup / SUM : null, 1)}</td></tr>`).join('') + '</tbody></table></div>';
+}
+function banners(){ return SNAP.n ? '' : `<div class="empty"><div><h3>Todavía no hay ventas de ${CFG.mes.label}</h3><p>La cobertura arranca con lo acumulado desde el 01/02/25 hasta el ${fmtDate(CFG.baseHasta)}. Se suma cada actualización del mes.</p></div></div>`; }
+function viewResumen(){
+  let h = banners();
+  h += howto('Cómo se lee esta pantalla', [
+    '<b>Cobertura de una línea</b>: clientes del universo del merchand (Autoservicio Tradicional asignado) que <b>desde el 01/02/25</b> hicieron al menos una compra de <b>6 unidades netas del mismo producto en la misma boleta</b> (Gordon\'s Tropical y Bossa Nova: 1 unidad), descontando rechazos. No se suman unidades de distintas compras.',
+    'Cada línea tiene su objetivo de cobertura (ver "Cómo funciona"). Las ' + L.length + ' líneas valen hasta ' + P.ptsLineas + ' puntos.',
+    '<b>Cupones</b>: 1 cada ' + P.ptsCup + ' puntos, y <b>' + P.cupMax + '</b> si llega al 100% en todas las líneas; <b>+' + P.cupPlus + '</b> si cumple el objetivo de todas las líneas y <b>+' + P.cupDuelo + '</b> para quien gane el duelo de merchand (más copas). Máximo ' + CUPTOT + '.'
+  ], !SNAP.n);
+  const tot = ALL.reduce((a, m) => a + m.nuevos, 0);
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Cupones en juego</span><span class="v">${SUM}</span><span class="s">${ALL.filter(m => m.cup > 0).length} de ${ALL.length} merchand participan</span></div>
+    <div class="kpi"><span class="eyebrow">Clientes nuevos en líneas</span><span class="v">${tot}</span><span class="s">cliente × línea que pasaron a cubiertos en ${CFG.mes.label}</span></div>
+    <div class="kpi"><span class="eyebrow">Ventas hasta</span><span class="v">${fmtDate(SNAP.maxF)}</span><span class="s">base acumulada al ${fmtDate(CFG.baseHasta)} + ${CFG.mes.label}</span></div></div>`;
+  h += `<div class="stack"><div class="panel"><div class="panel-h"><h3>Ranking</h3><span class="muted" style="font-size:13px">tocá un nombre para ver su ficha</span></div>${rankingTbl()}</div></div>`;
+  return h;
+}
+function viewDuelo(){
+  let h = banners();
+  h += howto('Duelo de merchand por línea', ['En cada línea: cobertura del merchand (clientes cubiertos ÷ objetivo) y, en verde, los <b>clientes nuevos que sumó en ' + CFG.mes.label + '</b>.', '🏆 <b>Copa</b>: la tiene quien sumó más clientes nuevos en el mes en esa línea, medido sobre su universo (nuevos ÷ clientes del merchand, para que el que tiene menos clientes compita parejo). Se recalcula en cada actualización: la copa puede pasar de uno a otro durante el mes.', '<b>Quien junte más copas se lleva ' + P.cupDuelo + ' cupones extra</b> (si empatan, se los llevan los empatados).', 'Verde = objetivo cumplido; ámbar = entre ' + fmtP(P.minLinea) + ' y 100% del objetivo (suma parte de los puntos); rojo = debajo del ' + fmtP(P.minLinea) + ' del objetivo (0 puntos).']);
+  const wins = ALL.map(() => 0);
+  const rows = L.map((l, i) => { const p = ALL.map(m => m.U ? (m.lin[i][0] - m.lin[i][2]) / m.U : 0); const mx = Math.max(...p); p.forEach((x, k) => { if (x === mx && mx > 0) wins[k]++; }); return { l, i, p, mx }; });
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Línea</th><th>Objetivo</th>${ALL.map(m => `<th>${esc(m.nom.split(' ')[0])}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="l sticky1 name">${esc(r.l.l)}</td><td>${fmtP(r.l.obj)}</td>${ALL.map((m, k) => { const [n, o, n0] = m.lin[r.i]; const nu = n - n0; return `<td title="${n} de ${m.U} clientes cubiertos · ${nu} nuevos en el mes · objetivo ${o}">${r.p[k] === r.mx && r.mx > 0 ? '🏆 ' : ''}<span class="cell ${clsP(o ? n / o : null)}">${fmtP(m.U ? n / m.U : null)}</span> <span class="muted" style="font-size:12px">${n}/${o}</span> <b style="font-size:12px;color:${nu > 0 ? 'var(--good)' : 'var(--muted)'}">+${nu}</b></td>`; }).join('')}</tr>`).join('') +
+    `</tbody><tfoot><tr><td class="l sticky1">🏆 Copas</td><td></td>${wins.map(w => `<td>${w}</td>`).join('')}</tr><tr><td class="l sticky1">Líneas en objetivo</td><td></td>${ALL.map(m => `<td>${m.ok} / ${L.length}</td>`).join('')}</tr></tfoot></table></div>`;
+  return h;
+}
+function viewFicha(){
+  const m = ME; let h = banners() + (SOLO == null ? `<div class="filters">${selM()}</div>` : '');
+  const ord = m.lin.map((x, i) => ({ ...x, i, l: L[i], pv: MEPV ? MEPV.lin[i].n : x.n })).sort((a, b) => (a.ok - b.ok) || (a.faltan - b.faltan));
+  h += `<div class="ficha-head"><div><span class="eyebrow">Merchand</span><h2>${esc(m.nom)}</h2><span class="muted">${m.U} clientes · ${m.ok} de ${L.length} líneas en objetivo · ${m.nuevos} clientes nuevos en líneas este mes</span></div><div class="big-tickets">${tickets(m.cup)} <span class="tot">${m.cup} cupones</span></div></div>`;
+  h += `<div class="steps"><div class="step"><span class="k">Puntos por líneas</span><span class="d">${L.length} líneas, hasta ${fmt1(R.pb)} puntos cada una al 100% · ${m.next ? 'faltan ' + fmt1(m.next.desde - m.total) + ' puntos para el próximo cupón' : 'máximo por puntos'}</span><span class="r">${fmt1(m.ptsL)}</span></div><div class="step"><span class="k">Cupones por puntos</span><span class="d">1 cada ${P.ptsCup} puntos · ${P.cupMax} con todas las líneas en objetivo</span><span class="r">${m.cupL}</span></div><div class="step"><span class="k">Plus todas las líneas</span><span class="d">${m.pleno ? 'las ' + L.length + ' líneas en objetivo' : m.ok + ' de ' + L.length + ' líneas en objetivo · ' + P.cupPlus + ' cupones si llega a todas'}</span><span class="r">${m.plus}</span></div><div class="step"><span class="k">Duelo de merchand</span><span class="d">🏆 ${m.copas} copas${m.duelo ? ' · va ganando el duelo' : ' · gana ' + P.cupDuelo + ' cupones quien junte más copas (hoy ' + MXC + ')'}</span><span class="r">${m.duelo}</span></div><div class="step total"><span class="k">Total de cupones</span><span class="d">máximo ${CUPTOT}</span><span class="r">${m.cup}</span></div></div>`;
+  h += `<div class="section"><h3>Dónde están los puntos</h3><p class="muted">Las líneas sin cumplir, de la más cercana a la más lejana. Cada cliente que se suma acerca la línea al objetivo.</p><div class="tw"><table><thead><tr><th class="l sticky1">Línea</th><th>Objetivo</th><th>Cubiertos</th><th>Faltan</th><th>Cumplimiento</th><th>Puntos</th><th class="l">Por día</th></tr></thead><tbody>${ord.map(x => `<tr><td class="l sticky1 name">${esc(x.l.l)}</td><td>${x.o} <span class="muted" style="font-size:12px">(${fmtP(x.l.obj)})</span></td><td>${x.n}${x.nuevos ? ' <span class="muted">(+' + x.nuevos + ')</span>' : ''}</td><td>${x.faltan || '—'}</td><td>${cellP(x.p)}</td><td>${fmt1(x.pts)}</td><td class="l">${needTag(x.faltan, x.o - x.pv)}</td></tr>`).join('')}</tbody></table></div></div>`;
+  return h;
+}
+function viewLineas(){
+  const m = ME; let h = banners();
+  h += howto('Cómo se lee', ['<b>Al ' + fmtDate(CFG.baseHasta) + '</b>: clientes cubiertos con lo acumulado desde el 01/02/25. <b>Hoy</b>: sumando lo vendido en ' + CFG.mes.label + '. <b>Nuevos</b>: los que pasaron a cubiertos este mes.', '<b>Por día</b>: clientes a sumar por día hábil para llegar al objetivo, descontando la preventa ya cargada.']);
+  h += SOLO == null ? `<div class="filters">${selM()}</div>` : '';
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Línea</th><th>Objetivo %</th><th>Objetivo clientes</th><th>Al ${fmtDate(CFG.baseHasta)}</th><th>Hoy</th><th>Nuevos</th><th>Cobertura</th><th>Cumplimiento</th><th>Faltan</th><th>Puntos</th><th class="l">Por día</th></tr></thead><tbody>` +
+    m.lin.map((x, i) => `<tr><td class="l sticky1 name">${esc(L[i].l)}</td><td>${fmtP(L[i].obj)}</td><td>${x.o}</td><td>${x.n0}</td><td><b>${x.n}</b></td><td>${x.nuevos ? '+' + x.nuevos : '—'}</td><td>${fmtP(x.pct)}</td><td>${cellP(x.p)}</td><td>${x.faltan || '—'}</td><td>${fmt1(x.pts)}</td><td class="l">${needTag(x.faltan, x.o - (MEPV ? MEPV.lin[i].n : x.n))}</td></tr>`).join('') +
+    `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td><td></td><td></td><td></td><td>+${m.nuevos}</td><td></td><td></td><td>${m.lin.reduce((a,x) => a + x.faltan, 0)}</td><td>${fmt1(m.ptsL)}</td><td></td></tr></tfoot></table></div>`;
+  return h;
+}
+function viewBatalla(){
+  const m = ME; let h = banners();
+  h += howto('Cómo se usa la batalla', ['Una fila por cliente y una columna por línea. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = ya cubierto (una compra de 6 u. netas del mismo producto en una boleta desde el 01/02/25; Gordon\'s y Bossa Nova 1 u.). Con borde punteado: lo cubrió en ' + CFG.mes.label + '.', 'Un número (ej. <b>4/6</b>) = su mejor compra fue de 4 unidades: no cuenta, tiene que llevar 6 en una misma compra. Es la venta más fácil.', '<span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = nunca la llevó.']);
+  h += `<div class="filters">${selM()}<label for="bSolo">Mostrar <select id="bSolo"><option value="todos" ${st.solo==='todos'?'selected':''}>Todos los clientes</option><option value="falta" ${st.solo==='falta'?'selected':''}>Con alguna línea sin cubrir</option><option value="cerca" ${st.solo==='cerca'?'selected':''}>Con líneas a medio camino</option></select></label><label for="bLin">Línea <select id="bLin"><option value="todas">Todas</option>${L.map((l,i) => `<option value="${i}" ${String(st.lin)===String(i)?'selected':''}>${esc(l.l)}</option>`).join('')}</select></label></div>`;
+  const li = st.lin === 'todas' ? null : +st.lin;
+  let rows = m.clientes.slice();
+  if (li != null) rows = rows.filter(c => !c.has[li]);
+  if (st.solo === 'falta') rows = rows.filter(c => c.n < L.length);
+  if (st.solo === 'cerca') rows = rows.filter(c => L.some((l, i) => !c.has[i] && c.tot[i] > 0));
+  rows.sort((a, b) => a.n - b.n || (+a.c) - (+b.c));
+  const cols = li != null ? [li] : L.map((l, i) => i);
+  h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(118px,1fr))">${cols.map(i => { const x = m.lin[i]; return `<div class="kpi" style="padding:10px 12px"><span class="eyebrow" style="font-size:11px">${esc(L[i].l)}</span><span class="v" style="font-size:22px">${x.n} <span class="muted" style="font-size:15px">/ ${x.o}</span></span><span class="s">${x.faltan ? 'faltan <b>' + x.faltan + '</b>' : '<b style="color:var(--good)">cumplido</b>'}</span></div>`; }).join('')}</div>`;
+  h += `<div class="panel-h"><span class="muted">${rows.length} clientes${li != null ? ' sin cubrir en ' + esc(L[li].l) : ''}</span><button class="btn small" type="button" data-export="tBat">Exportar a Excel (CSV)</button></div>`;
+  h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Nombre</th><th class="l">Dirección</th>${cols.map(i => `<th style="text-align:center">${esc(L[i].l)}</th>`).join('')}<th>Líneas</th></tr></thead><tbody>`;
+  for (const c of rows) h += `<tr><td class="l sticky1 name">${esc(c.c)}</td><td class="l">${esc(titleCase(c.nom))}</td><td class="l ink2">${esc(titleCase(c.dir))}</td>${cols.map(i => { if (c.has[i]) return `<td style="text-align:center"><span class="bt-yes" ${c.nuevo[i] ? 'style="border:2px dashed var(--good)" title="Cubierto en ' + CFG.mes.label + '"' : ''}>✓</span></td>`; if (c.tot[i] > 0) return `<td style="text-align:center"><span class="cell warn" style="min-width:0" title="Su mejor compra fue de ${fmt1(c.tot[i])} u.; necesita ${L[i].u} en una misma compra">${Math.round(c.tot[i]*10)/10}/${L[i].u}</span></td>`; return '<td style="text-align:center"><span class="bt-no">✗</span></td>'; }).join('')}<td><b>${c.n}</b> / ${L.length}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+function viewReglas(){
+  return `<div class="prose"><h2>Cómo funciona Carrileros PPP</h2>
+  <p>Participan los 3 merchand: ${ALL.map(m => esc(m.nom) + ' (' + m.U + ' clientes)').join(', ')}. El universo de cada uno son sus clientes de <b>Autoservicio Tradicional</b> asignados en el listado de merchand.</p>
+  <h3>Cobertura</h3><p>Un cliente está cubierto en una línea cuando, <b>desde el 01/02/25</b>, hizo al menos una compra de <b>6 unidades netas del mismo producto en la misma boleta</b> (Gordon's Tropical y Bossa Nova: 1 unidad). <b>No se suman unidades de compras distintas.</b> Los rechazos se restan de su boleta original. En Cazador vale cualquiera de sus productos (Cabernet Sauvignon, Malbec o Blanco Dulce), pero las 6 unidades tienen que ser del mismo. Lo comprado hasta el ${fmtDate(CFG.baseHasta)} queda guardado y en cada actualización se revisa solo lo del mes.</p>
+  <p class="formula">Cumplimiento de la línea = clientes cubiertos ÷ (objetivo % × clientes del merchand)</p>
+  <h3>Puntos (hasta ${P.ptsLineas})</h3><p>Cada una de las ${L.length} líneas vale ${fmt1(R.pb)} puntos al 100%. Debajo del ${fmtP(P.minLinea)} del objetivo suma 0; en el ${fmtP(P.minLinea)} suma el ${fmtP(P.pctMin)} de sus puntos y sube en línea hasta el 100%; arriba del 100% sigue sumando hasta ${fmtP(P.tope)}.</p>
+  <h3>Objetivos de ${CFG.mes.label}</h3><div class="tw"><table><thead><tr><th class="l">Línea</th><th>Objetivo</th>${ALL.map(m => `<th>${esc(m.nom.split(' ')[0])}</th>`).join('')}</tr></thead><tbody>${L.map((l, i) => `<tr><td class="l">${esc(l.l)}</td><td>${fmtP(l.obj)}</td>${ALL.map(m => `<td>${m.lin[i][1]} clientes</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+  <h3>Cupones (máximo ${CUPTOT})</h3>
+  <p class="formula">Cupones = puntos ÷ ${P.ptsCup} (${P.cupMax} con todas las líneas al 100%) + ${P.cupPlus} si cumple todas las líneas + ${P.cupDuelo} si gana el duelo</p>
+  <ul><li><b>Por puntos</b>: 1 cupón cada ${P.ptsCup} puntos, redondeado para abajo. Si llega al 100% en <b>todas</b> las líneas, son directamente ${P.cupMax}.</li><li><b>Plus</b>: ${P.cupPlus} cupones más si llega al objetivo en las ${L.length} líneas.</li><li><b>Duelo de merchand</b>: en cada línea, la copa 🏆 es del merchand que sumó más clientes nuevos en el mes (sobre su universo); puede pasar de uno a otro con cada actualización. Quien junte más copas en el mes se lleva ${P.cupDuelo} cupones extra (si empatan, todos los empatados).</li></ul>
+  <h3>Por día</h3><p>Lo que falta para el objetivo de la línea, menos la preventa ya cargada, dividido por los días hábiles que quedan (${DQ}; después de las 16 h se cuenta desde el día siguiente). La preventa no suma hasta que se factura.</p>
+  <p class="note">${SNAP.n ? 'Última carga: ' + esc(SNAP.archivo || '') + ', ventas de ' + CFG.mes.label + ' hasta el ' + fmtDate(SNAP.maxF) + '.' : 'Sin ventas del mes cargadas.'}</p></div>`;
+}
+function render(){ ME = R.ms[st.m] || R.ms[0]; MEPV = RPV ? RPV.ms[ME.i] : null; renderHeader(); $('#view').innerHTML = ({ resumen: viewResumen, duelo: viewDuelo, ficha: viewFicha, lineas: viewLineas, batalla: viewBatalla, reglas: viewReglas }[st.tab] || viewFicha)(); }
+const cuse = n => (window.claude && typeof window.claude.use === 'function') ? window.claude.use(n) : Promise.resolve(null);
+async function exportTable(id){
+  const tbl = document.getElementById(id); if (!tbl) return;
+  const lines = [...tbl.querySelectorAll('tr')].map(tr => [...tr.children].map(td => { let s = td.textContent.replace(/\s+/g,' ').trim(); if (s === '✓') s = 'Sí'; else if (s === '✗') s = 'No'; return '"' + s.replace(/"/g,'""') + '"'; }).join(';'));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], {type:'text/csv'}); const name = 'batalla_carrileros_' + CFG.mes.y + '-' + CFG.mes.m + '.csv';
+  const dl = await cuse('downloads'); if (dl) { try { await dl.save({ filename: name, data: blob }); } catch (e) {} return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab]'); if (t) { st.tab = t.dataset.tab; saveUI(); render(); window.scrollTo({top:0}); return; }
+  const m = e.target.closest('[data-m]'); if (m) { st.m = +m.dataset.m; st.tab = 'ficha'; saveUI(); render(); window.scrollTo({top:0}); return; }
+  const ex = e.target.closest('[data-export]'); if (ex) exportTable(ex.dataset.export);
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'mSel') { st.m = +e.target.value; saveUI(); render(); window.scrollTo({top:0}); }
+  if (e.target.id === 'bSolo') { st.solo = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'bLin') { st.lin = e.target.value; saveUI(); render(); }
+});
+render();
+</script>
+<script>
+function geoNombre(c){ for (const m of R.ms) { const k = m.clientes.find(x => String(x.c) === c); if (k) return k.nom; } return ''; }
+function geoFicha(c){
+  const chip = (t, ok, pr) => `<span class="gc${ok ? ' ok' : ''}${pr ? ' pr' : ''}">${ok ? '✓ ' : ''}${esc(t)}</span>`;
+  let m = null, k = null; for (const x of R.ms) { const y = x.clientes.find(z => String(z.c) === c); if (y) { m = x; k = y; break; } } if (!k) return '';
+  const Ls = L.map((l, i) => ({ t: l.l + (k.has[i] ? '' : ' · ' + l.u + ' u.'), ok: !!k.has[i], pr: !m.lin[i].ok })).sort((x, y) => (x.ok - y.ok) || (y.pr - x.pr));
+  const f = Ls.filter(x => !x.ok).length;
+  return `<p class="gmu">${esc(m.nom)}${k.ven ? ' · vendedor ' + esc(titleCase(k.ven)) : ''}${k.dir ? ' · ' + esc(k.dir) : ''}</p><div class="gsec"><h4>Innovaciones · ${f ? f + ' para sumar' : 'todas cubiertas'} (${k.n} de ${L.length})</h4><p class="gmu">Cubre con una compra de las unidades indicadas del mismo producto en una boleta. Con borde: líneas en las que todavía no llegás al objetivo.</p><div class="gch">${Ls.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
+}
+/* ===== 📍 Estoy en un cliente: ubica al vendedor con el GPS del celular y muestra las oportunidades del cliente más cercano de su cartera ===== */
+const GEO = /*GEO_START*/null/*GEO_END*/;
+(function(){
+  if (!GEO || !Object.keys(GEO).length || !navigator.geolocation) return;
+  const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const TC = s => String(s || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+  const dist = (a, b, c, d) => { const r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r; return Math.sqrt(x * x + y * y) * 6371000; };
+  const fmtD = m => m < 1000 ? Math.round(m) + ' m' : (m / 1000).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' km';
+  const st = document.createElement('style');
+  st.textContent = '#geoBtn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:55;border:0;border-radius:999px;padding:13px 18px;font:600 15px var(--f-body,system-ui);background:var(--accent,#2448C7);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28);cursor:pointer}'
+    + '#geoOv{position:fixed;inset:0;z-index:80;background:rgba(10,15,22,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}'
+    + '#geoOv .gm{background:var(--surface,#fff);color:var(--ink,#15202C);border-radius:14px;width:100%;max-width:560px;max-height:86vh;overflow:auto;padding:18px 18px 20px;display:grid;gap:12px;font:15px/1.45 var(--f-body,system-ui)}'
+    + '#geoOv h3{margin:0;font:700 21px var(--f-display,system-ui)} #geoOv h4{margin:6px 0 2px;font:700 16px var(--f-display,system-ui)} #geoOv p{margin:0}'
+    + '#geoOv .gmu{color:var(--muted,#738196);font-size:13px} #geoOv .gch{display:flex;flex-wrap:wrap;gap:6px}'
+    + '#geoOv .gc{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--bad-bg,#F9DEDB);color:var(--bad,#B4322A)} #geoOv .gc.ok{background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45)} #geoOv .gc.pr{outline:2px solid var(--bad,#B4322A)}'
+    + '#geoOv .gb{border:1px solid var(--line,#D5DCE6);background:var(--surface,#fff);color:inherit;border-radius:10px;padding:10px 12px;text-align:left;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:10px;width:100%} #geoOv .gx{border:0;background:var(--surface2,#EAEEF4);color:inherit;border-radius:8px;padding:10px 14px;font:600 14px var(--f-body,system-ui);cursor:pointer}'
+    + '#geoOv .gsec{border-top:1px solid var(--line,#D5DCE6);padding-top:10px;display:grid;gap:6px}';
+  document.head.appendChild(st);
+  const b = document.createElement('button'); b.id = 'geoBtn'; b.type = 'button'; b.textContent = '📍 Estoy en un cliente'; document.body.appendChild(b);
+  let ov = null;
+  const show = h => { if (!ov) { ov = document.createElement('div'); ov.id = 'geoOv'; ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-gclose]')) { ov.remove(); ov = null; return; } const g = e.target.closest('[data-gcli]'); if (g) ficha(g.dataset.gcli, +g.dataset.gd); }); document.body.appendChild(ov); } ov.innerHTML = '<div class="gm" role="dialog" aria-modal="true">' + h + '</div>'; };
+  const cerrar = '<div><button type="button" class="gx" data-gclose>Cerrar</button></div>';
+  const nombre = c => TC(window.geoNombre ? geoNombre(c) : '') || 'Cliente ' + c;
+  function ficha(c, d){
+    let body = '';
+    try { body = window.geoFicha ? geoFicha(String(c)) : ''; } catch (e) { body = '<p class="gmu">No se pudo armar el detalle de este cliente.</p>'; }
+    show(`<div><h3>${E(nombre(c))}</h3><p class="gmu">Cliente ${E(c)}${d != null && isFinite(d) ? ' · a ' + fmtD(d) : ''}</p></div>${body || '<p class="gmu">Sin oportunidades cargadas para este cliente.</p>'}${cerrar}`);
+  }
+  b.onclick = () => {
+    show('<div><h3>Buscando tu ubicación…</h3><p class="gmu">Si el celular lo pide, permití el acceso a la ubicación.</p></div>' + cerrar);
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: la, longitude: lo, accuracy: ac } = pos.coords;
+      const L = Object.entries(GEO).map(([c, p]) => ({ c, d: dist(la, lo, p[0], p[1]) })).sort((x, y) => x.d - y.d);
+      const R = Math.max(120, Math.min(300, (ac || 0) + 60));
+      const cerca = L.filter(x => x.d <= R).slice(0, 8);
+      if (cerca.length === 1) return ficha(cerca[0].c, cerca[0].d);
+      if (cerca.length > 1) return show(`<div><h3>¿En qué cliente estás?</h3><p class="gmu">Hay ${cerca.length} clientes de tu cartera a menos de ${fmtD(R)}.</p></div><div style="display:grid;gap:8px">${cerca.map(x => `<button type="button" class="gb" data-gcli="${E(x.c)}" data-gd="${x.d}"><span><b>${E(nombre(x.c))}</b> <span class="gmu">· ${E(x.c)}</span></span><span class="gmu">${fmtD(x.d)}</span></button>`).join('')}</div>${cerrar}`);
+      const n = L.slice(0, 3);
+      show(`<div><h3>No hay un cliente tuyo acá</h3><p class="gmu">No encontramos clientes de tu cartera a menos de ${fmtD(R)}${ac ? ' (precisión del GPS: ' + fmtD(ac) + ')' : ''}. Los más cercanos:</p></div><div style="display:grid;gap:8px">${n.map(x => `<button type="button" class="gb" data-gcli="${E(x.c)}" data-gd="${x.d}"><span><b>${E(nombre(x.c))}</b> <span class="gmu">· ${E(x.c)}</span></span><span class="gmu">${fmtD(x.d)}</span></button>`).join('')}</div>${cerrar}`);
+    }, err => {
+      show(`<div><h3>No pudimos ver tu ubicación</h3><p class="gmu">${err && err.code === 1 ? 'El celular no dio permiso. Activá la ubicación para el navegador y volvé a tocar el botón.' : 'Probá de nuevo al aire libre o con el GPS activado.'}</p></div>${cerrar}`);
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 });
+  };
+})();
+</script>
+</body></html>

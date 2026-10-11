@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<title>Incentivos Pehuenia</title>
+<style>
+:root{--bg:#F3F5F8;--ink:#15202C;--muted:#738196;--accent:#2448C7}
+@media (prefers-color-scheme:dark){:root{--bg:#0F151D;--ink:#E7ECF3;--muted:#8693A6;--accent:#7D9BFF}}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,"Segoe UI",sans-serif}
+#m{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;box-sizing:border-box;text-align:center}
+#m small{color:var(--muted)}
+.sp{width:28px;height:28px;border:3px solid #0002;border-top-color:var(--accent);border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0}
+</style></head>
+<body><div id="m"><div class="sp"></div><div>Cargando tu tablero…</div></div>
+<script>
+(async function(){
+  const m = document.getElementById('m');
+  const fail = (t, s) => { m.innerHTML = '<div><b>' + t + '</b></div><small>' + (s || '') + '</small>'; };
+  const h = location.hash.slice(1); const dot = h.indexOf('.');
+  if (dot < 1) return fail('Este link está incompleto.', 'Pedile a tu supervisor el link completo de tu tablero.');
+  const id = h.slice(0, dot), key = h.slice(dot + 1);
+  const b = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+  try {
+    const r = await fetch('d/datos.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return fail('Todavía no hay datos publicados.', 'Probá de nuevo más tarde.');
+    let D = await r.json(); let e = D.p && D.p[id];
+    if (!e) { try { const r2 = await fetch('d/carril.json?t=' + Date.now(), { cache: 'no-store' }); if (r2.ok) { const D2 = await r2.json(); if (D2.p && D2.p[id]) { D = D2; e = D2.p[id]; } } } catch (x) {} }
+    if (!e) return fail('No encontramos este tablero.', 'Revisá que el link esté completo.');
+    const k = await crypto.subtle.importKey('raw', b(key), 'AES-GCM', false, ['decrypt']);
+    const gz = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(e.iv) }, k, b(e.ct));
+    const P = JSON.parse(new TextDecoder().decode(await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()));
+    const tr = await fetch('t/' + e.t + '.html?v=' + (D.tpl || ''), { cache: 'no-cache' }); let tpl = await tr.text();
+    const js = o => JSON.stringify(o).replace(/<\//g, '<\\/');
+    const put = (a, z, o) => { tpl = tpl.replace(new RegExp('/\\*' + a + '\\*/[\\s\\S]*?/\\*' + z + '\\*/'), () => '/*' + a + '*/' + js(o) + '/*' + z + '*/'); };
+    put('CFG_START', 'CFG_END', P.cfg); put('EMBED_START', 'EMBED_END', P.snap); put('EMBEDOBJ_START', 'EMBEDOBJ_END', P.obj);
+    try { const gr = await fetch('d/geo.json?t=' + Date.now(), { cache: 'no-store' }); if (gr.ok) { const GJ = await gr.json(); const ge = GJ.p && GJ.p[id]; if (ge) { const gz2 = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(ge.iv) }, k, b(ge.ct)); put('GEO_START', 'GEO_END', JSON.parse(new TextDecoder().decode(await new Response(new Blob([gz2]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()))); } } } catch (x) {}
+    const titulo = String(P.titulo || 'Incentivos').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+    document.title = titulo; tpl = tpl.replace(/<title>[^<]*<\/title>/, '<title>' + titulo.replace(/[<&]/g, '') + '</title>');
+    const f = document.createElement('iframe'); f.allow = 'geolocation'; f.title = titulo; f.srcdoc = tpl; m.remove(); document.body.appendChild(f);
+  } catch (err) { fail('No se pudo abrir el tablero.', 'Revisá que el link esté completo. Si sigue sin abrir, avisale a tu supervisor.'); }
+})();
+window.addEventListener('hashchange', () => location.reload());
+</script></body></html>
