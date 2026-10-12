@@ -292,6 +292,13 @@ function pgDe(CFG, SNAP, cod){
   const g = pgPts(Object.keys(cli).length, o.cob || 0, Math.round((sp.so && sp.so[cod]) || 0), o.so || 0, CFG);
   return { ...g, sep: o.sep || 0, cli };
 }
+/* Georgalos (vendedora 28): cobertura por línea contra el 5% de la cartera; cada línea suma puntos con la misma regla que P&G */
+function ggDe(CFG, SNAP, cod){
+  const G = CFG.gg, o = G && G.obj && G.obj[cod]; if (!o) return { on: false, pts: 0, max: 0, lin: [], cli: {} };
+  const cli = (SNAP && SNAP.gg && SNAP.gg[cod]) || {}, P = CFG.params;
+  const lin = G.lines.map((l, i) => { const n = Object.keys(cli).filter(c => cli[c].includes(i)).length, ob = o[i] || 0, p = ob > 0 ? n / ob : null; return { l, s: G.short[i], n, o: ob, p, pts: ptsPG(p, G.pts, P) }; });
+  return { on: true, lin, cli, pts: lin.reduce((a, x) => a + x.pts, 0), max: G.pts * G.lines.length };
+}
 function computeP(CFG, SNAP){
   const P = CFG.params, nb = CFG.brands.length;
   const hab = CFG.habiles;
@@ -312,11 +319,12 @@ function computeP(CFG, SNAP){
     const real = [clientes.filter(x => x.ccc).length].concat(CFG.brands.map((x,i) => clientes.filter(k => k.has[i]).length));
     const p = puntuar(v.obj, real, P);
     const pg = pgDe(CFG, SNAP, v.cod);
-    const vmax = v.soloPG ? maxPG : max;
-    const esc = v.soloPG ? escala(P, 0, vmax) : escV;
-    const total = p.total + pg.pts;
+    const gg = ggDe(CFG, SNAP, v.cod);
+    const vmax = (v.soloPG ? maxPG : max) + gg.max;
+    const esc = v.soloPG || gg.on ? escala(P, 0, vmax) : escV;
+    const total = p.total + pg.pts + gg.pts;
     const cu = cuponesDe(total, esc);
-    return { ...v, clientes, real, ...p, pg, total, max: vmax, esc, ...cu, participa: cu.cup > 0 };
+    return { ...v, clientes, real, ...p, pg, gg, total, max: vmax, esc, ...cu, participa: cu.cup > 0 };
   });
   const sumV = vs.reduce((a,v) => a + v.cup, 0);
   const sups = [...new Set(CFG.vend.map(v => v.sup))].map(s => {
@@ -387,7 +395,8 @@ const pvOf = v => (RPV && RPV.vs.find(x => String(x.cod) === String(v.cod))) || 
 function needTag(obj, conPV, money){ const f = obj - conPV; if (!(obj > 0)) return '<span class="muted">—</span>'; if (f <= 0) return '<span class="need ok">✓ cumplido</span>'; if (!DQ) return '<span class="need bad">mes cerrado</span>'; const pd = f / DQ; const atras = conPV < obj * DJ / CFG.habiles.length; return `<span class="need ${atras ? 'late' : ''}" title="${atras ? 'Va atrasado contra el ritmo del mes' : 'Va en ritmo'}">${money ? fmtK(pd) + ' por día' : (pd < 1 ? '1 cliente cada ' + Math.max(2, Math.floor(1 / pd)) + ' días' : Math.ceil(pd - 1e-9) + (Math.ceil(pd - 1e-9) === 1 ? ' cliente' : ' clientes') + ' por día')}</span>`; }
 const pvTxt = (d, money) => d > 0 ? `<span class="muted">+${money ? fmtK(d) : d} preventa</span>` : '';
 const pgTab = (PG ? [['batallapg','Batalla P&amp;G']] : []).concat(CFG.gaona ? [['gaona','Gaona']] : [], CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
-const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(CFG.gaona ? [['gaona','Gaona']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
+const GGT = CFG.gg && Object.keys(CFG.gg.obj || {}).some(c => !SOLO || String(c) === String(SOLO)) ? [['georgalos','Georgalos']] : [];
+const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(GGT, CFG.gaona ? [['gaona','Gaona']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, GGT, [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
 if (!TABS.some(x => x[0] === st.tab)) st.tab = SOLO ? 'ficha' : 'resumen';
 if (SOLO) { st.ven = SOLO; st.bVen = String(SOLO); st.gVen = String(SOLO); }
 function renderTabs(){ $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join(''); }
@@ -597,9 +606,10 @@ function viewFicha(){
     <div class="step"><span class="k">P&amp;G sell out</span><span class="d">${fmtMM(g.soR)} de ${fmtMM(g.soO)} (${fmtP(g.pSo)})${g.soO - g.soR > 0 ? ' · faltan ' + fmtMM(g.soO - g.soR) : ''} ${pvTxt((pvOf(v).pg || g).soR - g.soR, true)} ${needTag(g.soO, (pvOf(v).pg || g).soR, true)}</span><span class="r">${fmt1(g.ptsSo)}</span></div>` : '';
   const totStep = `<div class="step total"><span class="k">Total de puntos</span><span class="d">${v.participa ? 'Nivel ' + v.nivel + ' · ' + v.cup + ' cupones' : 'Debajo del piso de ' + fmt1(v.esc[0].desde) + ' pts: sin cupones'}${v.next ? ' · faltan ' + fmt1(v.next.desde - v.total) + ' pts para ' + v.next.cup + ' cupones' : ''}</span><span class="r">${fmt1(v.total)}</span></div>`;
   const escTbl = `<div class="panel"><h3>Escala de cupones</h3><div class="tw" style="border:0;margin-top:8px"><table><thead><tr><th class="l">Nivel</th><th>Desde</th><th>Cupones</th></tr></thead><tbody>${v.esc.map(e => `<tr style="${v.nivel === e.nivel ? 'background:var(--accent-soft)' : ''}"><td class="l">${e.nivel}</td><td>${fmt1(e.desde)} pts</td><td><b>${e.cup}</b></td></tr>`).join('')}</tbody></table></div></div>`;
+  const ggSteps = v.gg && v.gg.on ? v.gg.lin.map(x => `<div class="step"><span class="k">Georgalos · ${esc(x.s)}</span><span class="d">${x.n} de ${x.o} clientes cubiertos (${fmtP(x.p)})${x.p != null && x.p < P.minMarca ? ' · debajo del ' + fmtP(P.minMarca) + ': 0 pts' : ''}${x.o - x.n > 0 ? ' · faltan ' + (x.o - x.n) : ''}</span><span class="r">${fmt1(x.pts)}</span></div>`).join('') : '';
   if (v.soloPG) {
-    h += `<div class="grid2"><div class="steps">${pgSteps}${totStep}</div>${escTbl}</div>`;
-    h += `<div class="section"><p class="note">Para ver qué clientes todavía no compraron P&amp;G y qué marca le falta a cada uno, usá la pestaña <b>Batalla P&amp;G</b>.</p></div>`;
+    h += `<div class="grid2"><div class="steps">${pgSteps}${ggSteps}${totStep}</div>${escTbl}</div>`;
+    h += `<div class="section"><p class="note">Para ver qué clientes todavía no compraron P&amp;G y qué marca le falta a cada uno, usá la pestaña <b>Batalla P&amp;G</b>${v.gg && v.gg.on ? '; para Georgalos, la pestaña <b>Georgalos</b>' : ''}.</p></div>`;
     return h;
   }
   h += `<div class="grid2"><div class="steps">
@@ -722,7 +732,7 @@ function viewReglas(){
   const meta = SNAP ? `Última carga${SNAP.origen === 'automatico' ? ' (automática)' : ''}: ${esc(SNAP.archivo || '')}, ${SNAP.nMes.toLocaleString('es-AR')} renglones de ${CFG.mes.label} de los vendedores 24 a 27, ventas hasta el ${fmtDate(SNAP.maxM)}.` : 'Todavía no hay ventas de ' + CFG.mes.label + ' cargadas.';
   return `<div class="prose"><h2>Cómo funciona el concurso Peñaflor${PG ? ' y P&amp;G' : ''}</h2>
   <p>Participan los vendedores 24 a 27 (equipo KAF)${PG ? ', la vendedora 28 (solo P&amp;G)' : ''} y su supervisor. Se juntan puntos por <b>CCC</b> (clientes de la cartera que compran Peñaflor en el mes) y por la <b>cobertura de 11 marcas</b> (clientes de la cartera que compraron cada marca en el mes, con al menos 6 unidades netas del mismo producto en una boleta; Gordon's: 1 unidad). Según los puntos se reciben cupones para el sorteo de la moto.</p>
-  ${PG ? `<p>También suma <b>P&amp;G</b>: cobertura (clientes de la cartera con al menos un producto P&amp;G en el mes) y sell out en pesos. ${R.vs.some(v => v.soloPG) || SOLOPG ? 'La vendedora 28 participa solo con P&amp;G.' : ''}</p>` : ''}
+  ${PG ? `<p>También suma <b>P&amp;G</b>: cobertura (clientes de la cartera con al menos un producto P&amp;G en el mes) y sell out en pesos. ${R.vs.some(v => v.soloPG) || SOLOPG ? 'La vendedora 28 participa solo con P&amp;G' + (CFG.gg ? ' y Georgalos (cobertura de ' + CFG.gg.lines.length + ' líneas, ' + CFG.gg.pts + ' puntos cada una, objetivo ' + fmtP(CFG.gg.pct) + ' de su cartera por línea)' : '') + '.' : ''}</p>` : ''}
   <p class="formula">Total = puntos CCC + puntos de las 11 marcas + bonus pleno${PG ? ' + puntos P&amp;G' : ''}</p>
   <h3>Puntos CCC (hasta ${P.ptsCCC})</h3><p>Cumplimiento = clientes de la cartera con compra Peñaflor del mes ÷ objetivo CCC. Si es menor a ${fmtP(P.minCCC)}, 0 puntos; si no, cumplimiento × ${P.ptsCCC}, con tope en ${fmtP(P.tope)}.</p>
   <h3>Puntos por marca (hasta ${fmt1(P.ptsMarcas / CFG.brands.length)} cada una, ${P.ptsMarcas} en total)</h3><p>Cumplimiento = clientes que compraron la marca en ${CFG.mes.label} (6 u. del mismo producto en una compra; Gordon's 1 u.) ÷ objetivo. Debajo del ${fmtP(P.minMarca)}: 0. En el ${fmtP(P.minMarca)}: el ${fmtP(P.pctMin)} de los puntos de la marca, subiendo en línea hasta el 100%. Arriba del 100% sigue sumando hasta ${fmtP(P.tope)}.</p>
@@ -778,12 +788,32 @@ function viewEsp(){
 }
 document.addEventListener('click', e => { const d = e.target.closest('[data-espdia]'); if (d) { st.espD = d.dataset.espdia; saveUI(); render(); return; } const r = e.target.closest('[data-espv]'); if (r) { st.espV = r.dataset.espv; saveUI(); render(); } });
 document.addEventListener('change', e => { if (e.target.id === 'espV') { st.espV = e.target.value; saveUI(); render(); } else if (e.target.id === 'espS') { st.espS = e.target.value; saveUI(); render(); } else if (e.target.id === 'espM') { st.espM = e.target.value; saveUI(); render(); } });
+function viewGeorgalos(){
+  const G = CFG.gg; if (!G) return '';
+  const vs = R.vs.filter(v => v.gg && v.gg.on); if (!vs.length) return '';
+  const v = vs.find(x => String(x.cod) === String(SOLO || st.ggV)) || vs[0];
+  const dSel = st.ggD || 'todos', fil = st.ggS || 'todos';
+  let h = banners();
+  h += howto('Cómo se mide Georgalos', [
+    'Cobertura de las ' + G.lines.length + ' líneas de Georgalos, igual que en el incentivo de la Moto: el cliente cubre una línea si en ' + CFG.mes.label + ' compró al menos <b>' + G.minUnid + ' unidades</b> de esa línea (o 1 display), descontando rechazos. <b>General Georgalos</b> cuenta cualquier producto Georgalos.',
+    'Objetivo por línea: el ' + fmtP(G.pct) + ' de los clientes de la cartera. Cada línea vale <b>' + G.pts + ' puntos</b> al 100% (desde el ' + fmtP(CFG.params.minMarca) + ' suma una parte, igual que P&amp;G) y se suman a los puntos de P&amp;G para los cupones.']);
+  h += `<div class="kpis">${v.gg.lin.map(x => `<div class="kpi"><span class="eyebrow">${esc(x.s)}</span><span class="v">${x.n} <span class="muted" style="font-size:20px">/ ${x.o}</span></span><span class="s">${fmtP(x.p)} · ${fmt1(x.pts)} pts (${G.pts} al 100%)</span><span>${x.n >= x.o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${x.o - x.n}</span>`}</span><div class="bar"><i style="width:${Math.min(x.p || 0, 1) * 100}%"></i></div></div>`).join('')}</div>`;
+  const base = (CFG.base || {})[v.cod] || {}, cli = v.gg.cli;
+  const rows = Object.keys(base).map(c => { const s = new Set(cli[c] || []); return { c, dia: base[c][0] || 0, has: G.lines.map((l, i) => s.has(i)), n: s.size }; });
+  const list = rows.filter(r => (fil !== 'sin' || !r.n) && (fil !== 'falta' || r.n < G.lines.length) && (dSel === 'todos' || String(r.dia) === String(dSel))).sort((a, b) => (a.dia || 9) - (b.dia || 9) || a.n - b.n);
+  const DN = {1:'Lu',2:'Ma',3:'Mi',4:'Ju',5:'Vi',6:'Sá'};
+  h += `<div class="filters" style="margin-top:16px"><label for="ggS">Mostrar <select id="ggS"><option value="todos" ${fil==='todos'?'selected':''}>Todos</option><option value="sin" ${fil==='sin'?'selected':''}>Sin Georgalos este mes</option><option value="falta" ${fil==='falta'?'selected':''}>Con alguna línea en ✗</option></select></label></div><div class="daychips" role="group" aria-label="Día de visita" style="margin-top:10px">${[['todos','Todos los días']].concat(Object.entries(DIAS).filter(([k]) => k !== '6'), [['0','Sin día']]).map(([k,l]) => `<button type="button" class="daychip" data-ggdia="${k}" aria-pressed="${String(dSel)===String(k)}">${l}</button>`).join('')}</div>`;
+  h += `<div class="panel-h"><span class="muted">${list.length} clientes</span>${exportBtn('tGG','georgalos_' + v.cod)}</div><div class="tw"><table id="tGG"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Nombre</th><th class="l">Día</th>${G.short.map(s => `<th style="text-align:center">${esc(s)}</th>`).join('')}<th>Líneas</th></tr></thead><tbody>${list.map(r => `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(titleCase(nameOf(r.c)))}</td><td class="l ink2">${DN[r.dia] || '—'}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes">✓</span>' : '<span class="bt-no">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${G.lines.length}</td></tr>`).join('')}</tbody></table></div>`;
+  return h;
+}
+document.addEventListener('click', e => { const d = e.target.closest('[data-ggdia]'); if (d) { st.ggD = d.dataset.ggdia; saveUI(); render(); } });
+document.addEventListener('change', e => { if (e.target.id === 'ggS') { st.ggS = e.target.value; saveUI(); render(); } });
 function render(){
   R = computeP(CFG, SNAP);
   RPV = SNAP && SNAP.pv ? computeP(CFG, { ...SNAP, v: SNAP.pv.v || {}, pg: SNAP.pv.pg || SNAP.pg }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = (R.sumV + R.sumS) ? v.cup / (R.sumV + R.sumS) : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, puntos: viewPuntos, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, gaona: viewGaona, litros: viewLitros, esp: viewEsp, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, puntos: viewPuntos, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
 }
 async function exportTable(id, name){
@@ -836,6 +866,7 @@ function geoFicha(c){
   const k = v.clientes.find(x => String(x.c) === c);
   const B = CFG.brands.map((b, i) => ({ t: b, ok: !!k.has[i], pr: (v.real[i + 1] || 0) < (v.obj[i + 1] || 0) })).sort((x, y) => (x.ok - y.ok) || (y.pr - x.pr));
   const f = B.filter(x => !x.ok).length;
+  if (v.soloPG) { const g = v.gg && v.gg.on ? v.gg : null; const s = new Set(g ? g.cli[c] || [] : []); return `<p class="gmu">${esc(titleCase(v.nom))} · visita ${(DIAS[k.dia] || 'sin día').toLowerCase()}</p>` + (g ? `<div class="gsec"><h4>Georgalos · ${g.lin.length - s.size} líneas para sumar</h4><p class="gmu">Cubre con ${CFG.gg.minUnid} unidades de la línea (o 1 display). Con borde: líneas en las que todavía no llegás al objetivo.</p><div class="gch">${g.lin.map((x, i) => ({ t: x.s, ok: s.has(i), pr: x.n < x.o })).sort((x, y) => (x.ok - y.ok) || (y.pr - x.pr)).map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>` : ''); }
   return `<p class="gmu">${esc(titleCase(v.nom))} · visita ${(DIAS[k.dia] || 'sin día').toLowerCase()}</p><div class="gsec"><h4>Peñaflor · ${f ? f + ' marcas para sumar' : 'todas las marcas'}</h4><div class="gch">${chip('CCC · compra Peñaflor del mes', !!k.ccc, !k.ccc)}</div><p class="gmu">Marcas: 6 u. del mismo producto en una compra (Gordon's 1 u.). Con borde: marcas en las que todavía no llegás al objetivo.</p><div class="gch">${B.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
 }
 /* ===== 📍 Estoy en un cliente: ubica al vendedor con el GPS del celular y muestra las oportunidades del cliente más cercano de su cartera ===== */
