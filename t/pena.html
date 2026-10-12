@@ -292,7 +292,7 @@ function pgDe(CFG, SNAP, cod){
   const g = pgPts(Object.keys(cli).length, o.cob || 0, Math.round((sp.so && sp.so[cod]) || 0), o.so || 0, CFG);
   return { ...g, sep: o.sep || 0, cli };
 }
-/* Georgalos (vendedora 28): cobertura por línea contra el 5% de la cartera; 1 cupón por cada línea al 100% (General Georgalos = CCC) */
+/* Georgalos (vendedora 28): cobertura por línea contra un % de la cartera (mismos objetivos que la Moto); 1 cupón por cada línea al 100% (General Georgalos = CCC) */
 function ggDe(CFG, SNAP, cod){
   const G = CFG.gg, o = G && G.obj && G.obj[cod]; if (!o) return { on: false, pts: 0, max: 0, lin: [], cli: {} };
   const cli = (SNAP && SNAP.gg && SNAP.gg[cod]) || {}, P = CFG.params;
@@ -735,7 +735,7 @@ function viewReglas(){
   const meta = SNAP ? `Última carga${SNAP.origen === 'automatico' ? ' (automática)' : ''}: ${esc(SNAP.archivo || '')}, ${SNAP.nMes.toLocaleString('es-AR')} renglones de ${CFG.mes.label} de los vendedores 24 a 27, ventas hasta el ${fmtDate(SNAP.maxM)}.` : 'Todavía no hay ventas de ' + CFG.mes.label + ' cargadas.';
   return `<div class="prose"><h2>Cómo funciona el concurso Peñaflor${PG ? ' y P&amp;G' : ''}</h2>
   <p>Participan los vendedores 24 a 27 (equipo KAF)${PG ? ', la vendedora 28 (solo P&amp;G)' : ''} y su supervisor. Se juntan puntos por <b>CCC</b> (clientes de la cartera que compran Peñaflor en el mes) y por la <b>cobertura de 11 marcas</b> (clientes de la cartera que compraron cada marca en el mes, con al menos 6 unidades netas del mismo producto en una boleta; Gordon's: 1 unidad). Según los puntos se reciben cupones para el sorteo de la moto.</p>
-  ${PG ? `<p>También suma <b>P&amp;G</b>: cobertura (clientes de la cartera con al menos un producto P&amp;G en el mes) y sell out en pesos. ${R.vs.some(v => v.soloPG) || SOLOPG ? 'La vendedora 28 participa solo con P&amp;G' + (CFG.gg ? ' y Georgalos (cobertura de ' + CFG.gg.lines.length + ' líneas, objetivo ' + fmtP(CFG.gg.pct) + ' de su cartera por línea: 1 cupón por cada línea al 100%)' : '') + '.' : ''}</p>` : ''}
+  ${PG ? `<p>También suma <b>P&amp;G</b>: cobertura (clientes de la cartera con al menos un producto P&amp;G en el mes) y sell out en pesos. ${R.vs.some(v => v.soloPG) || SOLOPG ? 'La vendedora 28 participa solo con P&amp;G' + (CFG.gg ? ' y Georgalos (cobertura de ' + CFG.gg.lines.length + ' líneas con los mismos objetivos que la Moto: 1 cupón por cada línea al 100%)' : '') + '.' : ''}</p>` : ''}
   <p class="formula">Total = puntos CCC + puntos de las 11 marcas + bonus pleno${PG ? ' + puntos P&amp;G' : ''}</p>
   <h3>Puntos CCC (hasta ${P.ptsCCC})</h3><p>Cumplimiento = clientes de la cartera con compra Peñaflor del mes ÷ objetivo CCC. Si es menor a ${fmtP(P.minCCC)}, 0 puntos; si no, cumplimiento × ${P.ptsCCC}, con tope en ${fmtP(P.tope)}.</p>
   <h3>Puntos por marca (hasta ${fmt1(P.ptsMarcas / CFG.brands.length)} cada una, ${P.ptsMarcas} en total)</h3><p>Cumplimiento = clientes que compraron la marca en ${CFG.mes.label} (6 u. del mismo producto en una compra; Gordon's 1 u.) ÷ objetivo. Debajo del ${fmtP(P.minMarca)}: 0. En el ${fmtP(P.minMarca)}: el ${fmtP(P.pctMin)} de los puntos de la marca, subiendo en línea hasta el 100%. Arriba del 100% sigue sumando hasta ${fmtP(P.tope)}.</p>
@@ -799,7 +799,7 @@ function viewGeorgalos(){
   let h = banners();
   h += howto('Cómo se mide Georgalos', [
     'Cobertura de las ' + G.lines.length + ' líneas de Georgalos, igual que en el incentivo de la Moto: el cliente cubre una línea si en ' + CFG.mes.label + ' compró al menos <b>' + G.minUnid + ' unidades</b> de esa línea (o 1 display), descontando rechazos. <b>General Georgalos</b> cuenta cualquier producto Georgalos.',
-    'Objetivo por línea: el ' + fmtP(G.pct) + ' de los clientes de la cartera. <b>Cada línea al 100% da 1 cupón</b> (General Georgalos es la CCC de Georgalos), hasta ' + G.lines.length + ' cupones, que se suman a los cupones de P&amp;G.']);
+    'Objetivo por línea (mismos que la Moto, sobre su cartera de ' + Object.keys((CFG.base || {})[v.cod] || {}).length + ' clientes): ' + G.short.map((s, i) => esc(s) + ' ' + fmtP(Array.isArray(G.pct) ? G.pct[i] : G.pct) + ' (' + v.gg.lin[i].o + ' clientes)').join(' · ') + '. <b>Cada línea al 100% da 1 cupón</b> (General Georgalos es la CCC de Georgalos), hasta ' + G.lines.length + ' cupones, que se suman a los cupones de P&amp;G.']);
   h += `<div class="kpis">${v.gg.lin.map(x => `<div class="kpi"><span class="eyebrow">${esc(x.s)}</span><span class="v">${x.n} <span class="muted" style="font-size:20px">/ ${x.o}</span></span><span class="s">${fmtP(x.p)} · ${x.ok ? '1 cupón' : 'cupón al 100%'}</span><span>${x.n >= x.o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${x.o - x.n}</span>`}</span><div class="bar"><i style="width:${Math.min(x.p || 0, 1) * 100}%"></i></div></div>`).join('')}</div>`;
   const base = (CFG.base || {})[v.cod] || {}, cli = v.gg.cli;
   const rows = Object.keys(base).map(c => { const s = new Set(cli[c] || []); return { c, dia: base[c][0] || 0, has: G.lines.map((l, i) => s.has(i)), n: s.size }; });
