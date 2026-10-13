@@ -396,7 +396,7 @@ function needTag(obj, conPV, money){ const f = obj - conPV; if (!(obj > 0)) retu
 const pvTxt = (d, money) => d > 0 ? `<span class="muted">+${money ? fmtK(d) : d} preventa</span>` : '';
 const pgTab = (PG ? [['batallapg','Batalla P&amp;G']] : []).concat(CFG.gaona ? [['gaona','Gaona']] : [], CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
 const GGT = CFG.gg && Object.keys(CFG.gg.obj || {}).some(c => !SOLO || String(c) === String(SOLO)) ? [['georgalos','Georgalos']] : [];
-const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(GGT, CFG.gaona ? [['gaona','Gaona']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, GGT, [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
+const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(GGT, CFG.gaona ? [['gaona','Gaona']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, GGT, CFG.eq ? [['equipo','Equipo 1 a 27']] : [], [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
 if (!TABS.some(x => x[0] === st.tab)) st.tab = SOLO ? 'ficha' : 'resumen';
 if (SOLO) { st.ven = SOLO; st.bVen = String(SOLO); st.gVen = String(SOLO); }
 function renderTabs(){ $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join(''); }
@@ -811,12 +811,29 @@ function viewGeorgalos(){
 }
 document.addEventListener('click', e => { const d = e.target.closest('[data-ggdia]'); if (d) { st.ggD = d.dataset.ggdia; saveUI(); render(); } });
 document.addEventListener('change', e => { if (e.target.id === 'ggS') { st.ggS = e.target.value; saveUI(); render(); } });
+function viewEquipo(){
+  const E = CFG.eq; if (!E) return '';
+  const B = CFG.brands, rows = E.rows, esp = R.esperado || 0;
+  const sum = f => rows.reduce((a, r) => a + f(r), 0);
+  const ec = p => p == null ? 'na' : p >= 1 - 1e-12 ? 'good' : p >= esp - 1e-12 ? 'warn' : 'bad';
+  const cell = (r, o) => o > 0 ? `<span class="cell ${ec(r / o)}">${r >= o ? '✓ ' : ''}${fmtP(r / o)}</span>` : '<span class="cell na">—</span>';
+  const ind = [{ l: 'CCC autoservicios', o: sum(r => r.oA), r: sum(r => r.rA) }, { l: 'CCC almacenes', o: sum(r => r.oD), r: sum(r => r.rD) }, { l: 'CCC total', o: sum(r => r.oA + r.oD), r: sum(r => r.rA + r.rD), tot: true }].concat(B.map((b, i) => ({ l: b, o: sum(r => r.ob[i]), r: sum(r => r.rb[i]) })));
+  let h = howto('Para qué es esta pestaña', [
+    'Avance del <b>equipo completo (vendedores 1 al 10 y KAF 24 a 27)</b> en CCC y en las ' + B.length + ' marcas de Peñaflor, contra la suma de los objetivos de cada vendedor.',
+    'Es <b>solo de referencia</b> para el supervisor: no suma puntos ni cupones de ningún concurso.',
+    esc(E.nota) + ' Ámbar = va en ritmo (esperado a hoy ' + fmtP(esp) + '); rojo = va atrasado.']);
+  const cT = ind[2];
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">CCC total del equipo</span><span class="v">${cT.r} <span class="muted" style="font-size:20px">/ ${cT.o}</span></span><span class="s">${fmtP(cT.o ? cT.r / cT.o : null)} · faltan ${Math.max(0, cT.o - cT.r)}</span><div class="bar"><i style="width:${Math.min(cT.o ? cT.r / cT.o : 0, 1) * 100}%"></i><b style="left:${esp * 100}%"></b></div></div><div class="kpi"><span class="eyebrow">Marcas al 100%</span><span class="v">${ind.slice(3).filter(x => x.o > 0 && x.r >= x.o).length} <span class="muted" style="font-size:20px">/ ${B.length}</span></span><span class="s">marcas del equipo con el objetivo cumplido</span></div><div class="kpi"><span class="eyebrow">Vendedores</span><span class="v">${rows.length}</span><span class="s">${rows.filter(r => r.g === 'moto').length} de los equipos 1 a 10 · ${rows.filter(r => r.g === 'kaf').length} KAF</span></div></div>`;
+  h += `<div class="section"><div class="panel-h"><h3>Total equipo</h3><span style="flex:1"></span>${exportBtn('tEqT','equipo_total')}</div><div class="tw"><table id="tEqT"><thead><tr><th class="l sticky1">Indicador</th><th>Objetivo equipo</th><th>Real</th><th>%</th><th>Faltan</th></tr></thead><tbody>${ind.map(x => `<tr${x.tot ? ' style="background:var(--accent-soft)"' : ''}><td class="l sticky1 name">${esc(x.l)}</td><td>${x.o}</td><td><b>${x.r}</b></td><td>${cell(x.r, x.o)}</td><td>${x.o - x.r > 0 ? x.o - x.r : '<span class="need ok">✓</span>'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  h += `<div class="section"><div class="panel-h"><h3>Por vendedor</h3><span style="flex:1"></span>${exportBtn('tEqV','equipo_vendedores')}</div><div class="tw"><table id="tEqV"><thead><tr><th class="l sticky1">Vendedor</th><th>CCC autoserv.</th><th>CCC almacenes</th>${B.map(b => `<th>${esc(b)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr><td class="l sticky1 name">${r.c} · ${esc(titleCase(r.nom))}</td><td>${cell(r.rA, r.oA)} <span class="muted" style="font-size:12px">${r.rA}/${r.oA}</span></td><td>${r.oD ? cell(r.rD, r.oD) + ` <span class="muted" style="font-size:12px">${r.rD}/${r.oD}</span>` : '<span class="cell na">—</span>'}</td>${B.map((b, i) => `<td>${cell(r.rb[i], r.ob[i])}</td>`).join('')}</tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Equipo</td><td>${cell(ind[0].r, ind[0].o)}</td><td>${cell(ind[1].r, ind[1].o)}</td>${B.map((b, i) => `<td>${cell(ind[3 + i].r, ind[3 + i].o)}</td>`).join('')}</tr></tfoot></table></div></div>`;
+  return h;
+}
 function render(){
   R = computeP(CFG, SNAP);
   RPV = SNAP && SNAP.pv ? computeP(CFG, { ...SNAP, v: SNAP.pv.v || {}, pg: SNAP.pv.pg || SNAP.pg }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = (R.sumV + R.sumS) ? v.cup / (R.sumV + R.sumS) : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, puntos: viewPuntos, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, puntos: viewPuntos, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
 }
 async function exportTable(id, name){
