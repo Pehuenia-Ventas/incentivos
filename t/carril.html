@@ -86,8 +86,8 @@ select{border:1px solid var(--line);background:var(--surface);border-radius:8px;
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
 .panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 
-/* Tablas */
-.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+/* Tablas (las listas largas scrollean dentro de la tabla, máx. 75% de la pantalla, así los títulos de columna quedan fijos) */
+.tw{overflow:auto;max-height:75vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
 table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
 th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--surface);position:sticky;top:0;z-index:1}
