@@ -191,8 +191,8 @@ details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-
 <script>
 const CFG = /*CFG_START*/null/*CFG_END*/;
 /* ===== Núcleo de cálculo (mismo criterio que el Excel "Modelo de incentivo") ===== */
-const GBR = ['Chocolates','Caramelos blandos','Chocolate en polvo','Pasta de maní','Cobertura general'];
-const GSHORT = {'Chocolates':'Chocolates','Caramelos blandos':'Caram. blandos','Chocolate en polvo':'Choc. en polvo','Pasta de maní':'Pasta de maní','Cobertura general':'General Georgalos'};
+const GBR = ['Chocolates','Caramelos blandos','Chocolate en polvo','Pasta de maní','Galletitas Toddy','Cobertura general'];
+const GSHORT = {'Chocolates':'Chocolates','Caramelos blandos':'Caram. blandos','Chocolate en polvo':'Choc. en polvo','Pasta de maní':'Pasta de maní','Galletitas Toddy':'Galletitas Toddy','Cobertura general':'General Georgalos'};
 function norm(s){ return String(s == null ? '' : s).trim().toUpperCase().replace(/\s+/g,' '); }
 function ceilX(x){ return Math.ceil(+(+x).toFixed(9)); }
 function pad2(n){ return (n<10?'0':'')+n; }
@@ -504,7 +504,7 @@ function viewResumen(){
     <div class="kpi"><span class="eyebrow">Falta vender</span><span class="v">${fmtMk(falta)}</span><span class="s">${realPV - realT > 0 ? fmtMk(realPV - realT) + ' de preventa cargada · ' : ''}${DQ ? 'en los ' + DQ + ' días hábiles que quedan' : 'mes cerrado'}</span><span>${needTag(objT, realPV, true)}</span></div>
     <div class="kpi"><span class="eyebrow">Cupones en juego</span><span class="v">${fmtN(cup)}</span><span class="s">${conCup} de ${vs.length} vendedores con cupones · ${tope} en el tope</span></div>
     <div class="kpi"><span class="eyebrow">Marcas al 100%</span><span class="v">${marcasOk} <span class="muted" style="font-size:20px">/ ${marcasTot}</span></span><span class="s">sumando todas las marcas con objetivo de cada vendedor</span></div>
-    <div class="kpi"><span class="eyebrow">Coberturas Georgalos logradas</span><span class="v">${cobOk} <span class="muted" style="font-size:20px">/ ${vs.length * 5}</span></span><span class="s">4 líneas + cobertura general por vendedor</span></div>
+    <div class="kpi"><span class="eyebrow">Coberturas Georgalos logradas</span><span class="v">${cobOk} <span class="muted" style="font-size:20px">/ ${vs.length * GBR.length}</span></span><span class="s">${GBR.length - 1} líneas + cobertura general por vendedor</span></div>
   </div>`;
   h += `<div class="stack">
     <div class="panel"><div class="panel-h"><h3>Facturación acumulada del mes</h3><span class="muted" style="font-size:13px">línea punteada = ritmo para llegar al objetivo</span></div>${chartSVG(vs)}</div>
@@ -558,14 +558,14 @@ function viewCupones(){
   h += howto('Cómo se calculan los cupones de cada vendedor', [
     '<b>A · Puntos por marca</b>: cada marca que llega al 100% de su objetivo suma puntos según su peso en el objetivo total del vendedor (ej.: si Peñaflor es el 20% del objetivo, suma 20 puntos). <b>Cada ' + P.ptsCup + ' puntos, 1 cupón</b>, hasta ' + P.cupMarcas + ' cupones.',
     '<b>B · Plus todas las marcas</b>: si llega al 100% en <b>todas</b> las marcas con objetivo, suma ' + P.cupPlus + ' cupones más.',
-    '<b>C · Cobertura Georgalos</b>: ' + P.cupCob + ' cupón por cada línea Georgalos (Chocolates, Caramelos blandos, Chocolate en polvo, Pasta de maní) en la que se llega a la cantidad de clientes pedida, y 1 más (el 5.º) por la cobertura general de todos los productos Georgalos.',
+    '<b>C · Cobertura Georgalos</b>: ' + P.cupCob + ' cupón por cada línea Georgalos (' + GBR.slice(0, -1).join(', ') + ') en la que se llega a la cantidad de clientes pedida, y 1 más por la cobertura general de todos los productos Georgalos.',
     '<b>Total</b> = A + B + C, con un máximo de ' + P.tope + '. Lo que pase el tope no cuenta.',
     '<b>Probabilidad</b> = cupones del vendedor ÷ total de cupones de los vendedores. Si los supervisores entran en la misma urna, baja un poco (se ve en "Supervisores").',
     '<b>Máx. posible</b>: cuántos cupones podría llegar a tener si cumple todo lo que tiene objetivo.'
   ]);
   h += `<div class="panel-h"><span class="muted">${vs.length} vendedores · tocá una fila para ver qué le falta</span>${exportBtn('tCup','cupones_vendedores')}</div>`;
   h += `<div class="tw"><table id="tCup"><thead><tr><th class="l sticky1">Vendedor</th><th class="l">Supervisor</th><th>Marcas al 100%</th><th>Puntos</th><th>A · cupones marcas</th><th>% objetivo total</th><th>B · plus todas</th><th>Georgalos cubiertas</th><th>C · cupones cobertura</th><th>A+B+C</th><th class="l">Cupones (tope ${P.tope})</th><th>Total</th><th>Máx. posible</th><th>Prob. de ganar</th></tr></thead><tbody>`;
-  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td class="l ink2">${esc(supName(v.sup))}</td><td>${v.n100} / ${v.conObj}</td><td>${Math.round(v.pts)}</td><td>${v.A}</td><td>${cellP(v.objT ? v.pct : null)}</td><td>${v.B}</td><td>${v.nCob} / 5</td><td>${v.C}</td><td>${v.sub}</td><td class="l">${tickets(v)}</td><td class="tot">${v.total}</td><td class="muted">${v.maxPosible}</td><td>${fmtP(v.prob,1)}</td></tr>`;
+  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td class="l ink2">${esc(supName(v.sup))}</td><td>${v.n100} / ${v.conObj}</td><td>${Math.round(v.pts)}</td><td>${v.A}</td><td>${cellP(v.objT ? v.pct : null)}</td><td>${v.B}</td><td>${v.nCob} / ${GBR.length}</td><td>${v.C}</td><td>${v.sub}</td><td class="l">${tickets(v)}</td><td class="tot">${v.total}</td><td class="muted">${v.maxPosible}</td><td>${fmtP(v.prob,1)}</td></tr>`;
   const t = k => vs.reduce((a,v) => a + v[k], 0);
   h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td><td>${t('n100')} / ${t('conObj')}</td><td></td><td>${t('A')}</td><td></td><td>${t('B')}</td><td>${t('nCob')}</td><td>${t('C')}</td><td>${t('sub')}</td><td></td><td class="tot">${t('total')}</td><td></td><td>${R.sumV ? fmtP(t('total')/R.sumV,1) : '—'}</td></tr></tfoot></table></div>`;
   h += ticketLegend;
@@ -614,7 +614,7 @@ function viewCobertura(){
     '<b>Displays y estuches</b> (Flynn Paff, Palitos, Lengüetazo, Chocolatín, Sin azúcares, Mantecol bocado/barra/bañado, etc.): 1 display o estuche ya cubre al cliente.',
     '<b>Cobertura general</b>: lo mismo, pero con todos los productos Georgalos juntos (alfajores, galletitas, Flow, etc.). La línea Fiestas no cuenta.',
     '<b>Clientes a alcanzar</b> = cartera × el % de cada línea (' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + '), redondeado hacia arriba. Ej.: cartera de 260 clientes con 10% → 26 clientes.',
-    'Cada línea en la que se llega a esa cantidad suma 1 cupón (C), y la cobertura general suma el 5.º: hasta 5 cupones por cobertura.',
+    'Cada línea en la que se llega a esa cantidad suma 1 cupón (C), y la cobertura general suma 1 más: hasta ' + GBR.length + ' cupones por cobertura.',
     'Cada línea tiene su lista de artículos (está en "Cómo funciona"). Si sale un artículo nuevo, hay que agregarlo a la lista.',
     'En la <b>Ficha del vendedor</b> está la lista de clientes que compraron cada marca en septiembre y todavía no en octubre: es la lista para salir a buscar.'
   ]);
@@ -638,7 +638,7 @@ function viewSupervisores(){
   ]);
   h += `<div class="panel-h"><span class="muted">Sorteo conjunto: ${R.sumV} cupones de vendedores + ${R.sumS} de supervisores = <b>${R.sumV + R.sumS}</b></span>${exportBtn('tSup','supervisores')}</div>`;
   h += `<div class="tw"><table id="tSup"><thead><tr><th class="l">Supervisor</th><th>Vendedores</th><th>Objetivo total</th><th>Facturado</th><th>% total</th><th>Tendencia</th><th>Marcas al 100%</th><th>Puntos</th><th>A</th><th>B · plus</th><th>Georgalos cubiertas</th><th>C</th><th class="l">Cupones</th><th>Total</th><th>Prob. (sorteo conjunto)</th></tr></thead><tbody>`;
-  for (const s of R.sups) h += `<tr><td class="l name">${esc(supName(s.sup))}</td><td>${s.vendedores} <span class="muted">(${s.conCupones} con cupones)</span></td><td>${fmtMk(s.objT)}</td><td>${fmtMk(s.realT)}</td><td>${cellP(s.pct)}</td><td>${R.diasTrans ? fmtP(s.tendPct) : '—'}</td><td>${s.n100} / ${s.conObj}</td><td>${Math.round(s.pts)}</td><td>${s.A}</td><td>${s.B}</td><td>${s.nCob} / 5</td><td>${s.C}</td><td class="l">${tickets(s)}</td><td class="tot">${s.total}</td><td>${fmtP(s.prob,1)}</td></tr>`;
+  for (const s of R.sups) h += `<tr><td class="l name">${esc(supName(s.sup))}</td><td>${s.vendedores} <span class="muted">(${s.conCupones} con cupones)</span></td><td>${fmtMk(s.objT)}</td><td>${fmtMk(s.realT)}</td><td>${cellP(s.pct)}</td><td>${R.diasTrans ? fmtP(s.tendPct) : '—'}</td><td>${s.n100} / ${s.conObj}</td><td>${Math.round(s.pts)}</td><td>${s.A}</td><td>${s.B}</td><td>${s.nCob} / ${GBR.length}</td><td>${s.C}</td><td class="l">${tickets(s)}</td><td class="tot">${s.total}</td><td>${fmtP(s.prob,1)}</td></tr>`;
   h += '</tbody></table></div>';
   h += `<div class="section"><h3 style="margin-bottom:8px">Avance por marca de cada equipo</h3>${statusLegend()}<div class="tw"><table><thead><tr><th class="l sticky1">Supervisor</th>${CFG.brands.map(b => `<th>${esc(b.short)}</th>`).join('')}</tr></thead><tbody>`;
   for (const s of R.sups) h += `<tr><td class="l name sticky1">${esc(supName(s.sup))}</td>${s.pctB.map(p => `<td>${cellP(p)}</td>`).join('')}</tr>`;
@@ -660,7 +660,7 @@ function viewFicha(){
     <div class="step"><span class="k">A · Puntos por marcas al 100%</span><span class="d">${v.n100} de ${v.conObj} marcas al 100% = ${Math.round(v.pts)} de 100 puntos · cada ${P.ptsCup} puntos, 1 cupón (hasta ${P.cupMarcas})</span><span class="r">${v.A}</span></div>
     <div class="step"><span class="k">¿Llegó al 100% del objetivo total?</span><span class="d">${fmtMk(v.realT)} de ${fmtMk(v.objT)} (${fmtP(v.pct)})${faltaT > 0 ? ' · faltan ' + fmtMk(faltaT) : ''}</span><span class="r">${v.tot100 ? 'Sí' : 'No'}</span></div>
     <div class="step"><span class="k">B · Plus todas las marcas al 100%</span><span class="d">${v.todas ? 'Todas sus marcas llegaron al 100%' : 'Faltan ' + (v.conObj - v.n100) + ' marcas para el plus de ' + P.cupPlus + ' cupones'}</span><span class="r">${v.B}</span></div>
-    <div class="step"><span class="k">C · Cobertura Georgalos</span><span class="d">${v.nCob} de 5 coberturas cumplidas (4 líneas + general)</span><span class="r">${v.C}</span></div>
+    <div class="step"><span class="k">C · Cobertura Georgalos</span><span class="d">${v.nCob} de ${GBR.length} coberturas cumplidas (${GBR.length - 1} líneas + general)</span><span class="r">${v.C}</span></div>
     <div class="step"><span class="k">Subtotal A + B + C</span><span class="d">${v.sub > P.tope ? 'Pasa el tope: lo que excede no cuenta' : 'Sin tope'}</span><span class="r">${v.sub}</span></div>
     <div class="step total"><span class="k">Total de cupones</span><span class="d">El menor entre el subtotal y ${P.tope} · probabilidad ${fmtP(v.prob,1)}</span><span class="r">${v.total}</span></div>
   </div>
@@ -668,7 +668,7 @@ function viewFicha(){
     <div class="steps" style="margin-top:10px;border:0">
       <div class="step"><span class="k">Tendencia al cierre</span><span class="d">${R.diasTrans ? 'Al promedio diario actual llegaría a ' + fmtMk(v.tend) : 'Se calcula con el primer día de ventas'}</span><span class="r">${R.diasTrans ? fmtP(v.tendPct) : '—'}</span></div>
       <div class="step"><span class="k">Necesita por día hábil</span><span class="d">${DQ > 0 ? 'Para llegar al 100% del total en los ' + DQ + ' días que quedan' + (pvOf(v).realT > v.realT ? ', descontando ' + fmtMk(pvOf(v).realT - v.realT) + ' de preventa ya cargada' : '') : 'Mes cerrado'}</span><span class="r" style="font-size:20px">${DQ > 0 && v.objT > pvOf(v).realT ? fmtMk((v.objT - pvOf(v).realT) / DQ) : (DQ ? '✓' : '—')}</span></div>
-      <div class="step"><span class="k">Cupones posibles</span><span class="d">Si cumple todas sus marcas y las 5 coberturas</span><span class="r">${v.maxPosible}</span></div>
+      <div class="step"><span class="k">Cupones posibles</span><span class="d">Si cumple todas sus marcas y las ${GBR.length} coberturas</span><span class="r">${v.maxPosible}</span></div>
     </div></div></div>`;
   // marcas
   const rows = CFG.brands.map((b,i) => ({ b, o: v.obj[i], r: v.real[i], rp: pvOf(v).real[i] })).filter(x => x.o > 0).sort((a,b) => (a.r/a.o >= 1) - (b.r/b.o >= 1) || b.o - a.o);
@@ -727,7 +727,7 @@ function viewBatalla(){
   h += `<div class="panel-h"><span class="muted">${rows.length.toLocaleString('es-AR')} clientes${dSel !== 'todos' ? ' · ' + (DIAS[dSel] || 'Sin día') : ''} · en la lista: ${GBR.map((g,i) => GSHORT[g] + ' ' + tot[i]).join(' · ')}</span>${exportBtn('tBat','batalla_georgalos')}</div>`;
   const shown = rows.slice(0, 1500);
   h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Nombre</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${GBR.map(g => `<th style="text-align:center">${GSHORT[g]}</th>`).join('')}<th>Coberturas</th></tr></thead><tbody>`;
-  for (const r of shown) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(titleCase(nameOf(r.c)) || '—')}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.d] || 'Sin día'}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes" title="Compró">✓</span>' : '<span class="bt-no" title="No compró">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / 5</td></tr>`;
+  for (const r of shown) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(titleCase(nameOf(r.c)) || '—')}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.d] || 'Sin día'}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes" title="Compró">✓</span>' : '<span class="bt-no" title="No compró">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${GBR.length}</td></tr>`;
   h += '</tbody></table></div>';
   if (rows.length > shown.length) h += `<p class="note">Se muestran los primeros ${shown.length.toLocaleString('es-AR')} clientes; filtrá por vendedor o día para ver el resto (la exportación incluye solo los visibles).</p>`;
   return h;
@@ -807,7 +807,7 @@ function viewReglas(){
   return `<div class="prose">
   <h2>Cómo funciona el concurso</h2>
   <p>Cada vendedor y cada supervisor junta cupones durante el mes según su cumplimiento. A fin de mes se sortea la moto entre todos los cupones: cuantos más cupones, más chances. <b>Pepsico no participa</b>; todas las demás marcas (incluidas Peñaflor y New PGA) cuentan.</p>
-  <p class="formula">Total de cupones = A (hasta ${P.cupMarcas}) + B (${P.cupPlus}) + C (hasta 5) · máximo ${P.tope}</p>
+  <p class="formula">Total de cupones = A (hasta ${P.cupMarcas}) + B (${P.cupPlus}) + C (hasta ${GBR.length}) · máximo ${P.tope}</p>
   <h3>A · Puntos por marca (hasta ${P.cupMarcas} cupones)</h3>
   <p>Cada marca que llega al objetivo del mes (real ÷ objetivo ≥ ${fmtP(P.cumpl)}) suma puntos según su <b>peso en el objetivo total</b> del vendedor: puntos de la marca = objetivo de la marca ÷ objetivo total × 100. Así, las marcas más importantes valen más. Con todas las marcas al 100% se llega a 100 puntos. <b>Cada ${P.ptsCup} puntos, 1 cupón</b> (redondeado para abajo), hasta ${P.cupMarcas} cupones: el máximo se alcanza con ${P.ptsCup * P.cupMarcas} puntos. Si una marca no tiene objetivo (o está en 0) no suma.</p>
   <p class="note">Ejemplo: objetivo total $ 20 M; Peñaflor $ 6 M (30 puntos), Georgalos $ 4 M (20 puntos), Ledesma $ 2 M (10 puntos). Si llega al 100% en esas tres, junta 60 puntos = 4 cupones.</p>
