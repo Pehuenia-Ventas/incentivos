@@ -447,7 +447,7 @@ function exportBtn(id, name){ return `<button class="btn small" type="button" da
 
 /* ===================== Pestañas ===================== */
 const SOLO = CFG.solo || null;
-const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
+const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : [], CFG.inn ? [['inn','Batalla innovaciones']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
 const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['batalla','Batalla Georgalos']].concat(GTAB, [['reglas','Cómo funciona']]) : [
   ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, [
   ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
@@ -466,7 +466,7 @@ function renderHeader(){
   else { sd.className = 'chip warn'; sd.textContent = 'Sin ventas cargadas todavía'; }
   $('#stDias').textContent = 'Días hábiles: ' + R.diasTrans + ' de ' + R.diasTot + (DQ ? ' · quedan ' + DQ + ' para vender' : '');
   $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
-  $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp'].includes(st.tab);
+  $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn'].includes(st.tab);
   if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
   const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
 }
@@ -905,6 +905,30 @@ function viewP10Avance(cods, sel){
   h += `<div class="tw"><table id="tP10A"><thead><tr><th class="l sticky1">Vendedor</th>${COLS.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${vs.map(v => `<tr ${SOLO ? '' : `class="click" data-p10v="${v.c}"`} ${!SOLO && v.c === sel ? 'style="background:var(--accent-soft)"' : ''}><td class="l name sticky1">${v.c} · ${esc(titleCase(v.nom))}</td>${COLS.map((c,i) => `<td>${cell(v.obj[i], v.real[i])}</td>`).join('')}</tr>`).join('')}</tbody>${vs.length > 1 ? `<tfoot><tr><td class="l sticky1">Equipo</td>${COLS.map((c,i) => `<td>${cell(vs.reduce((a,v) => a + v.obj[i], 0), vs.reduce((a,v) => a + v.real[i], 0))}</td>`).join('')}</tr></tfoot>` : ''}</table></div><p class="note">CCC autoservicios: compra Peñaflor en ${esc(CFG.mes.label)}. CCC almacenes: compra Peñaflor en ${esc(CFG.mes.label)}. El objetivo de CCC es el mismo los tres meses del trimestre (${esc(PC.trim)}), pero cada mes se cuenta desde 0. ${SOLO ? '' : 'Tocá un vendedor para ver sus clientes abajo.'}</p></div>`;
   return h;
 }
+/* ===== Batalla de innovaciones (vendedores 1 a 10): autoservicios de la cartera; línea cubierta = alguna compra desde el 01/02/25 de N u. del mismo SKU en una boleta ===== */
+function viewInn(){
+  const I = CFG.inn; if (!I) return '';
+  const Q = (SNAP && SNAP.inn && SNAP.inn.q) || {}, L = I.lines;
+  const cods = [...new Set(Object.values(I.cli).map(x => x[0]))].sort((a, b) => a - b);
+  const nomV = c => { const v = (CFG.vend || []).find(x => String(x.cod) === String(c)); return v ? titleCase(v.nom) : 'Vendedor ' + c; };
+  const vSel = SOLO ? String(SOLO) : (st.iVen && (st.iVen === 'todos' || cods.map(String).includes(st.iVen)) ? st.iVen : 'todos'), dSel = st.iDia || 'todos', solo = st.iSolo || 'todos';
+  const all = Object.keys(I.cli).filter(c => vSel === 'todos' || String(I.cli[c][0]) === vSel).map(c => { const x = I.cli[c], q = Q[c] || {}; const nue = L.map((l, i) => !x[2].includes(i) && (+q[l.ci] || 0) >= l.u - 1e-9); const has = L.map((l, i) => x[2].includes(i) || nue[i]); const parc = L.map((l, i) => !has[i] && (+q[l.ci] || 0) > 0 ? +q[l.ci] : 0); return { c, ven: x[0], dia: x[1], has, nue, parc, n: has.filter(Boolean).length }; });
+  const U = all.length;
+  let h = ''; const fmt1 = n => (Math.round(n * 10) / 10).toLocaleString('es-AR', {maximumFractionDigits:1});
+  h += howto('Cómo se usa la batalla de innovaciones', [
+    'Una fila por <b>autoservicio</b> de la cartera y una columna por línea de innovación. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = el cliente ya tiene la línea: alguna vez desde el 01/02/25 compró <b>6 unidades del mismo producto en una misma boleta</b> (Gordon\'s y Bossa Nova: 1). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no: es la venta a buscar.',
+    'Con borde punteado: cubierta este mes. En ámbar: este mes compró algo pero no llegó a las unidades de una misma compra.',
+    'Arriba, la cobertura de cada línea (clientes con ✓ ÷ autoservicios) contra el objetivo de cobertura pedido.',
+    'Es una batalla para trabajar la cartera: no cambia los puntos ni los cupones del incentivo.']);
+  const vSelHtml = SOLO ? '' : `<label for="iVen">Vendedor <select id="iVen"><option value="todos" ${vSel==='todos'?'selected':''}>Todos</option>${cods.map(c => `<option value="${c}" ${String(c)===vSel?'selected':''}>${c} · ${esc(nomV(c))}</option>`).join('')}</select></label>`;
+  h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(118px,1fr))">${L.map((l, i) => { const n = all.filter(r => r.has[i]).length, p = U ? n / U : null, o = l.obj != null ? Math.ceil(U * l.obj - 1e-9) : null; return `<div class="kpi" style="padding:10px 12px"><span class="eyebrow" style="font-size:11px">${esc(l.l)}</span><span class="v" style="font-size:22px">${n} <span class="muted" style="font-size:14px">/ ${U}</span></span><span class="s">${fmtP(p)}${o != null ? ' · obj. ' + fmtP(l.obj) : ''}</span><span>${o == null ? '<span class="need">sin objetivo</span>' : n >= o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${o - n}</span>`}</span></div>`; }).join('')}</div>`;
+  h += `<div class="filters" style="margin:14px 0 10px">${vSelHtml}<div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(Object.entries(DIAS).filter(([k]) => k !== '6'), [['0','Sin día']]).map(([k,l]) => `<button type="button" class="daychip" data-idia="${k}" aria-pressed="${String(dSel)===String(k)}">${l}</button>`).join('')}</div><label for="iSolo">Mostrar <select id="iSolo"><option value="todos" ${solo==='todos'?'selected':''}>Todos los clientes</option><option value="obj" ${solo==='obj'?'selected':''}>Con ✗ en líneas con objetivo</option></select></label></div>`;
+  const rows = all.filter(r => (dSel === 'todos' || String(r.dia) === String(dSel)) && (solo !== 'obj' || L.some((l, i) => l.obj != null && !r.has[i]))).sort((a, b) => (a.dia || 9) - (b.dia || 9) || a.n - b.n || (+a.c) - (+b.c));
+  h += `<div class="panel-h"><span class="muted">${rows.length} clientes</span>${exportBtn('tInn','batalla_innovaciones_' + vSel)}</div><div class="tw"><table id="tInn"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Dirección</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${L.map(l => `<th style="text-align:center">${esc(l.l)}</th>`).join('')}<th>Líneas</th></tr></thead><tbody>${rows.map(r => `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(cliTxt(r.c) || '—')}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(nomV(r.ven))}</td>` : ''}<td class="l ink2">${DIAS[r.dia] || 'Sin día'}</td>${L.map((l, i) => r.has[i] ? `<td style="text-align:center"><span class="bt-yes" ${r.nue[i] ? 'style="border:2px dashed var(--good)" title="Cubierta en ' + CFG.mes.label + '"' : ''}>✓</span></td>` : r.parc[i] ? `<td style="text-align:center"><span class="cell warn" style="min-width:0" title="Su mejor compra este mes fue de ${fmt1(r.parc[i])} u.; necesita ${l.u} en una misma compra">${Math.round(r.parc[i]*10)/10}/${l.u}</span></td>` : '<td style="text-align:center"><span class="bt-no">✗</span></td>').join('')}<td><b>${r.n}</b> / ${L.length}</td></tr>`).join('')}</tbody></table></div>`;
+  return h;
+}
+document.addEventListener('click', e => { const d = e.target.closest('[data-idia]'); if (d) { st.iDia = d.dataset.idia; saveUI(); render(); } });
+document.addEventListener('change', e => { if (e.target.id === 'iVen') { st.iVen = e.target.value; saveUI(); render(); } else if (e.target.id === 'iSolo') { st.iSolo = e.target.value; saveUI(); render(); } });
 function viewP10(){
   const PC = CFG.p10; if (!PC) return '';
   const PV = (SNAP && SNAP.p10) || {};
@@ -977,7 +1001,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
