@@ -1,0 +1,224 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Facturación KAF por marca</title>
+<style>
+/* Layout: barra superior con estado de datos + pestañas; cada pestaña abre con "Cómo se lee" y luego la tabla/tarjetas. */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --surface2:#EAEEF4; --line:#D5DCE6; --ink:#15202C; --ink2:#4A5869; --muted:#738196;
+  --accent:#2448C7; --accent-soft:#DCE4FB; --accent2:#0E8C8C; --accent2-soft:#D3EFEE;
+  --good:#1D7F45; --good-bg:#DDF2E4; --warn:#9A6400; --warn-bg:#FCEFCF; --bad:#B4322A; --bad-bg:#F9DEDB;
+  --ticket-empty:#E1E6EE;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}
+[hidden]{display:none!important}
+.ro .edit-only{display:none!important}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:20px 60px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:34px;font-weight:700;line-height:1.05}
+h2{font-size:26px;font-weight:700}
+h3{font-size:19px;font-weight:600}
+.num,td,th{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .ink2{color:var(--ink2)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Encabezado */
+.top{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.top .ttl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.status{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.need{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}.need.ok{background:var(--good-bg);color:var(--good)}.need.bad{background:var(--bad-bg);color:var(--bad)}.need.late{background:var(--warn-bg);color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.chip.good{background:var(--good-bg);color:var(--good)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0F151D}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0F151D}}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* Pestañas */
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-block:16px 18px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:16px}
+.filters label{font-size:13px;color:var(--muted);font-weight:600;display:flex;gap:8px;align-items:center}
+select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;max-width:100%}
+
+/* Caja explicativa */
+.howto{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:14px 18px;margin-bottom:18px}
+.howto summary{cursor:pointer;font-weight:700;list-style:none;display:flex;gap:8px;align-items:center}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:"▸";color:var(--accent);transition:transform .15s}
+.howto[open] summary::before{transform:rotate(90deg)}
+.howto ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:95ch}
+.howto p{margin:10px 0 0;max-width:95ch}
+
+/* Tarjetas KPI */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1.05}
+.kpi .s{font-size:13px;color:var(--ink2)}
+.bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;position:relative;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.kpis{grid-template-columns:1fr}}
+.stack{display:grid;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+
+/* Tablas (las listas largas scrollean dentro de la tabla, máx. 75% de la pantalla, así los títulos de columna quedan fijos) */
+.tw{overflow:auto;max-height:75vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--surface);position:sticky;top:0;z-index:1}
+th.l,td.l{text-align:left}
+tbody tr:hover td{background:var(--surface2)}
+tfoot td{font-weight:700;background:var(--surface2)}
+td.name{font-weight:600}
+tr.click{cursor:pointer}
+.sticky1{position:sticky;left:0;background:var(--surface);z-index:2}
+tbody tr:hover td.sticky1{background:var(--surface2)}
+tfoot td.sticky1{background:var(--surface2)}
+th.sticky1{z-index:3}
+.cell{display:inline-block;min-width:58px;padding:2px 6px;border-radius:5px;font-weight:600;text-align:center}
+.cell.good{background:var(--good-bg);color:var(--good)} .cell.warn{background:var(--warn-bg);color:var(--warn)} .cell.bad{background:var(--bad-bg);color:var(--bad)} .cell.na{color:var(--muted);font-weight:400}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink2);margin:10px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* Cupones tipo ticket */
+.tickets{display:inline-flex;gap:3px;vertical-align:middle}
+.tickets i{width:11px;height:16px;border-radius:2px;background:var(--ticket-empty);display:block}
+.tickets i.a{background:var(--accent)} .tickets i.b{background:var(--accent);opacity:.5} .tickets i.c{background:var(--accent2)}
+.big-tickets .tickets i{width:22px;height:32px;border-radius:4px}
+.tot{font-family:var(--f-display);font-size:20px;font-weight:700}
+
+/* Ficha */
+.ficha-head{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.steps{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.step{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.step:last-child{border-bottom:0}
+.step .k{font-weight:700}
+.step .d{font-size:13px;color:var(--ink2);grid-column:1}
+.step .r{grid-row:1 / span 2;grid-column:2;font-family:var(--f-display);font-size:24px;font-weight:700;text-align:right}
+.step.total{background:var(--accent-soft)}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+details.cli{border-top:1px solid var(--line);padding:8px 0}
+details.cli summary{cursor:pointer;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-gap:20px}
+@media (max-width:560px){details.cli ol{columns:1}}
+
+/* Gráfico */
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2}
+.chart .area{fill:var(--accent);opacity:.12}
+.chart .obj{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:5 4;fill:none}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:6px;font-size:13px;z-index:50;white-space:nowrap}
+
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px;background:var(--surface)}
+.empty p{margin:4px 0 0;max-width:70ch;color:var(--ink2)}
+.bt-yes{color:var(--good);font-weight:800;font-size:17px}
+.bt-no{color:var(--bad);font-weight:800;font-size:17px}
+.bt-yes,.bt-no{display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:6px}
+.bt-yes{background:var(--good-bg)} .bt-no{background:var(--bad-bg)}
+.daychips{display:flex;flex-wrap:wrap;gap:6px}
+.daychip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;cursor:pointer;font-size:13px}
+.daychip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
+.prose{max-width:80ch}
+.prose h3{margin-top:22px}
+.prose p,.prose li{color:var(--ink2)}
+.prose ol,.prose ul{padding-left:22px;display:grid;gap:6px}
+.formula{font-family:var(--f-display);font-size:20px;font-weight:600;background:var(--accent-soft);padding:10px 14px;border-radius:8px;color:var(--ink)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.section{margin-top:22px}
+.overlay{position:fixed;inset:0;background:rgba(10,15,22,.55);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
+.modal{background:var(--surface);border-radius:12px;padding:22px;max-width:520px;width:100%;display:grid;gap:12px}
+.spinner{width:22px;height:22px;border:3px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+@media (max-width:560px){h1{font-size:28px}.kpi .v{font-size:28px}.wrap{padding-inline:16px}}
+</style>
+<style>
+.dfil{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:12px}
+.dfil label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+.dfil input[type=date],.dfil select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-height:36px}
+td.zero{color:var(--muted)}
+</style>
+</head><body>
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <span class="eyebrow">Primeros Productos Pehuenia · vendedores KAF 24 a 27</span>
+      <h1>Facturación por marca · <span id="mesLabel"></span></h1>
+    </div>
+    <div class="status"><span id="stData" class="chip"></span></div>
+  </header>
+  <main id="view"></main>
+</div>
+<script>
+const CFG = /*CFG_START*/null/*CFG_END*/;
+const EMBED = /*EMBED_START*/null/*EMBED_END*/;
+const EMBED_OBJ = /*EMBEDOBJ_START*/null/*EMBEDOBJ_END*/;
+const S = EMBED || { provs: [], d: {} };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtM = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+const titleCase = s => String(s).toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+const DIAS = {1:'Lunes',2:'Martes',3:'Miércoles',4:'Jueves',5:'Viernes',6:'Sábado'};
+const dow = f => new Date(f + 'T12:00:00').getDay(); // 0 domingo
+const fechas = Object.keys(S.d).sort();
+const pad2 = n => (n < 10 ? '0' : '') + n;
+const ini = CFG.mes.y + '-' + pad2(CFG.mes.m) + '-01', fin = fechas.length ? fechas[fechas.length - 1] : ini;
+const st = { desde: ini, hasta: fin, dias: [], ven: 'todos', orden: 'total' };
+try { Object.assign(st, JSON.parse(localStorage.getItem('kfac_ui') || '{}')); } catch (e) {}
+if (st.desde < ini) st.desde = ini; if (st.hasta > fin || st.hasta < ini) st.hasta = fin;
+const save = () => { try { localStorage.setItem('kfac_ui', JSON.stringify(st)); } catch (e) {} };
+const fD = f => f ? f.slice(8, 10) + '/' + f.slice(5, 7) : '—';
+document.getElementById('mesLabel').textContent = CFG.mes.label;
+document.getElementById('stData').textContent = 'Ventas hasta el ' + fD(S.maxF) + (S.cuando ? ' · actualizado ' + new Date(S.cuando).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+const vend = CFG.vend.slice().sort((a, b) => a.cod - b.cod);
+function render(){
+  const vs = vend.filter(v => st.ven === 'todos' || String(v.cod) === st.ven);
+  const sel = fechas.filter(f => f >= st.desde && f <= st.hasta && (!st.dias.length || st.dias.includes(String(dow(f)))));
+  const P = S.provs, tot = P.map(() => ({})), totV = {}, porDia = {};
+  for (const f of sel) for (const v of vs) { const e = (S.d[f] || {})[v.cod] || {}; for (const k in e) { tot[k][v.cod] = (tot[k][v.cod] || 0) + e[k]; totV[v.cod] = (totV[v.cod] || 0) + e[k]; porDia[f] = (porDia[f] || 0) + e[k]; } }
+  const rowsB = P.map((p, i) => ({ p, i, t: vs.reduce((a, v) => a + (tot[i][v.cod] || 0), 0) }));
+  rowsB.sort(st.orden === 'az' ? (a, b) => a.p.localeCompare(b.p) : (a, b) => b.t - a.t || a.p.localeCompare(b.p));
+  const T = rowsB.reduce((a, r) => a + r.t, 0), conVenta = rowsB.filter(r => Math.abs(r.t) >= 1).length;
+  let h = `<details class="howto"><summary>Cómo se lee</summary><ul><li>Facturación de los vendedores KAF (24 a 27) por marca, en pesos con impuestos (columna ImporteItem del detallado de ventas de Gescom, el mismo que alimenta los otros tableros). Venta menos rechazos. <b>No incluye Pepsico.</b></li><li>Están todas las marcas que vendió la empresa en el mes (cualquier vendedor); si un vendedor no vendió una marca en las fechas elegidas, figura <b>0</b>.</li><li>Elegí el rango de fechas y, si querés, uno o más días de la semana (por ejemplo, solo los lunes).</li></ul></details>`;
+  h += `<div class="dfil"><label>Desde<input type="date" id="fDesde" min="${ini}" max="${fin}" value="${st.desde}"></label><label>Hasta<input type="date" id="fHasta" min="${ini}" max="${fin}" value="${st.hasta}"></label><label>Vendedor<select id="fVen"><option value="todos">Todos</option>${vend.map(v => `<option value="${v.cod}" ${String(v.cod) === st.ven ? 'selected' : ''}>${v.cod} · ${esc(titleCase(v.nom))}</option>`).join('')}</select></label><label>Ordenar<select id="fOrd"><option value="total" ${st.orden === 'total' ? 'selected' : ''}>Mayor facturación</option><option value="az" ${st.orden === 'az' ? 'selected' : ''}>Marca A-Z</option></select></label><button class="btn small" type="button" id="fReset">Todo el mes</button></div>`;
+  h += `<div class="daychips" role="group" aria-label="Día de la semana" style="margin-bottom:16px"><button type="button" class="daychip" data-dia="todos" aria-pressed="${!st.dias.length}">Todos los días</button>${Object.entries(DIAS).map(([k, l]) => `<button type="button" class="daychip" data-dia="${k}" aria-pressed="${st.dias.includes(k)}">${l}</button>`).join('')}</div>`;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Facturación</span><span class="v">${fmtM(T)}</span><span class="s">${sel.length} días con venta en el filtro · ${fD(st.desde)} al ${fD(st.hasta)}</span></div><div class="kpi"><span class="eyebrow">Marcas con venta</span><span class="v">${conVenta} <span class="muted" style="font-size:20px">/ ${P.length}</span></span><span class="s">de las marcas que vendió la empresa en el mes (sin Pepsico)</span></div><div class="kpi"><span class="eyebrow">Promedio por día</span><span class="v">${fmtM(sel.length ? T / sel.length : 0)}</span><span class="s">facturación ÷ días con venta</span></div></div>`;
+  const cell = n => Math.abs(n) < 1 ? '<td class="zero">0</td>' : `<td>${fmtM(n)}</td>`;
+  h += `<div class="section"><div class="panel-h"><h3>Facturación por marca y vendedor</h3><span style="flex:1"></span><button class="btn small" type="button" data-export="tK" data-name="facturacion_kaf_por_marca">Exportar a Excel (CSV)</button></div><div class="tw"><table id="tK"><thead><tr><th class="l sticky1">Marca</th>${vs.map(v => `<th>${v.cod} · ${esc(titleCase(v.nom).split(' ')[0])}</th>`).join('')}${vs.length > 1 ? '<th>Total</th>' : ''}<th>% del total</th></tr></thead><tbody>${rowsB.map(r => `<tr><td class="l sticky1 name">${esc(titleCase(r.p))}</td>${vs.map(v => cell(tot[r.i][v.cod] || 0)).join('')}${vs.length > 1 ? `<td class="tot">${Math.abs(r.t) < 1 ? '0' : fmtM(r.t)}</td>` : ''}<td class="ink2">${T ? (100 * r.t / T).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + '%' : '—'}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total</td>${vs.map(v => `<td>${fmtM(totV[v.cod] || 0)}</td>`).join('')}${vs.length > 1 ? `<td>${fmtM(T)}</td>` : ''}<td>100%</td></tr></tfoot></table></div></div>`;
+  h += `<div class="section"><div class="panel-h"><h3>Facturación por día</h3><span style="flex:1"></span><button class="btn small" type="button" data-export="tKd" data-name="facturacion_kaf_por_dia">Exportar a Excel (CSV)</button></div><div class="tw"><table id="tKd"><thead><tr><th class="l">Fecha</th><th class="l">Día</th>${vs.map(v => `<th>${v.cod} · ${esc(titleCase(v.nom).split(' ')[0])}</th>`).join('')}${vs.length > 1 ? '<th>Total</th>' : ''}</tr></thead><tbody>${sel.map(f => { const e = S.d[f] || {}; const sv = v => Object.values(e[v.cod] || {}).reduce((a, b) => a + b, 0); return `<tr><td class="l name">${fD(f)}</td><td class="l ink2">${DIAS[dow(f)] || 'Domingo'}</td>${vs.map(v => cell(sv(v))).join('')}${vs.length > 1 ? `<td class="tot">${fmtM(porDia[f] || 0)}</td>` : ''}</tr>`; }).join('') || `<tr><td class="l" colspan="${vs.length + 3}">No hay ventas en las fechas elegidas.</td></tr>`}</tbody></table></div></div>`;
+  document.getElementById('view').innerHTML = h;
+}
+document.addEventListener('change', e => { const id = e.target.id; if (id === 'fDesde') st.desde = e.target.value || ini; else if (id === 'fHasta') st.hasta = e.target.value || fin; else if (id === 'fVen') st.ven = e.target.value; else if (id === 'fOrd') st.orden = e.target.value; else return; if (st.hasta < st.desde) st.hasta = st.desde; save(); render(); });
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-dia]'); if (d) { const k = d.dataset.dia; if (k === 'todos') st.dias = []; else st.dias = st.dias.includes(k) ? st.dias.filter(x => x !== k) : st.dias.concat(k); save(); render(); return; }
+  if (e.target.id === 'fReset') { st.desde = ini; st.hasta = fin; st.dias = []; save(); render(); return; }
+  const ex = e.target.closest('[data-export]'); if (ex) { const tbl = document.getElementById(ex.dataset.export); if (!tbl) return; const lines = [...tbl.querySelectorAll('tr')].map(tr => [...tr.children].map(td => '"' + td.textContent.replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"').join(';')); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv' })); a.download = ex.dataset.name + '_' + st.desde + '_' + st.hasta + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+});
+render();
+</script>
+</body></html>
