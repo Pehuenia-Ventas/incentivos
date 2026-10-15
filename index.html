@@ -24,7 +24,7 @@ iframe{position:fixed;inset:0;width:100%;height:100%;border:0}
     const r = await fetch('d/datos.json?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return fail('Todavía no hay datos publicados.', 'Probá de nuevo más tarde.');
     let D = await r.json(); let e = D.p && D.p[id];
-    if (!e) { try { const r2 = await fetch('d/carril.json?t=' + Date.now(), { cache: 'no-store' }); if (r2.ok) { const D2 = await r2.json(); if (D2.p && D2.p[id]) { D = D2; e = D2.p[id]; } } } catch (x) {} }
+    for (const f of ['carril', 'pagos']) { if (e) break; try { const r2 = await fetch('d/' + f + '.json?t=' + Date.now(), { cache: 'no-store' }); if (r2.ok) { const D2 = await r2.json(); if (D2.p && D2.p[id]) { D = D2; e = D2.p[id]; } } } catch (x) {} }
     if (!e) return fail('No encontramos este tablero.', 'Revisá que el link esté completo.');
     const k = await crypto.subtle.importKey('raw', b(key), 'AES-GCM', false, ['decrypt']);
     const gz = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(e.iv) }, k, b(e.ct));
