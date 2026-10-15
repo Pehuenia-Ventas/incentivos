@@ -207,9 +207,8 @@ const DESC = new Set(['Anticipo','Presentismo','Pedidos','Embargo']);
 const NOM = new Set(['Días','Vacaciones (días)','Horas nocturnas']);
 function premioBox(p, titulo){
   if (!p || !p.items.length) return `<div class="dl"><div class="r grp"><span>${esc(titulo)}</span></div><div class="r"><span>Sin premios este mes</span><span>$0</span></div><div class="r tot"><span>Total premios</span><span>$0</span></div></div>`;
-  let h = `<div class="dl"><div class="r grp"><span>${esc(titulo)}</span></div>`, g = null;
-  const gs = {}; p.items.forEach(x => gs[x[0]] = (gs[x[0]] || 0) + x[2]);
-  for (const x of p.items) { if (x[0] !== g) { g = x[0]; h += `<div class="r grp"><span>${esc(g)}</span><span>${fM(gs[g])}</span></div>`; } h += `<div class="r"><span>${esc(x[1])}</span><span>${fM(x[2])}</span></div>`; }
+  let h = `<div class="dl"><div class="r grp"><span>${esc(titulo)}</span></div>`;
+  for (const x of p.items) h += `<div class="r"><span>${esc(x[1])}</span><span>${fM(x[2])}</span></div>`;
   return h + `<div class="r tot"><span>Total premios</span><span>${fM(p.total)}</span></div></div>`;
 }
 function sueldoBox(s, titulo){
@@ -225,11 +224,12 @@ function filtro(){
 function viewPremios(){
   let h = filtro();
   if (SOLO || st.v !== 'todos') { const v = D.vend[SOLO ? 0 : +st.v]; if (!v) { st.v = 'todos'; return viewPremios(); } return h + `<div class="grid2"><div>${premioBox(v.premio, 'Premios de ' + mesL)}</div></div>`; }
-  const G = []; D.vend.forEach(v => v.premio.items.forEach(x => { if (!G.includes(x[0])) G.push(x[0]); }));
-  const gsum = (v, g) => v.premio.items.filter(x => x[0] === g).reduce((a, x) => a + x[2], 0);
+  const G = [], GL = {}; D.vend.forEach(v => v.premio.items.forEach(x => { const k = x[3] || x[1]; if (!G.includes(k)) { G.push(k); GL[k] = x[1]; } }));
+  const ORD = 'C D E F G H I J K L M N O P Q R S T U V W X Y Z AA'.split(' '); G.sort((a, b) => ORD.indexOf(a) - ORD.indexOf(b));
+  const gsum = (v, g) => v.premio.items.filter(x => (x[3] || x[1]) === g).reduce((a, x) => a + x[2], 0);
   const T = D.vend.reduce((a, v) => a + v.premio.total, 0);
-  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Premios del equipo</span><span class="v">${fM(T)}</span><span class="s">${D.vend.length} personas · sin el supervisor</span></div><div class="kpi"><span class="eyebrow">Con premio</span><span class="v">${D.vend.filter(v => v.premio.total > 0).length} <span class="muted" style="font-size:20px">/ ${D.vend.length}</span></span><span class="s">personas que cobran algún premio</span></div><div class="kpi"><span class="eyebrow">Premio del supervisor</span><span class="v">${fM(D.sup.premio.total)}</span><span class="s">ver la solapa Supervisor</span></div></div>`;
-  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th>${G.map(g => `<th>${esc(g)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${D.vend.map((v, i) => `<tr class="click" data-v="${i}"><td class="l sticky1 name">${esc(vlab(v))}</td>${G.map(g => `<td>${gsum(v, g) ? fM(gsum(v, g)) : '<span class="muted">—</span>'}</td>`).join('')}<td class="tot">${fM(v.premio.total)}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total equipo</td>${G.map(g => `<td>${fM(D.vend.reduce((a, v) => a + gsum(v, g), 0))}</td>`).join('')}<td>${fM(T)}</td></tr></tfoot></table></div><p class="note">Tocá un vendedor para ver el detalle de sus premios.</p>`;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Premios del equipo</span><span class="v">${fM(T)}</span><span class="s">${D.vend.length} personas · sin el supervisor</span></div><div class="kpi"><span class="eyebrow">Con premio</span><span class="v">${D.vend.filter(v => v.premio.total > 0).length} <span class="muted" style="font-size:20px">/ ${D.vend.length}</span></span><span class="s">personas que cobran algún premio</span></div><div class="kpi"><span class="eyebrow">Conceptos pagados</span><span class="v">${G.length}</span><span class="s">premios distintos que cobra el equipo</span></div></div>`;
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th>${G.map(g => `<th style="white-space:normal;min-width:96px">${esc(GL[g])}</th>`).join('')}<th>Total</th></tr></thead><tbody>${D.vend.map((v, i) => `<tr class="click" data-v="${i}"><td class="l sticky1 name">${esc(vlab(v))}</td>${G.map(g => `<td>${gsum(v, g) ? fM(gsum(v, g)) : '<span class="muted">—</span>'}</td>`).join('')}<td class="tot">${fM(v.premio.total)}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total equipo</td>${G.map(g => `<td>${fM(D.vend.reduce((a, v) => a + gsum(v, g), 0))}</td>`).join('')}<td>${fM(T)}</td></tr></tfoot></table></div><p class="note">Tocá un vendedor para ver el detalle de sus premios.</p>`;
   return h;
 }
 function viewSueldo(){
