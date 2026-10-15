@@ -1,0 +1,254 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Sueldos y premios</title>
+<style>
+/* Layout: barra superior con estado de datos + pestañas; cada pestaña abre con "Cómo se lee" y luego la tabla/tarjetas. */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --surface2:#EAEEF4; --line:#D5DCE6; --ink:#15202C; --ink2:#4A5869; --muted:#738196;
+  --accent:#2448C7; --accent-soft:#DCE4FB; --accent2:#0E8C8C; --accent2-soft:#D3EFEE;
+  --good:#1D7F45; --good-bg:#DDF2E4; --warn:#9A6400; --warn-bg:#FCEFCF; --bad:#B4322A; --bad-bg:#F9DEDB;
+  --ticket-empty:#E1E6EE;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F151D; --surface:#17202B; --surface2:#1F2A37; --line:#2E3B4B; --ink:#E7ECF3; --ink2:#AFBACA; --muted:#8693A6;
+  --accent:#7D9BFF; --accent-soft:#25335E; --accent2:#4CC9C4; --accent2-soft:#173B3D;
+  --good:#5FD08C; --good-bg:#173726; --warn:#F0B54A; --warn-bg:#3B2E12; --bad:#FF8A80; --bad-bg:#43201E;
+  --ticket-empty:#2A3645; color-scheme:dark;}
+[hidden]{display:none!important}
+.ro .edit-only{display:none!important}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:20px 60px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:34px;font-weight:700;line-height:1.05}
+h2{font-size:26px;font-weight:700}
+h3{font-size:19px;font-weight:600}
+.num,td,th{font-variant-numeric:tabular-nums}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)} .ink2{color:var(--ink2)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Encabezado */
+.top{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.top .ttl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.status{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.need{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}.need.ok{background:var(--good-bg);color:var(--good)}.need.bad{background:var(--bad-bg);color:var(--bad)}.need.late{background:var(--warn-bg);color:var(--warn)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface2);color:var(--ink2);white-space:nowrap}
+.chip.good{background:var(--good-bg);color:var(--good)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0F151D}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0F151D}}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* Pestañas */
+.tabs{display:flex;gap:4px;overflow-x:auto;margin-block:16px 18px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{border:0;background:none;padding:10px 14px;font-family:var(--f-display);font-size:18px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:16px}
+.filters label{font-size:13px;color:var(--muted);font-weight:600;display:flex;gap:8px;align-items:center}
+select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;max-width:100%}
+
+/* Caja explicativa */
+.howto{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--r);padding:14px 18px;margin-bottom:18px}
+.howto summary{cursor:pointer;font-weight:700;list-style:none;display:flex;gap:8px;align-items:center}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:"▸";color:var(--accent);transition:transform .15s}
+.howto[open] summary::before{transform:rotate(90deg)}
+.howto ul{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;max-width:95ch}
+.howto p{margin:10px 0 0;max-width:95ch}
+
+/* Tarjetas KPI */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-size:34px;font-weight:700;line-height:1.05}
+.kpi .s{font-size:13px;color:var(--ink2)}
+.bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;position:relative;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.kpis{grid-template-columns:1fr}}
+.stack{display:grid;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+
+/* Tablas (las listas largas scrollean dentro de la tabla, máx. 75% de la pantalla, así los títulos de columna quedan fijos) */
+.tw{overflow:auto;max-height:75vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;background:var(--surface);position:sticky;top:0;z-index:1}
+th.l,td.l{text-align:left}
+tbody tr:hover td{background:var(--surface2)}
+tfoot td{font-weight:700;background:var(--surface2)}
+td.name{font-weight:600}
+tr.click{cursor:pointer}
+.sticky1{position:sticky;left:0;background:var(--surface);z-index:2}
+tbody tr:hover td.sticky1{background:var(--surface2)}
+tfoot td.sticky1{background:var(--surface2)}
+th.sticky1{z-index:3}
+.cell{display:inline-block;min-width:58px;padding:2px 6px;border-radius:5px;font-weight:600;text-align:center}
+.cell.good{background:var(--good-bg);color:var(--good)} .cell.warn{background:var(--warn-bg);color:var(--warn)} .cell.bad{background:var(--bad-bg);color:var(--bad)} .cell.na{color:var(--muted);font-weight:400}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink2);margin:10px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* Cupones tipo ticket */
+.tickets{display:inline-flex;gap:3px;vertical-align:middle}
+.tickets i{width:11px;height:16px;border-radius:2px;background:var(--ticket-empty);display:block}
+.tickets i.a{background:var(--accent)} .tickets i.b{background:var(--accent);opacity:.5} .tickets i.c{background:var(--accent2)}
+.big-tickets .tickets i{width:22px;height:32px;border-radius:4px}
+.tot{font-family:var(--f-display);font-size:20px;font-weight:700}
+
+/* Ficha */
+.ficha-head{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.steps{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.step{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.step:last-child{border-bottom:0}
+.step .k{font-weight:700}
+.step .d{font-size:13px;color:var(--ink2);grid-column:1}
+.step .r{grid-row:1 / span 2;grid-column:2;font-family:var(--f-display);font-size:24px;font-weight:700;text-align:right}
+.step.total{background:var(--accent-soft)}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+details.cli{border-top:1px solid var(--line);padding:8px 0}
+details.cli summary{cursor:pointer;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-gap:20px}
+@media (max-width:560px){details.cli ol{columns:1}}
+
+/* Gráfico */
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .line{fill:none;stroke:var(--accent);stroke-width:2}
+.chart .area{fill:var(--accent);opacity:.12}
+.chart .obj{stroke:var(--ink2);stroke-width:1.5;stroke-dasharray:5 4;fill:none}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:6px;font-size:13px;z-index:50;white-space:nowrap}
+
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px;background:var(--surface)}
+.empty p{margin:4px 0 0;max-width:70ch;color:var(--ink2)}
+.bt-yes{color:var(--good);font-weight:800;font-size:17px}
+.bt-no{color:var(--bad);font-weight:800;font-size:17px}
+.bt-yes,.bt-no{display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:6px}
+.bt-yes{background:var(--good-bg)} .bt-no{background:var(--bad-bg)}
+.daychips{display:flex;flex-wrap:wrap;gap:6px}
+.daychip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;cursor:pointer;font-size:13px}
+.daychip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:60;max-width:calc(100% - 32px)}
+.prose{max-width:80ch}
+.prose h3{margin-top:22px}
+.prose p,.prose li{color:var(--ink2)}
+.prose ol,.prose ul{padding-left:22px;display:grid;gap:6px}
+.formula{font-family:var(--f-display);font-size:20px;font-weight:600;background:var(--accent-soft);padding:10px 14px;border-radius:8px;color:var(--ink)}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+.section{margin-top:22px}
+.overlay{position:fixed;inset:0;background:rgba(10,15,22,.55);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
+.modal{background:var(--surface);border-radius:12px;padding:22px;max-width:520px;width:100%;display:grid;gap:12px}
+.spinner{width:22px;height:22px;border:3px solid var(--surface2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+@media (max-width:560px){h1{font-size:28px}.kpi .v{font-size:28px}.wrap{padding-inline:16px}}
+</style>
+<style>
+.dl{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.dl .r{display:flex;justify-content:space-between;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.dl .r:last-child{border-bottom:0}
+.dl .r>span:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.dl .grp{background:var(--surface2);font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.dl .grp>span:only-child{white-space:normal;text-align:left;font-weight:700}
+.dl .neg{color:var(--bad)}
+.dl .tot{background:var(--accent-soft);font-weight:800;font-size:17px}
+.fsel{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:16px}
+.fsel label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+.fsel select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-height:36px;min-width:240px}
+</style>
+</head><body>
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <span class="eyebrow" id="eyebrow">Primeros Productos Pehuenia</span>
+      <h1 id="h1">Sueldos y premios</h1>
+    </div>
+    <div class="status"><span id="stMes" class="chip"></span></div>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <main id="view"></main>
+</div>
+<script>
+const CFG = /*CFG_START*/null/*CFG_END*/;
+const EMBED = /*EMBED_START*/null/*EMBED_END*/;
+const EMBED_OBJ = /*EMBEDOBJ_START*/null/*EMBEDOBJ_END*/;
+const D = EMBED || { vend: [] };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fM = n => (n < 0 ? '−$' : '$') + Math.abs(Math.round(n || 0)).toLocaleString('es-AR');
+const tc = s => String(s || '').toLowerCase().replace(/(^|\s|,)\S/g, c => c.toUpperCase());
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const mesL = (m => MESES[+m.slice(5,7) - 1] + ' ' + m.slice(0,4))(CFG.mes);
+const SOLO = !!CFG.solo;
+document.getElementById('stMes').textContent = 'Período: ' + mesL;
+document.getElementById('eyebrow').textContent = 'Primeros Productos Pehuenia · ' + (SOLO ? 'liquidación personal' : 'equipo de ' + CFG.supNom);
+document.getElementById('h1').textContent = SOLO ? D.vend[0].nombre : 'Sueldos y premios · ' + CFG.supNom;
+const TABS = SOLO ? [['premios','Premios'], ['sueldo','Sueldo']] : [['premios','Premios'], ['sueldo','Sueldos'], ['sup','Supervisor']];
+const st = { tab: 'premios', v: 'todos' };
+try { Object.assign(st, JSON.parse(localStorage.getItem('pago_ui_' + (CFG.id || '')) || '{}')); } catch (e) {}
+if (!TABS.some(t => t[0] === st.tab)) st.tab = 'premios';
+const save = () => { try { localStorage.setItem('pago_ui_' + (CFG.id || ''), JSON.stringify(st)); } catch (e) {} };
+const vlab = v => (typeof v.n === 'number' ? v.n + ' · ' : '') + v.nombre;
+const DESC = new Set(['Anticipo','Presentismo','Pedidos','Embargo']);
+const NOM = new Set(['Días','Vacaciones (días)','Horas nocturnas']);
+function premioBox(p, titulo){
+  if (!p || !p.items.length) return `<div class="dl"><div class="r grp"><span>${esc(titulo)}</span></div><div class="r"><span>Sin premios este mes</span><span>$0</span></div><div class="r tot"><span>Total premios</span><span>$0</span></div></div>`;
+  let h = `<div class="dl"><div class="r grp"><span>${esc(titulo)}</span></div>`, g = null;
+  const gs = {}; p.items.forEach(x => gs[x[0]] = (gs[x[0]] || 0) + x[2]);
+  for (const x of p.items) { if (x[0] !== g) { g = x[0]; h += `<div class="r grp"><span>${esc(g)}</span><span>${fM(gs[g])}</span></div>`; } h += `<div class="r"><span>${esc(x[1])}</span><span>${fM(x[2])}</span></div>`; }
+  return h + `<div class="r tot"><span>Total premios</span><span>${fM(p.total)}</span></div></div>`;
+}
+function sueldoBox(s, titulo){
+  if (!s) return `<div class="empty"><div><h3>Sin datos de sueldo</h3><p>Esta persona no figura en el maestro de nómina del mes.</p></div></div>`;
+  let h = `<div class="dl"><div class="r grp"><span>${esc(titulo)} · legajo ${s.leg} · ingreso ${esc(s.ingreso)}</span></div>`;
+  for (const [k, v] of s.campos) { if (v == null || v === '' || (typeof v === 'number' && Math.abs(v) < 0.5 && !['Días','Sueldo del mes','Pago en efectivo'].includes(k))) continue; const neg = DESC.has(k); h += `<div class="r"><span>${esc(k)}${neg ? ' <span class="muted">(descuento)</span>' : ''}</span><span class="${neg ? 'neg' : ''}">${NOM.has(k) ? esc(v) : (neg ? '−' : '') + fM(v)}</span></div>`; }
+  return h + `<div class="r tot"><span>Total a cobrar</span><span>${fM(s.total)}</span></div></div><p class="note">Total a cobrar = pago en efectivo + premio + horas extras − anticipo − presentismo − pedidos (mismo cálculo que la planilla de sueldos).</p>`;
+}
+function filtro(){
+  if (SOLO) return '';
+  return `<div class="fsel"><label for="fV">Vendedor<select id="fV"><option value="todos">Todo el equipo</option>${D.vend.map((v, i) => `<option value="${i}" ${String(i) === st.v ? 'selected' : ''}>${esc(vlab(v))}</option>`).join('')}</select></label></div>`;
+}
+function viewPremios(){
+  let h = filtro();
+  if (SOLO || st.v !== 'todos') { const v = D.vend[SOLO ? 0 : +st.v]; if (!v) { st.v = 'todos'; return viewPremios(); } return h + `<div class="grid2"><div>${premioBox(v.premio, 'Premios de ' + mesL)}</div></div>`; }
+  const G = []; D.vend.forEach(v => v.premio.items.forEach(x => { if (!G.includes(x[0])) G.push(x[0]); }));
+  const gsum = (v, g) => v.premio.items.filter(x => x[0] === g).reduce((a, x) => a + x[2], 0);
+  const T = D.vend.reduce((a, v) => a + v.premio.total, 0);
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Premios del equipo</span><span class="v">${fM(T)}</span><span class="s">${D.vend.length} personas · sin el supervisor</span></div><div class="kpi"><span class="eyebrow">Con premio</span><span class="v">${D.vend.filter(v => v.premio.total > 0).length} <span class="muted" style="font-size:20px">/ ${D.vend.length}</span></span><span class="s">personas que cobran algún premio</span></div><div class="kpi"><span class="eyebrow">Premio del supervisor</span><span class="v">${fM(D.sup.premio.total)}</span><span class="s">ver la solapa Supervisor</span></div></div>`;
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th>${G.map(g => `<th>${esc(g)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${D.vend.map((v, i) => `<tr class="click" data-v="${i}"><td class="l sticky1 name">${esc(vlab(v))}</td>${G.map(g => `<td>${gsum(v, g) ? fM(gsum(v, g)) : '<span class="muted">—</span>'}</td>`).join('')}<td class="tot">${fM(v.premio.total)}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total equipo</td>${G.map(g => `<td>${fM(D.vend.reduce((a, v) => a + gsum(v, g), 0))}</td>`).join('')}<td>${fM(T)}</td></tr></tfoot></table></div><p class="note">Tocá un vendedor para ver el detalle de sus premios.</p>`;
+  return h;
+}
+function viewSueldo(){
+  let h = filtro();
+  if (SOLO || st.v !== 'todos') { const v = D.vend[SOLO ? 0 : +st.v]; if (!v) { st.v = 'todos'; return viewSueldo(); } return h + `<div class="grid2"><div>${sueldoBox(v.sueldo, 'Sueldo de ' + mesL)}</div></div>`; }
+  const g = (s, k) => { const x = s && s.campos.find(c => c[0] === k); return x ? x[1] : 0; };
+  const T = D.vend.reduce((a, v) => a + (v.sueldo ? v.sueldo.total : 0), 0);
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th><th>Legajo</th><th>Sueldo del mes</th><th>Recibo (banco)</th><th>Efectivo</th><th>Premio</th><th>Hs. extras</th><th>Anticipo</th><th>Presentismo</th><th>Pedidos</th><th>Total a cobrar</th></tr></thead><tbody>${D.vend.map((v, i) => { const s = v.sueldo; if (!s) return `<tr><td class="l sticky1 name">${esc(vlab(v))}</td><td colspan="10" class="l muted">sin datos en el maestro de nómina</td></tr>`; return `<tr class="click" data-v="${i}"><td class="l sticky1 name">${esc(vlab(v))}</td><td>${s.leg}</td><td>${fM(g(s,'Sueldo del mes'))}</td><td>${fM(g(s,'Sueldo en recibo (banco)'))}</td><td>${fM(g(s,'Pago en efectivo'))}</td><td>${fM(g(s,'Premio'))}</td><td>${fM(g(s,'Hs. extras'))}</td><td>${fM(g(s,'Anticipo'))}</td><td>${fM(g(s,'Presentismo'))}</td><td>${fM(g(s,'Pedidos'))}</td><td class="tot">${fM(s.total)}</td></tr>`; }).join('')}</tbody><tfoot><tr><td class="l sticky1">Total equipo</td><td></td><td colspan="8"></td><td>${fM(T)}</td></tr></tfoot></table></div><p class="note">Tocá un vendedor para ver el detalle de su sueldo.</p>`;
+  return h;
+}
+function viewSup(){
+  const s = D.sup; return `<div class="grid2"><div><h3 style="margin:0 0 10px">Premios</h3>${premioBox(s.premio, 'Premios de ' + mesL)}</div><div><h3 style="margin:0 0 10px">Sueldo</h3>${sueldoBox(s.sueldo, 'Sueldo de ' + mesL)}</div></div>`;
+}
+function render(){
+  document.getElementById('tabs').innerHTML = TABS.map(([k, l]) => `<button type="button" role="tab" class="tab" data-tab="${k}" aria-selected="${st.tab === k}">${l}</button>`).join('');
+  document.getElementById('view').innerHTML = ({ premios: viewPremios, sueldo: viewSueldo, sup: viewSup })[st.tab]();
+}
+document.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { st.tab = t.dataset.tab; save(); render(); return; } const r = e.target.closest('tr[data-v]'); if (r) { st.v = r.dataset.v; save(); render(); window.scrollTo(0, 0); } });
+document.addEventListener('change', e => { if (e.target.id === 'fV') { st.v = e.target.value; save(); render(); } });
+render();
+</script>
+</body></html>
