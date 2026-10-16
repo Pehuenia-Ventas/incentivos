@@ -180,6 +180,30 @@ details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-
 td.c,th.c{text-align:center}
 .status{flex-wrap:wrap}.status .chip{white-space:normal}
 </style>
+<style>
+/* Colores del archivo de objetivos (Modelo de incentivo): azul marino 1F3864 en encabezados, celeste D9E1F2 en bandas y totales, amarillo FFF2CC en objetivos, verde E2EFDA / 008000 en cumplidos */
+:root{--hdr:#1F3864;--hdr-ink:#FFFFFF;--band:#D9E1F2;--band-ink:#1F3864;--objbg:#FFF2CC;
+  --accent:#1F3864;--accent-soft:#D9E1F2;--good:#007A00;--good-bg:#E2EFDA;--warn:#8A5A00;--warn-bg:#FFF2CC;--surface2:#E9EEF8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--hdr:#22365E;--hdr-ink:#EAF0FF;--band:#1E2B45;--band-ink:#C9D6F2;--objbg:#3B3418;--accent:#8FA9E8;--accent-soft:#22365E;--good:#6FD27A;--good-bg:#173726;--warn:#F0C25A;--warn-bg:#3B3418;--surface2:#1F2A37}}
+:root[data-theme="dark"]{--hdr:#22365E;--hdr-ink:#EAF0FF;--band:#1E2B45;--band-ink:#C9D6F2;--objbg:#3B3418;--accent:#8FA9E8;--accent-soft:#22365E;--good:#6FD27A;--good-bg:#173726;--warn:#F0C25A;--warn-bg:#3B3418;--surface2:#1F2A37}
+.top{background:var(--hdr);color:var(--hdr-ink);border-radius:var(--r);padding:18px 20px;border-bottom:0;margin-top:8px}
+.top .eyebrow{color:var(--hdr-ink);opacity:.8}
+.top h1{color:var(--hdr-ink)}
+.top .chip{background:rgba(255,255,255,.14);color:var(--hdr-ink)}
+.top .chip.good{background:var(--good-bg);color:var(--good)}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+th{background:var(--hdr);color:var(--hdr-ink)}
+th .muted{color:var(--hdr-ink);opacity:.8}
+tfoot td,tfoot td.sticky1{background:var(--band);color:var(--band-ink)}
+.kpi{border-top:4px solid var(--hdr)}
+.kpi .eyebrow{color:var(--band-ink)}
+.sec-h h3{color:var(--accent);border-left:4px solid var(--hdr);padding-left:10px}
+thead th.sticky1,th.sticky1{background:var(--hdr);color:var(--hdr-ink)}
+.lead td{background:var(--band)}
+.grp{background:var(--band);color:var(--band-ink)}
+.grp.kaf{background:var(--objbg);color:var(--warn)}
+.howto{border-left-color:var(--hdr)}
+</style>
 <div class="wrap">
   <header class="top">
     <div class="ttl">
