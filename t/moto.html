@@ -575,6 +575,10 @@ function viewCupones(){
 }
 
 /* ===================== Marcas ===================== */
+/* Venta del último día hábil completo (antes de hoy) contra lo que necesitaba ese día: lo que le faltaba para el objetivo del mes al empezar el día ÷ días hábiles que quedaban (incluido ese día) */
+const DIAV = (function(){ const hoy = (SNAP && SNAP.hoy) || HOYAR; const ds = CFG.habiles.filter(d => d < hoy); return ds.length ? ds[ds.length - 1] : null; })();
+function diaVend(v){ const dv = (SNAP && SNAP.dailyV && SNAP.dailyV[v.cod]) || {}; if (!DIAV) return null; const venta = dv[DIAV] || 0; let antes = 0; for (const d in dv) if (d < DIAV) antes += dv[d]; const rest = CFG.habiles.filter(d => d >= DIAV).length; const nec = rest ? Math.max(0, (v.objT - antes) / rest) : 0; return { venta, nec, diff: venta - nec, ok: v.objT > 0 && antes >= v.objT }; }
+function diaCells(x){ if (!x) return '<td>—</td><td>—</td>'; const dif = x.ok ? '<span class="cell good" title="Ya había llegado al objetivo del mes">✓ cumplido</span>' : `<span class="cell ${x.diff >= 0 ? 'good' : 'bad'}" title="Necesitaba ${fmtMk(x.nec)} ese día">${x.diff >= 0 ? 'se pasó ' + fmtMk(x.diff) : 'faltó ' + fmtMk(-x.diff)}</span>`; return `<td class="tot" title="Necesitaba ${fmtMk(x.nec)}">${fmtMk(x.venta)}</td><td>${dif}</td>`; }
 function viewMarcas(){
   const vs = vendFiltered();
   const mode = st.mMode || 'pct';
@@ -584,11 +588,12 @@ function viewMarcas(){
     'Cada celda es <b>lo facturado en el mes ÷ el objetivo de esa marca</b> para ese vendedor. Al llegar al 100% la marca suma puntos según su peso en el objetivo total (A: cada ' + P.ptsCup + ' puntos, 1 cupón, hasta ' + P.cupMarcas + ').',
     'El color compara contra el avance esperado a hoy (' + fmtP(R.esperado) + ' del mes hábil): así se ve qué marcas hay que empujar antes de que sea tarde.',
     'Con el selector podés ver el %, lo facturado, <b>cuánto falta</b> en pesos o <b>cuánto traer por día</b>: lo que falta (descontando la preventa ya cargada) dividido los ' + DQ + ' días hábiles que quedan. En ámbar si va atrasado contra el ritmo del mes.',
+    (DIAV ? '<b>Venta del ' + fmtDate(DIAV) + '</b>: lo facturado ese día (último día hábil completo). <b>Faltó / se pasó</b>: contra lo que necesitaba vender ese día para llegar al objetivo total del mes (lo que le faltaba al empezar el día ÷ los días hábiles que quedaban, incluido ese día).' : ''),
     'Las marcas en las que el vendedor no tiene objetivo aparecen con "—" (no dan cupón). Peñaflor, New PGA y Pilares solo tienen objetivo en el equipo de Juan Armandola.'
   ]);
   h += `<div class="filters" style="margin-bottom:10px"><label for="mMode">Mostrar <select id="mMode"><option value="pct" ${mode==='pct'?'selected':''}>% de cumplimiento</option><option value="falta" ${mode==='falta'?'selected':''}>Cuánto falta ($)</option><option value="real" ${mode==='real'?'selected':''}>Facturado ($)</option><option value="obj" ${mode==='obj'?'selected':''}>Objetivo ($)</option><option value="dia" ${mode==='dia'?'selected':''}>Cuánto traer por día (con preventa)</option></select></label><span style="flex:1"></span>${exportBtn('tMar','avance_por_marca')}</div>`;
   h += statusLegend();
-  h += `<div class="tw"><table id="tMar"><thead><tr><th class="l sticky1">Vendedor</th>${used.map(i => `<th>${esc(CFG.brands[i].short)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+  h += `<div class="tw"><table id="tMar"><thead><tr><th class="l sticky1">Vendedor</th>${used.map(i => `<th>${esc(CFG.brands[i].short)}</th>`).join('')}<th>Total</th>${DIAV ? `<th>Venta del ${fmtDate(DIAV)}</th><th>Faltó / se pasó</th>` : ''}</tr></thead><tbody>`;
   const cell = (o, r, rp) => {
     if (!(o > 0)) return '<span class="cell na">—</span>';
     if (mode === 'dia') return needTag(o, rp == null ? r : rp, true);
@@ -597,9 +602,9 @@ function viewMarcas(){
     if (mode === 'obj') return fmtMk(o);
     const f = o - r; return f <= 0 ? '<span class="cell good">✓ listo</span>' : `<span class="cell ${cls(r/o)}">${fmtMk(f)}</span>`;
   };
-  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td>${used.map(i => `<td>${cell(v.obj[i], v.real[i], pvOf(v).real[i])}</td>`).join('')}<td>${cell(v.objT, v.realT, pvOf(v).realT)}</td></tr>`;
+  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td>${used.map(i => `<td>${cell(v.obj[i], v.real[i], pvOf(v).real[i])}</td>`).join('')}<td>${cell(v.objT, v.realT, pvOf(v).realT)}</td>${DIAV ? diaCells(diaVend(v)) : ''}</tr>`;
   const so = i => vs.reduce((a,v) => a + v.obj[i], 0), sr = i => vs.reduce((a,v) => a + v.real[i], 0), sp = i => vs.reduce((a,v) => a + pvOf(v).real[i], 0);
-  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td>${used.map(i => `<td>${cell(so(i), sr(i), sp(i))}</td>`).join('')}<td>${cell(vs.reduce((a,v)=>a+v.objT,0), vs.reduce((a,v)=>a+v.realT,0), vs.reduce((a,v)=>a+pvOf(v).realT,0))}</td></tr></tfoot></table></div>`;
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td>${used.map(i => `<td>${cell(so(i), sr(i), sp(i))}</td>`).join('')}<td>${cell(vs.reduce((a,v)=>a+v.objT,0), vs.reduce((a,v)=>a+v.realT,0), vs.reduce((a,v)=>a+pvOf(v).realT,0))}</td>${DIAV ? (function(){ const xs = vs.map(diaVend).filter(Boolean); const t = { venta: xs.reduce((a,x)=>a+x.venta,0), nec: xs.reduce((a,x)=>a+(x.ok?0:x.nec),0) }; t.diff = t.venta - t.nec; t.ok = false; return diaCells(t); })() : ''}</tr></tfoot></table></div>`;
   if (SNAP && SNAP.otros && Object.keys(SNAP.otros).length) {
     const o = Object.entries(SNAP.otros).filter(([k,v]) => Math.abs(v) > 1).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
     if (o.length) h += `<p class="note">Facturación que no entra en ninguna marca del concurso (proveedor nuevo o renglones sin proveedor, como ajustes): ${o.map(([k,v]) => esc(k) + ' ' + fmtMk(v)).join(' · ')}. No suma a ningún objetivo.</p>`;
