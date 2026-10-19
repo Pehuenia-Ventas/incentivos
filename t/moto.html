@@ -635,6 +635,7 @@ function viewMarcas(){
     (DIAV ? '<b>Venta del ' + fmtDate(DIAV) + '</b>: lo facturado ese día (último día hábil completo). <b>Faltó / se pasó</b>: contra lo que necesitaba vender ese día para llegar al objetivo total del mes (lo que le faltaba al empezar el día ÷ los días hábiles que quedaban, incluido ese día).' : ''),
     'Las marcas en las que el vendedor no tiene objetivo aparecen con "—" (no dan cupón). Peñaflor, New PGA y Pilares solo tienen objetivo en el equipo de Juan Armandola.'
   ]);
+  if (SOLO && vs.length === 1) return h + marcasSolo(vs[0], used);
   h += `<div class="filters" style="margin-bottom:10px"><label for="mMode">Mostrar <select id="mMode"><option value="pct" ${mode==='pct'?'selected':''}>% de cumplimiento</option><option value="falta" ${mode==='falta'?'selected':''}>Cuánto falta ($)</option><option value="real" ${mode==='real'?'selected':''}>Facturado ($)</option><option value="obj" ${mode==='obj'?'selected':''}>Objetivo ($)</option><option value="dia" ${mode==='dia'?'selected':''}>Cuánto traer por día (con preventa)</option></select></label><span style="flex:1"></span>${exportBtn('tMar','avance_por_marca')}</div>`;
   h += statusLegend();
   h += `<div class="tw"><table id="tMar"><thead><tr><th class="l sticky1">Vendedor</th>${used.map(i => `<th>${esc(CFG.brands[i].short)}</th>`).join('')}<th>Total</th>${DIAV ? `<th>Venta del ${fmtDate(DIAV)}</th><th>Faltó / se pasó</th>` : ''}</tr></thead><tbody>`;
@@ -652,6 +653,32 @@ function viewMarcas(){
   if (SNAP && SNAP.otros && Object.keys(SNAP.otros).length) {
     const o = Object.entries(SNAP.otros).filter(([k,v]) => Math.abs(v) > 1).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
     if (o.length) h += `<p class="note">Facturación que no entra en ninguna marca del concurso (proveedor nuevo o renglones sin proveedor, como ajustes): ${o.map(([k,v]) => esc(k) + ' ' + fmtMk(v)).join(' · ')}. No suma a ningún objetivo.</p>`;
+  }
+  return h;
+}
+
+/* Link de un vendedor: las marcas una debajo de la otra, con la venta de la última y la penúltima visita (lo cargado hace 7 y 14 días) */
+function marcasSolo(v, used){
+  const hoy = (SNAP && SNAP.hoy) || HOYAR, menos = n => new Date(Date.parse(hoy + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+  const V1 = menos(7), V2 = menos(14), CV = ((SNAP && SNAP.cvb) || {})[v.cod] || {}, DV = ((SNAP && SNAP.dailyVB) || {})[v.cod] || {};
+  const DN = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], dl = f => DN[new Date(f + 'T12:00:00').getDay()] + ' ' + fmtDate(f);
+  const vis = (f, i) => (CV[f] || [])[i] || 0, visT = f => (CV[f] || []).reduce((a, b) => a + b, 0);
+  const rest = DIAV ? CFG.habiles.filter(d => d >= DIAV).length : 0;
+  const diaB = i => { if (!DIAV) return null; const venta = (DV[DIAV] || [])[i] || 0; let antes = 0; for (const d in DV) if (d < DIAV) antes += (DV[d] || [])[i] || 0; const o = v.obj[i] || 0; const nec = rest ? Math.max(0, (o - antes) / rest) : 0; return { venta, nec, diff: venta - nec, ok: o > 0 && antes >= o }; };
+  const pv = pvOf(v);
+  const falta = (o, r) => { if (!(o > 0)) return '<span class="cell na">—</span>'; const f = o - r; return f <= 0 ? '<span class="cell good">✓ listo</span>' : `<span class="cell ${cls(r / o)}">${fmtMk(f)}</span>`; };
+  const pct = (o, r) => o > 0 ? cellP(r / o) : '<span class="cell na">—</span>';
+  const money = n => Math.abs(n) < 1 ? '<span class="muted">—</span>' : fmtMk(n);
+  let h = `<div class="filters" style="margin-bottom:10px"><span style="flex:1"></span>${exportBtn('tMar','avance_por_marca')}</div>`;
+  h += statusLegend();
+  h += `<div class="tw"><table id="tMar"><thead><tr><th class="l sticky1">Marca</th><th>Objetivo</th><th>Facturado</th><th>Cumplimiento</th><th>Última visita<br><span class="muted" style="font-weight:500">${dl(V1)}</span></th><th>Penúltima visita<br><span class="muted" style="font-weight:500">${dl(V2)}</span></th><th>Cuánto falta</th><th>Por día (con preventa)</th>${DIAV ? `<th>Venta del ${fmtDate(DIAV)}</th><th>Faltó / se pasó</th>` : ''}</tr></thead><tbody>`;
+  const idx = CFG.brands.map((b, i) => i).filter(i => used.includes(i) || Math.abs(v.real[i]) >= 1 || vis(V1, i) || vis(V2, i));
+  for (const i of idx) { const o = v.obj[i] || 0, r = v.real[i] || 0; h += `<tr><td class="l name sticky1">${esc(CFG.brands[i].short)}</td><td>${o > 0 ? fmtMk(o) : '<span class="cell na">sin objetivo</span>'}</td><td>${money(r)}</td><td>${pct(o, r)}</td><td>${money(vis(V1, i))}</td><td>${money(vis(V2, i))}</td><td>${falta(o, r)}</td><td>${o > 0 ? needTag(o, pv.real[i] == null ? r : pv.real[i], true) : '<span class="cell na">—</span>'}</td>${DIAV ? (o > 0 ? diaCells(diaB(i)) : `<td>${money((DV[DIAV] || [])[i] || 0)}</td><td><span class="cell na">—</span></td>`) : ''}</tr>`; }
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${fmtMk(v.objT)}</td><td>${fmtMk(v.realT)}</td><td>${pct(v.objT, v.realT)}</td><td>${money(visT(V1))}</td><td>${money(visT(V2))}</td><td>${falta(v.objT, v.realT)}</td><td>${needTag(v.objT, pv.realT == null ? v.realT : pv.realT, true)}</td>${DIAV ? diaCells(diaVend(v)) : ''}</tr></tfoot></table></div>`;
+  h += `<p class="note"><b>Última visita</b> y <b>penúltima visita</b>: lo que cargaste hace 7 y 14 días (${dl(V1)} y ${dl(V2)}), por marca y en pesos con impuestos, según la fecha de carga del pedido. Solo cuenta lo que ya está facturado y lo cargado en ${esc(CFG.mes.label)}.</p>`;
+  if (SNAP && SNAP.otros && Object.keys(SNAP.otros).length) {
+    const o = Object.entries(SNAP.otros).filter(([k,x]) => Math.abs(x) > 1).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+    if (o.length) h += `<p class="note">Facturación que no entra en ninguna marca del concurso: ${o.map(([k,x]) => esc(k) + ' ' + fmtMk(x)).join(' · ')}. No suma a ningún objetivo.</p>`;
   }
   return h;
 }
