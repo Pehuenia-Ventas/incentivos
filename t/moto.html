@@ -702,13 +702,20 @@ function viewFicha(){
 
 /* ===================== Batalla Georgalos ===================== */
 const DIAS = {1:'Lunes',2:'Martes',3:'Miércoles',4:'Jueves',5:'Viernes',6:'Sábado'};
+/* Venta de las últimas visitas: con un día de visita elegido, lo que compró cada cliente (todas las marcas menos Pepsico, por fecha de carga del pedido) en la última visita (el último de ese día antes de hoy) y en la anterior (7 días antes) */
+function visitasDe(k){ if (!(+k >= 1 && +k <= 5)) return null; const hoy = (SNAP && SNAP.hoy) || HOYAR; const t = Date.parse(hoy + 'T12:00:00Z'); for (let i = 1; i <= 7; i++) { const d = new Date(t - i * 864e5); if (d.getUTCDay() === +k) return [d.toISOString().slice(0, 10), new Date(t - (i + 7) * 864e5).toISOString().slice(0, 10)]; } return null; }
+const VINI = CFG.mes.y + '-' + pad2(CFG.mes.m) + '-01';
+const fmtV = n => { const a = Math.abs(n); if (a >= 1e6) return '$ ' + (n / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' M'; if (a >= 1e3) return '$ ' + Math.round(n / 1e3).toLocaleString('es-AR') + ' mil'; return '$ ' + Math.round(n).toLocaleString('es-AR'); };
+function ventaVis(cod, cli, f){ if (f < VINI) return '<td class="muted" title="Fuera del mes: el tablero toma solo lo cargado en ' + esc(CFG.mes.label) + '">—</td>'; const n = ((((SNAP && SNAP.cd) || {})[cod] || {})[String(cli)] || {})[f] || 0; return n ? `<td class="tot" style="font-size:15px">${fmtV(n)}</td>` : '<td><span class="cell bad" style="min-width:0">sin compra</span></td>'; }
+const visTh = VV => VV ? `<th title="Lo que compró el cliente en esa visita (todas las marcas menos Pepsico)">Venta ${fmtDate2(VV[0])}</th><th title="Visita anterior">Venta ${fmtDate2(VV[1])}</th>` : '';
+function fmtDate2(f){ return f.slice(8, 10) + '/' + f.slice(5, 7); }
 function viewBatalla(){
   const vSel = st.bVen || 'todos', dSel = st.bDia || 'todos', solo = st.bSolo || 'todos';
   const pool = R.vs.filter(v => vSel === 'todos' || String(v.cod) === String(vSel));
   let h = emptyBanner();
   h += howto('Cómo se usa la batalla', [
     'Una fila por cliente de la cartera y una columna por línea Georgalos más la cobertura general. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = ya está cubierto este mes (al menos ' + (CFG.minUnid || 3) + ' unidades de la línea, o 1 display/estuche; los rechazos restan). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no la compró.',
-    'Filtrá por <b>vendedor</b> y por <b>día de visita</b> para armar la recorrida del día: los clientes con más ✗ arriba.',
+    'Filtrá por <b>vendedor</b> y por <b>día de visita</b> para armar la recorrida del día: los clientes con más ✗ arriba. Con un día elegido aparecen dos columnas con <b>lo que compró cada cliente en las últimas dos visitas</b> (ese día de la semana, hace 7 y 14 días; todas las marcas menos Pepsico, por fecha de carga del pedido).',
     'El día de visita sale de la ruta de preventa de cada cliente en septiembre (ruta terminada en 1 = lunes, 2 = martes, … 5 = viernes). Los clientes sin compras en septiembre quedan como "Sin día".',
     'Arriba de cada marca: clientes con ✓ sobre los que hacen falta para el cupón de cobertura (cartera × el % de cada línea: ' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + ').'
   ]);
@@ -733,9 +740,9 @@ function viewBatalla(){
   const have = GBR.map((g,i) => pool.reduce((a,v) => a + v.cobCnt[i], 0));
   h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${GBR.map((g,i) => `<div class="kpi"><span class="eyebrow">${GSHORT[g]}</span><span class="v" style="font-size:28px">${have[i]} <span class="muted" style="font-size:18px">/ ${need[i]}</span></span><span class="s">${have[i] >= need[i] ? '<b style="color:var(--good)">Cupón logrado</b>' : 'faltan <b>' + (need[i] - have[i]) + '</b> clientes'}${vSel === 'todos' ? ' (suma de vendedores)' : ''}</span></div>`).join('')}</div>`;
   h += `<div class="panel-h"><span class="muted">${rows.length.toLocaleString('es-AR')} clientes${dSel !== 'todos' ? ' · ' + (DIAS[dSel] || 'Sin día') : ''} · en la lista: ${GBR.map((g,i) => GSHORT[g] + ' ' + tot[i]).join(' · ')}</span>${exportBtn('tBat','batalla_georgalos')}</div>`;
-  const shown = rows.slice(0, 1500);
-  h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Dirección</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${GBR.map(g => `<th style="text-align:center">${GSHORT[g]}</th>`).join('')}<th>Coberturas</th></tr></thead><tbody>`;
-  for (const r of shown) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(cliTxt(r.c) || '—')}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.d] || 'Sin día'}</td>${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes" title="Compró">✓</span>' : '<span class="bt-no" title="No compró">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${GBR.length}</td></tr>`;
+  const shown = rows.slice(0, 1500); const VV = visitasDe(dSel);
+  h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Dirección</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${visTh(VV)}${GBR.map(g => `<th style="text-align:center">${GSHORT[g]}</th>`).join('')}<th>Coberturas</th></tr></thead><tbody>`;
+  for (const r of shown) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(cliTxt(r.c) || '—')}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.d] || 'Sin día'}</td>${VV ? ventaVis(r.v.cod, r.c, VV[0]) + ventaVis(r.v.cod, r.c, VV[1]) : ''}${r.has.map(x => `<td style="text-align:center">${x ? '<span class="bt-yes" title="Compró">✓</span>' : '<span class="bt-no" title="No compró">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${GBR.length}</td></tr>`;
   h += '</tbody></table></div>';
   if (rows.length > shown.length) h += `<p class="note">Se muestran los primeros ${shown.length.toLocaleString('es-AR')} clientes; filtrá por vendedor o día para ver el resto (la exportación incluye solo los visibles).</p>`;
   return h;
