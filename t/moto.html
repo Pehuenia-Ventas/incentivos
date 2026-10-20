@@ -109,7 +109,7 @@ th.sticky1{z-index:3}
 /* Cupones tipo ticket */
 .tickets{display:inline-flex;gap:3px;vertical-align:middle}
 .tickets i{width:11px;height:16px;border-radius:2px;background:var(--ticket-empty);display:block}
-.tickets i.a{background:var(--accent)} .tickets i.b{background:var(--accent);opacity:.5} .tickets i.c{background:var(--accent2)}
+.tickets i.a{background:var(--accent)} .tickets i.b{background:var(--accent);opacity:.5} .tickets i.c{background:var(--accent2)} .tickets i.d{background:var(--good)}
 .big-tickets .tickets i{width:22px;height:32px;border-radius:4px}
 .tot{font-family:var(--f-display);font-size:20px;font-weight:700}
 
@@ -310,6 +310,47 @@ function aggregate(rows, CFG){
   return { mes: pref, minD, maxD, minM, maxM, nMes, nTot, sinFecha, porEntrega, real, otros, cob, dailyV };
 }
 
+/* ===== ¿Planifiqué bien? Evaluación de la planificación diaria por marca =====
+   Para cada día hábil desde P.planIni y cada marca con objetivo del mes > 0 (los vendedores 31 a 38 no tienen Peñaflor, New PGA ni Pilares):
+   referencia = promedio de lo cargado en la última y la penúltima visita (mismo día 7 y 14 días antes; si una visita dio 0, se usa la otra;
+   si las dos dieron 0, la referencia es lo necesario para llegar al mes). Necesario = lo que faltaba del objetivo del mes en la marca ÷ días hábiles que quedaban.
+   Semáforo: sin cargar = no planificó · rojo = menos del 80% de la referencia o menos de lo necesario · amarillo = más del 120% · verde = entre 80% y 120%.
+   Punto: verde 1 · amarillo 1 si lo vendido llegó a lo planificado · rojo y no planificó 0. Con el P.planUmbral de los puntos posibles del mes, P.cupPlan cupones. */
+function planEval(CFG, SNAP, v){
+  const P = CFG.params || {}, ini = P.planIni, nb = CFG.brands.length;
+  const H = (CFG.habiles || []).slice().sort(), dias = ini ? H.filter(d => d >= ini) : [];
+  const hoy = (SNAP && SNAP.hoy) || new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const lo = (P.planBanda || [0.8, 1.2])[0], hi = (P.planBanda || [0.8, 1.2])[1];
+  const F = (CFG.objDia || {})[v.cod] || {}, D = ((SNAP && SNAP.dailyVB) || {})[v.cod] || {}, C = ((SNAP && SNAP.cvb) || {})[v.cod] || {};
+  const fechas = Object.keys(D).sort();
+  const sale = (f, i) => { const a = D[f]; if (a && a[i] != null) return +a[i] || 0; const b = C[f]; return b ? +b[i] || 0 : 0; };
+  const menos = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+  const marcas = []; for (let i = 0; i < nb; i++) if ((v.obj[i] || 0) > 0) marcas.push(i);
+  const evalDia = d => {
+    const rest = H.filter(x => x >= d).length, F1 = F[d] || {};
+    return marcas.map(i => {
+      let antes = 0; for (const f of fechas) if (f < d) antes += sale(f, i);
+      const nec = rest ? Math.max(0, v.obj[i] - antes) / rest : 0;
+      const v1 = sale(menos(d, 7), i), v2 = sale(menos(d, 14), i), vv = [v1, v2].filter(x => x > 0);
+      const ref = vv.length ? vv.reduce((a, b) => a + b, 0) / vv.length : 0, base = ref > 0 ? ref : nec;
+      const fv = F1[CFG.brands[i].short], carg = fv != null && fv !== '' && isFinite(+fv), plan = carg ? +fv : null;
+      const venta = d <= hoy ? sale(d, i) : 0;
+      let sem = 'n';
+      if (carg) { const r = base > 0 ? plan / base : (plan > 0 ? Infinity : 1); sem = (nec > 0 && plan + 1 < nec) || r < lo - 1e-9 ? 'r' : r > hi + 1e-9 ? 'a' : 'v'; }
+      const llego = carg && plan > 0 && venta >= plan - 0.5;
+      const pt = d > hoy ? 0 : sem === 'v' ? 1 : sem === 'a' && llego ? 1 : 0;
+      return { i, v1, v2, ref, nec, carg, plan, venta, sem, llego, pt, ratio: carg && base > 0 ? plan / base : null };
+    });
+  };
+  const det = dias.map(d => ({ d, its: evalDia(d) }));
+  const jug = det.filter(x => x.d <= hoy);
+  const pts = jug.reduce((a, x) => a + x.its.reduce((b, y) => b + y.pt, 0), 0);
+  const posibles = dias.length * marcas.length, umbral = Math.ceil((P.planUmbral || 0.7) * posibles - 1e-9);
+  const quedan = det.filter(x => x.d > hoy).length * marcas.length + jug.filter(x => x.d === hoy).reduce((a, x) => a + x.its.filter(y => !y.pt).length, 0);
+  const cnt = k => jug.reduce((a, x) => a + x.its.filter(y => y.sem === k).length, 0);
+  const D2 = posibles > 0 && pts >= umbral ? (P.cupPlan || 0) : 0;
+  return { marcas, dias, det, pts, posibles, umbral, quedan, alcanzable: pts + quedan >= umbral, D: D2, nV: cnt('v'), nA: cnt('a'), nR: cnt('r'), nN: cnt('n'), jugadas: jug.length * marcas.length, evalDia };
+}
 /* Cálculo de cupones a partir del snapshot (o vacío si todavía no hay ventas). */
 function compute(CFG, SNAP){
   const P = CFG.params, nb = CFG.brands.length;
@@ -344,10 +385,11 @@ function compute(CFG, SNAP){
     const nCob = cobPct.filter(p => p != null && p >= 1 - 1e-12).length;
     const C = nCob * P.cupCob;
     const sub = A + B + C;
-    const total = Math.min(sub, P.tope);
-    const maxPosible = Math.min(P.cupMarcas + P.cupPlus + GBR.length * P.cupCob, P.tope);
+    const plan = planEval(CFG, SNAP, v), D = plan.D;
+    const total = Math.min(sub, P.tope) + D;
+    const maxPosible = Math.min(P.cupMarcas + P.cupPlus + GBR.length * P.cupCob, P.tope) + (plan.posibles ? (P.cupPlan || 0) : 0);
     const tend = diasTrans > 0 ? realT / diasTrans * diasTot : 0;
-    return { ...v, real, pctB, conObj, n100, pts, todas, A, objT, realT, pct, tot100, B, cartera, cobList, cobCnt, need, cobPct, nCob, C, sub, total, maxPosible, tend, tendPct: objT > 0 ? tend / objT : 0 };
+    return { ...v, real, pctB, conObj, n100, pts, todas, A, objT, realT, pct, tot100, B, cartera, cobList, cobCnt, need, cobPct, nCob, C, sub, plan, D, total, maxPosible, tend, tendPct: objT > 0 ? tend / objT : 0 };
   });
   const sumV = vs.reduce((a,v) => a + v.total, 0);
   const sups = [...new Set(CFG.vend.map(v => v.sup))].map(s => {
@@ -432,12 +474,14 @@ function cls(p){
 }
 function cellP(p){ return p == null ? '<span class="cell na">—</span>' : `<span class="cell ${cls(p)}">${p >= 1 - 1e-12 ? '✓ ' : ''}${fmtP(p)}</span>`; }
 function tickets(v){
-  let h = '<span class="tickets" aria-label="' + v.total + ' de ' + P.tope + ' cupones">';
+  const PD = P.cupPlan || 0, dd = Math.min(v.D || 0, PD);
+  let h = '<span class="tickets" aria-label="' + v.total + ' de ' + (P.tope + PD) + ' cupones">';
   let a = Math.min(v.A, P.tope), b = Math.min(v.B, P.tope - a), c = Math.min(v.C, P.tope - a - b);
   for (let i = 0; i < P.tope; i++) h += '<i class="' + (i < a ? 'a' : i < a + b ? 'b' : i < a + b + c ? 'c' : '') + '"></i>';
+  for (let i = 0; i < PD; i++) h += '<i class="' + (i < dd ? 'd' : '') + '"' + (i === 0 ? ' style="margin-left:4px"' : '') + '></i>';
   return h + '</span>';
 }
-const ticketLegend = '<div class="legend"><span><i class="sw" style="background:var(--accent)"></i>A · puntos por marcas al 100%</span><span><i class="sw" style="background:var(--accent);opacity:.5"></i>B · plus todas las marcas al 100%</span><span><i class="sw" style="background:var(--accent2)"></i>C · cobertura Georgalos</span><span><i class="sw" style="background:var(--ticket-empty)"></i>lugar libre (tope ' + P.tope + ')</span></div>';
+const ticketLegend = '<div class="legend"><span><i class="sw" style="background:var(--accent)"></i>A · puntos por marcas al 100%</span><span><i class="sw" style="background:var(--accent);opacity:.5"></i>B · plus todas las marcas al 100%</span><span><i class="sw" style="background:var(--accent2)"></i>C · cobertura Georgalos</span><span><i class="sw" style="background:var(--good)"></i>D · planificación del día</span><span><i class="sw" style="background:var(--ticket-empty)"></i>lugar libre (tope ' + P.tope + ' + ' + (P.cupPlan || 0) + ' de planificación)</span></div>';
 const statusLegend = () => '<div class="legend"><span><span class="cell good">✓ 100%</span> cumplido: ya suma el cupón</span><span><span class="cell warn">' + fmtP(R.esperado) + '</span> va en ritmo (igual o arriba del ' + fmtP(R.esperado) + ' esperado a hoy)</span><span><span class="cell bad">40%</span> va atrasado respecto del ritmo</span><span><span class="cell na">—</span> sin objetivo: no da cupón</span></div>';
 function howto(title, items, open){
   return `<details class="howto" ${open ? 'open' : ''}><summary>${esc(title)}</summary><ul>${items.map(i => '<li>' + i + '</li>').join('')}</ul></details>`;
@@ -448,8 +492,8 @@ function exportBtn(id, name){ return `<button class="btn small" type="button" da
 /* ===================== Pestañas ===================== */
 const SOLO = CFG.solo || null;
 const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : [], CFG.inn ? [['inn','Batalla innovaciones']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
-const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['batalla','Batalla Georgalos']].concat(GTAB, [['reglas','Cómo funciona']]) : [
-  ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, [
+const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['batalla','Batalla Georgalos']].concat(GTAB, [['reglas','Cómo funciona']]) : [
+  ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, [
   ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
 if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
@@ -561,15 +605,15 @@ function viewCupones(){
     '<b>A · Puntos por marca</b>: cada marca que llega al 100% de su objetivo suma puntos según su peso en el objetivo total del vendedor (ej.: si Peñaflor es el 20% del objetivo, suma 20 puntos). <b>Cada ' + P.ptsCup + ' puntos, 1 cupón</b>, hasta ' + P.cupMarcas + ' cupones.',
     '<b>B · Plus todas las marcas</b>: si llega al 100% en <b>todas</b> las marcas con objetivo, suma ' + P.cupPlus + ' cupones más.',
     '<b>C · Cobertura Georgalos</b>: ' + P.cupCob + ' cupón por cada línea Georgalos (' + GBR.slice(0, -1).join(', ') + ') en la que se llega a la cantidad de clientes pedida, y 1 más por la cobertura general de todos los productos Georgalos.',
-    '<b>Total</b> = A + B + C, con un máximo de ' + P.tope + '. Lo que pase el tope no cuenta.',
+    '<b>Total</b> = A + B + C, con un máximo de ' + P.tope + ' (lo que pase el tope no cuenta), más <b>D · planificación</b>: ' + (P.cupPlan || 0) + ' cupones aparte si junta el ' + Math.round((P.planUmbral || 0.7) * 100) + '% de los puntos de planificación del mes (pestaña "¿Planifiqué bien?").',
     '<b>Probabilidad</b> = cupones del vendedor ÷ total de cupones de los vendedores. Si los supervisores entran en la misma urna, baja un poco (se ve en "Supervisores").',
     '<b>Máx. posible</b>: cuántos cupones podría llegar a tener si cumple todo lo que tiene objetivo.'
   ]);
   h += `<div class="panel-h"><span class="muted">${vs.length} vendedores · tocá una fila para ver qué le falta</span>${exportBtn('tCup','cupones_vendedores')}</div>`;
-  h += `<div class="tw"><table id="tCup"><thead><tr><th class="l sticky1">Vendedor</th><th class="l">Supervisor</th><th>Marcas al 100%</th><th>Puntos</th><th>A · cupones marcas</th><th>% objetivo total</th><th>B · plus todas</th><th>Georgalos cubiertas</th><th>C · cupones cobertura</th><th>A+B+C</th><th class="l">Cupones (tope ${P.tope})</th><th>Total</th><th>Máx. posible</th><th>Prob. de ganar</th></tr></thead><tbody>`;
-  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td class="l ink2">${esc(supName(v.sup))}</td><td>${v.n100} / ${v.conObj}</td><td>${Math.round(v.pts)}</td><td>${v.A}</td><td>${cellP(v.objT ? v.pct : null)}</td><td>${v.B}</td><td>${v.nCob} / ${GBR.length}</td><td>${v.C}</td><td>${v.sub}</td><td class="l">${tickets(v)}</td><td class="tot">${v.total}</td><td class="muted">${v.maxPosible}</td><td>${fmtP(v.prob,1)}</td></tr>`;
+  h += `<div class="tw"><table id="tCup"><thead><tr><th class="l sticky1">Vendedor</th><th class="l">Supervisor</th><th>Marcas al 100%</th><th>Puntos</th><th>A · cupones marcas</th><th>% objetivo total</th><th>B · plus todas</th><th>Georgalos cubiertas</th><th>C · cupones cobertura</th><th>A+B+C</th><th>D · planificación</th><th class="l">Cupones (tope ${P.tope})</th><th>Total</th><th>Máx. posible</th><th>Prob. de ganar</th></tr></thead><tbody>`;
+  for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td class="l ink2">${esc(supName(v.sup))}</td><td>${v.n100} / ${v.conObj}</td><td>${Math.round(v.pts)}</td><td>${v.A}</td><td>${cellP(v.objT ? v.pct : null)}</td><td>${v.B}</td><td>${v.nCob} / ${GBR.length}</td><td>${v.C}</td><td>${v.sub}</td><td>${v.D || 0}</td><td class="l">${tickets(v)}</td><td class="tot">${v.total}</td><td class="muted">${v.maxPosible}</td><td>${fmtP(v.prob,1)}</td></tr>`;
   const t = k => vs.reduce((a,v) => a + v[k], 0);
-  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td><td>${t('n100')} / ${t('conObj')}</td><td></td><td>${t('A')}</td><td></td><td>${t('B')}</td><td>${t('nCob')}</td><td>${t('C')}</td><td>${t('sub')}</td><td></td><td class="tot">${t('total')}</td><td></td><td>${R.sumV ? fmtP(t('total')/R.sumV,1) : '—'}</td></tr></tfoot></table></div>`;
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td><td>${t('n100')} / ${t('conObj')}</td><td></td><td>${t('A')}</td><td></td><td>${t('B')}</td><td>${t('nCob')}</td><td>${t('C')}</td><td>${t('sub')}</td><td>${t('D')}</td><td></td><td class="tot">${t('total')}</td><td></td><td>${R.sumV ? fmtP(t('total')/R.sumV,1) : '—'}</td></tr></tfoot></table></div>`;
   h += ticketLegend;
   return h;
 }
@@ -619,6 +663,100 @@ function viewOdia(){
   return emptyBanner() + odiaView({ brands: CFG.brands.map((b, i) => ({ k: i, name: b.short, short: b.short })), vend: vs.map(v => ({ cod: v.cod, nom: v.nom })), objMes: (cod, i) => { const v = vs.find(x => x.cod === cod); return v ? v.obj[i] || 0 : 0; }, sale: (cod, f, i) => ((DVB[cod] || {})[f] || [])[i] || 0, vis: (cod, f, i) => ((((SNAP && SNAP.cvb) || {})[cod] || {})[f] || [])[i] || 0, visNota: 'según la fecha de carga del pedido (lo cargado ese día, ya facturado)', fechas: [...fs].sort(), habiles: CFG.habiles || [], hoy: (SNAP && SNAP.hoy) || HOYAR, form: CFG.objDia || {}, formUrl: CFG.odUrl || '', st, esc, tc: titleCase });
 }
 document.addEventListener('change', e => { if (e.target.id === 'odDia') { st.odDia = e.target.value; saveUI(); render(); } else if (e.target.id === 'odVen') { st.odVen = e.target.value; saveUI(); render(); } });
+/* ===================== ¿Planifiqué bien? =====================
+   Evalúa el objetivo del día que cargó cada vendedor en el form contra lo que venía vendiendo en las dos últimas visitas (mismo día 7 y 14 días antes)
+   y contra lo que necesitaba para llegar al mes. El cálculo está en planEval (núcleo); acá solo se muestra. */
+function viewPlan(){
+  const vsAll = vendFiltered(); if (!vsAll.length) return emptyBanner();
+  const fF = f => f.slice(8, 10) + '/' + f.slice(5, 7), DNs = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], dn = f => DNs[new Date(f + 'T12:00:00').getDay()];
+  const $f = n => '$' + Math.round(n || 0).toLocaleString('es-AR'), r1k = n => Math.round((n || 0) / 1000) * 1000;
+  const menos = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+  const hoy = (SNAP && SNAP.hoy) || HOYAR, ini = P.planIni, H = (CFG.habiles || []).slice().sort();
+  const pctT = x => x == null ? '—' : x === Infinity ? '—' : Math.round(x * 100) + '%';
+  const motivoR = x => x.carg && x.nec > 0 && x.plan + 1 < x.nec;
+  const SEM = { v: ['good', 'Realista'], a: ['warn', 'Ambicioso'], r: ['bad', 'Bajo'], n: ['na', 'No planificó'] };
+  const semTag = x => `<span class="cell ${SEM[x.sem][0]}">${x.sem === 'r' && motivoR(x) ? 'No llega al mes' : SEM[x.sem][1]}</span>`;
+  const brandN = i => CFG.brands[i].short;
+  let h = emptyBanner();
+  if (!ini) return h + '<div class="empty"><div><h3>Todavía no arrancó</h3><p>La evaluación de la planificación se activa con la próxima actualización.</p></div></div>';
+  const banda = P.planBanda || [0.8, 1.2], lo = banda[0], hi = banda[1], umbP = P.planUmbral || 0.7;
+  h += howto('Cómo se evalúa la planificación', [
+    '<b>Referencia</b>: el promedio de lo que vendiste en esa marca en la <b>última y la penúltima visita</b> (el mismo día de la semana anterior y de dos semanas antes, por fecha de carga). Si en una de las dos no vendiste, se usa la otra; si no vendiste en ninguna, la referencia es lo que necesitás por día para llegar al mes.',
+    '<b>Necesario</b>: lo que te falta del objetivo del mes en la marca ÷ los días hábiles que quedan (incluido ese día).',
+    '<span class="cell good">Realista</span>: cargaste entre el ' + Math.round(lo * 100) + '% y el ' + Math.round(hi * 100) + '% de la referencia y alcanza para el mes → <b>suma 1 punto</b>.',
+    '<span class="cell warn">Ambicioso</span>: cargaste más del ' + Math.round(hi * 100) + '% de la referencia → <b>suma 1 punto solo si llegás</b> a lo que planificaste ese día.',
+    '<span class="cell bad">Bajo</span> / <span class="cell bad">No llega al mes</span>: menos del ' + Math.round(lo * 100) + '% de la referencia, o menos de lo necesario para llegar al mes → <b>no suma</b>, aunque llegues.',
+    '<span class="cell na">No planificó</span>: no cargaste objetivo de esa marca en el form → no suma. Solo cuentan las marcas en las que tenés objetivo del mes.',
+    '<b>Cupones</b>: desde el ' + fF(ini) + ' cada marca de cada día hábil es 1 punto posible. Con el ' + Math.round(umbP * 100) + '% de los puntos posibles del mes ganás <b>' + (P.cupPlan || 0) + ' cupones</b> para la moto, que se suman aparte del tope.'
+  ]);
+  /* ---- Ranking (solo en el General) ---- */
+  const sel = SOLO ? String(SOLO) : (st.plVen && vsAll.some(v => String(v.cod) === String(st.plVen)) ? String(st.plVen) : 'todos');
+  if (!SOLO) {
+    h += `<div class="filters" style="margin-bottom:10px"><label>Vendedor <select id="plVen"><option value="todos">Todos (ranking)</option>${vsAll.map(v => `<option value="${v.cod}" ${String(v.cod) === sel ? 'selected' : ''}>${v.cod} · ${esc(titleCase(v.nom))}</option>`).join('')}</select></label></div>`;
+    if (sel === 'todos') {
+      const rk = vsAll.slice().sort((a, b) => b.plan.pts / (b.plan.umbral || 1) - a.plan.pts / (a.plan.umbral || 1));
+      h += `<div class="section"><div class="panel-h"><h3>Puntaje de planificación</h3>${exportBtn('tPlR', 'planificacion_ranking')}</div><div class="tw"><table id="tPlR"><thead><tr><th class="l sticky1">Vendedor</th><th>Marcas</th><th>Puntos</th><th>Necesita</th><th>Posibles del mes</th><th>Realista</th><th>Ambicioso</th><th>Bajo</th><th>No planificó</th><th class="l">Cupones</th></tr></thead><tbody>` +
+        rk.map(v => { const p = v.plan; return `<tr class="click" data-plven="${v.cod}"><td class="l sticky1 name">${v.cod} · ${esc(titleCase(v.nom))}</td><td>${p.marcas.length}</td><td class="tot">${p.pts}</td><td>${p.umbral}</td><td class="muted">${p.posibles}</td><td>${p.nV}</td><td>${p.nA}</td><td>${p.nR}</td><td>${p.nN}</td><td class="l">${p.D ? `<span class="cell good">✓ ${p.D} cupones</span>` : p.alcanzable ? `<span class="cell warn">faltan ${p.umbral - p.pts}</span>` : '<span class="cell bad">ya no llega</span>'}</td></tr>`; }).join('') +
+        `</tbody></table></div><p class="note">Tocá un vendedor para ver su detalle. Puntos al día de hoy; "Necesita" es el ${Math.round(umbP * 100)}% de los puntos posibles del mes (desde el ${fF(ini)}).</p></div>`;
+      return h;
+    }
+  }
+  const v = vsAll.find(x => String(x.cod) === sel) || vsAll[0], p = v.plan;
+  if (!p.marcas.length) return h + '<p class="note">Sin marcas con objetivo del mes.</p>';
+  /* ---- KPIs ---- */
+  const faltan = Math.max(0, p.umbral - p.pts);
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Puntos de planificación</span><span class="v">${p.pts}<span class="muted" style="font-size:18px"> / ${p.umbral}</span></span><span class="s">necesitás ${p.umbral} de ${p.posibles} posibles (${p.marcas.length} marcas × ${p.dias.length} días)</span></div>` +
+    `<div class="kpi"><span class="eyebrow">Cupones por planificar bien</span><span class="v">${p.D ? '✓ ' + p.D : '0'}</span><span class="s">${p.D ? 'ya los ganaste' : p.alcanzable ? 'te faltan ' + faltan + ' puntos · quedan ' + p.quedan + ' por jugar' : 'con lo que queda ya no se llega'}</span></div>` +
+    `<div class="kpi"><span class="eyebrow">Cómo venís</span><span class="v" style="font-size:20px"><span class="cell good">${p.nV}</span> <span class="cell warn">${p.nA}</span> <span class="cell bad">${p.nR}</span> <span class="cell na">${p.nN}</span></span><span class="s">realista · ambicioso · bajo · no planificó (${p.jugadas} marcas-día evaluadas)</span></div></div>`;
+  /* ---- 1 · Semáforo del día ---- */
+  const conForm = Object.keys((CFG.objDia || {})[v.cod] || {});
+  const dSel = H.filter(d => d <= hoy && (d >= ini || conForm.includes(d)));
+  if (dSel.length) {
+    const defD = dSel.filter(d => d < hoy).pop() || dSel[dSel.length - 1];
+    const dia = st.plDia && dSel.includes(st.plDia) ? st.plDia : defD, its = p.evalDia(dia), pas = dia < hoy, cuenta = dia >= ini;
+    const qp = x => {
+      const ref = x.ref > 0 ? `tus visitas (${$f(x.ref)})` : `lo necesario (${$f(x.nec)}), porque no vendiste en las dos visitas`;
+      if (x.sem === 'n') return 'No cargaste objetivo para esta marca.';
+      if (motivoR(x)) return `Planificaste ${$f(x.plan)}, pero necesitabas ${$f(x.nec)} por día para llegar al mes.`;
+      const base = `Planificaste el ${pctT(x.ratio)} de ${ref}.`;
+      if (x.sem === 'r') return base + ' Quedó corto.';
+      if (x.sem === 'a') return base + (x.llego ? ' Llegaste: suma.' : pas ? ' No llegaste: no suma.' : ' Si llegás, suma.');
+      return base + (x.llego ? ' Y llegaste.' : '');
+    };
+    const T = k => its.reduce((a, x) => a + (+x[k] || 0), 0);
+    h += `<div class="section"><div class="panel-h"><h3>Semáforo del día</h3><label class="muted">Día <select id="plDia">${dSel.map(d => `<option value="${d}" ${d === dia ? 'selected' : ''}>${dn(d)} ${fF(d)}${d === hoy ? ' · hoy (en curso)' : ''}${d < ini ? ' · práctica' : ''}</option>`).join('')}</select></label></div>`;
+    if (!cuenta) h += `<p class="note">El ${fF(dia)} es de práctica: se muestra para que veas cómo se evalúa, pero los puntos cuentan desde el ${fF(ini)}.</p>`;
+    h += `<div class="tw"><table id="tPlD"><thead><tr><th class="l sticky1">Marca</th><th>Última visita<br><span class="muted" style="font-weight:500">${dn(menos(dia, 7))} ${fF(menos(dia, 7))}</span></th><th>Penúltima<br><span class="muted" style="font-weight:500">${fF(menos(dia, 14))}</span></th><th>Referencia</th><th>Necesario</th><th>Planificado</th><th>% de la ref.</th><th class="l">Planificación</th><th>Vendido</th><th class="l">Punto</th><th class="l">Qué pasó</th></tr></thead><tbody>` +
+      its.map(x => `<tr><td class="l sticky1 name">${esc(brandN(x.i))}</td><td>${x.v1 ? $f(x.v1) : '—'}</td><td>${x.v2 ? $f(x.v2) : '—'}</td><td>${x.ref ? $f(x.ref) : '—'}</td><td class="ink2">${$f(x.nec)}</td><td class="tot">${x.carg ? $f(x.plan) : '—'}</td><td>${pctT(x.ratio)}</td><td class="l">${semTag(x)}</td><td>${$f(x.venta)}</td><td class="l">${x.pt ? '<span class="cell good">+1</span>' : x.sem === 'a' && !pas ? '<span class="cell na">en juego</span>' : '<span class="cell na">0</span>'}</td><td class="l" style="white-space:normal;min-width:220px">${qp(x)}</td></tr>`).join('') +
+      `</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${$f(T('v1'))}</td><td>${$f(T('v2'))}</td><td>${$f(T('ref'))}</td><td>${$f(T('nec'))}</td><td>${$f(T('plan'))}</td><td>${T('ref') ? pctT(T('plan') / T('ref')) : '—'}</td><td></td><td>${$f(T('venta'))}</td><td class="l"><b>${cuenta ? T('pt') : 0}</b> de ${its.length}</td><td></td></tr></tfoot></table></div></div>`;
+  }
+  /* ---- 3 · Tendencia por marca ---- */
+  const jug = p.det.filter(x => x.d <= hoy);
+  const desv = i => { let pl = 0, ve = 0; for (const x of jug) { if (x.d >= hoy) continue; const y = x.its.find(z => z.i === i); if (y && y.carg) { pl += y.plan; ve += y.venta; } } return ve > 0 ? pl / ve - 1 : null; };
+  if (jug.length) {
+    const L = { v: 'R', a: 'A', r: 'B', n: '–' };
+    h += `<div class="section"><div class="panel-h"><h3>Tendencia por marca</h3>${exportBtn('tPlT', 'planificacion_tendencia_' + v.cod)}</div><p class="note" style="margin-top:0">R realista · A ambicioso · B bajo / no llega al mes · – no planificó. Con borde, los días que sumaron punto.</p><div class="tw"><table id="tPlT"><thead><tr><th class="l sticky1">Marca</th>${jug.map(x => `<th style="text-align:center">${dn(x.d)}<br>${fF(x.d)}</th>`).join('')}<th>Puntos</th><th class="l">Tu desvío (planificado vs. vendido)</th></tr></thead><tbody>` +
+      p.marcas.map(i => { const cs = jug.map(x => x.its.find(z => z.i === i)); const dv = desv(i);
+        return `<tr><td class="l sticky1 name">${esc(brandN(i))}</td>${cs.map(y => `<td style="text-align:center"><span class="cell ${SEM[y.sem][0]}" style="min-width:30px;${y.pt ? 'outline:2px solid var(--good);outline-offset:1px' : ''}" title="${y.carg ? 'Planificado ' + $f(y.plan) + ' · vendido ' + $f(y.venta) : 'No planificó'}">${L[y.sem]}</span></td>`).join('')}<td class="tot">${cs.reduce((a, y) => a + y.pt, 0)}</td><td class="l">${dv == null ? '<span class="muted">sin datos</span>' : Math.abs(dv) < 0.1 ? '<span class="cell good">planificás justo</span>' : `<span class="cell ${dv > 0 ? 'warn' : 'bad'}">${dv > 3 ? 'más del +300%' : (dv > 0 ? '+' : '') + Math.round(dv * 100) + '%'} · planificás ${dv > 0 ? 'arriba' : 'abajo'} de lo que vendés</span>`}</td></tr>`; }).join('') +
+      `</tbody></table></div></div>`;
+  }
+  /* ---- 4 · Sugerido para la próxima visita ---- */
+  const prox = H.filter(d => d >= hoy).slice(0, 5);
+  if (prox.length) {
+    const defS = HORAAR < 12 && prox[0] === hoy ? hoy : (prox.find(d => d > hoy) || prox[0]);
+    const ds = st.plSug && prox.includes(st.plSug) ? st.plSug : defS, its = p.evalDia(ds);
+    h += `<div class="section"><div class="panel-h"><h3>Sugerido para cargar en el form</h3><label class="muted">Día <select id="plSug">${prox.map(d => `<option value="${d}" ${d === ds ? 'selected' : ''}>${dn(d)} ${fF(d)}${d === hoy ? ' · hoy' : ''}</option>`).join('')}</select></label></div><p class="note" style="margin-top:0">Para que la planificación quede en verde, cargá un objetivo dentro del <b>rango verde</b>: entre el ${Math.round(lo * 100)}% y el ${Math.round(hi * 100)}% de tus visitas y no menos de lo necesario para el mes.${CFG.odUrl ? ` Form: <a href="${esc(CFG.odUrl)}" target="_blank" rel="noopener">${esc(CFG.odUrl)}</a>` : ''}</p>`;
+    h += `<div class="tw"><table id="tPlS"><thead><tr><th class="l sticky1">Marca</th><th>Última visita<br><span class="muted" style="font-weight:500">${fF(menos(ds, 7))}</span></th><th>Penúltima<br><span class="muted" style="font-weight:500">${fF(menos(ds, 14))}</span></th><th>Referencia</th><th>Necesario</th><th>Rango verde</th><th>Sugerido</th><th class="l">Ojo</th></tr></thead><tbody>` +
+      its.map(x => { const base = x.ref > 0 ? x.ref : x.nec, mn = Math.max(lo * base, x.nec), mx = hi * base, sinV = mn > mx + 1, dv = desv(x.i);
+        const sug = base > 0 ? r1k(Math.max(base, x.nec)) : 0;
+        const ojo = sinV ? `Para llegar al mes necesitás más del ${Math.round(hi * 100)}% de tus visitas: queda ambicioso, suma solo si llegás.` : dv != null && dv > 0.2 ? `Venís planificando ${dv > 3 ? 'más del 300%' : Math.round(dv * 100) + '%'} arriba de lo que vendés.` : dv != null && dv < -0.2 ? `Venís vendiendo más de lo que planificás: podés subirlo.` : '';
+        return `<tr><td class="l sticky1 name">${esc(brandN(x.i))}</td><td>${x.v1 ? $f(x.v1) : '—'}</td><td>${x.v2 ? $f(x.v2) : '—'}</td><td>${x.ref ? $f(x.ref) : '—'}</td><td class="ink2">${$f(x.nec)}</td><td>${base > 0 ? (sinV ? '<span class="cell warn">no hay verde</span>' : $f(r1k(mn)) + ' a ' + $f(r1k(mx))) : '—'}</td><td class="tot">${sug ? $f(sug) : '—'}</td><td class="l" style="white-space:normal;min-width:220px">${ojo}</td></tr>`; }).join('') +
+      `</tbody></table></div></div>`;
+  }
+  return h;
+}
+document.addEventListener('change', e => { const id = e.target.id; if (id === 'plDia' || id === 'plVen' || id === 'plSug') { st[id] = e.target.value; saveUI(); render(); } });
+document.addEventListener('click', e => { const r = e.target.closest('[data-plven]'); if (r) { st.plVen = r.dataset.plven; saveUI(); render(); } });
 /* ===================== Marcas ===================== */
 /* Venta del último día hábil completo (antes de hoy) contra lo que necesitaba ese día: lo que le faltaba para el objetivo del mes al empezar el día ÷ días hábiles que quedaban (incluido ese día) */
 const DIAV = (function(){ const hoy = (SNAP && SNAP.hoy) || HOYAR; const ds = CFG.habiles.filter(d => d < hoy); return ds.length ? ds[ds.length - 1] : null; })();
@@ -733,7 +871,7 @@ function viewFicha(){
   const v = R.vs.find(x => x.cod == st.ven) || R.vs[0];
   let h = SOLO ? '' : `<div class="filters"><label for="fVen">Vendedor <select id="fVen">${SUPS.map(s => `<optgroup label="${esc(supName(s))}">${R.vs.filter(x => x.sup === s).map(x => `<option value="${x.cod}" ${x.cod===v.cod?'selected':''}>${esc(titleCase(x.nom))}</option>`).join('')}</optgroup>`).join('')}</select></label></div>`;
   h += emptyBanner();
-  h += `<div class="ficha-head"><div><span class="eyebrow">${esc(supName(v.sup))} · código ${v.cod} · cartera ${v.cartera} clientes</span><h2>${esc(titleCase(v.nom))}</h2></div><div class="big-tickets" style="display:flex;gap:14px;align-items:center">${tickets(v)}<span class="tot" style="font-size:30px">${v.total}<span class="muted" style="font-size:18px"> / ${P.tope}</span></span></div></div>`;
+  h += `<div class="ficha-head"><div><span class="eyebrow">${esc(supName(v.sup))} · código ${v.cod} · cartera ${v.cartera} clientes</span><h2>${esc(titleCase(v.nom))}</h2></div><div class="big-tickets" style="display:flex;gap:14px;align-items:center">${tickets(v)}<span class="tot" style="font-size:30px">${v.total}<span class="muted" style="font-size:18px"> / ${P.tope + (P.cupPlan || 0)}</span></span></div></div>`;
   const faltaT = Math.max(v.objT - v.realT, 0);
   h += `<div class="grid2"><div class="steps">
     <div class="step"><span class="k">A · Puntos por marcas al 100%</span><span class="d">${v.n100} de ${v.conObj} marcas al 100% = ${Math.round(v.pts)} de 100 puntos · cada ${P.ptsCup} puntos, 1 cupón (hasta ${P.cupMarcas})</span><span class="r">${v.A}</span></div>
@@ -741,13 +879,14 @@ function viewFicha(){
     <div class="step"><span class="k">B · Plus todas las marcas al 100%</span><span class="d">${v.todas ? 'Todas sus marcas llegaron al 100%' : 'Faltan ' + (v.conObj - v.n100) + ' marcas para el plus de ' + P.cupPlus + ' cupones'}</span><span class="r">${v.B}</span></div>
     <div class="step"><span class="k">C · Cobertura Georgalos</span><span class="d">${v.nCob} de ${GBR.length} coberturas cumplidas (${GBR.length - 1} líneas + general)</span><span class="r">${v.C}</span></div>
     <div class="step"><span class="k">Subtotal A + B + C</span><span class="d">${v.sub > P.tope ? 'Pasa el tope: lo que excede no cuenta' : 'Sin tope'}</span><span class="r">${v.sub}</span></div>
-    <div class="step total"><span class="k">Total de cupones</span><span class="d">El menor entre el subtotal y ${P.tope} · probabilidad ${fmtP(v.prob,1)}</span><span class="r">${v.total}</span></div>
+    <div class="step"><span class="k">D · Planificación del día</span><span class="d">${v.plan && v.plan.posibles ? v.plan.pts + ' de ' + v.plan.umbral + ' puntos necesarios (' + v.plan.posibles + ' posibles) · ver "¿Planifiqué bien?"' : 'Arranca con la carga de objetivos diarios'}</span><span class="r">${v.D || 0}</span></div>
+    <div class="step total"><span class="k">Total de cupones</span><span class="d">El menor entre el subtotal y ${P.tope}, más D · probabilidad ${fmtP(v.prob,1)}</span><span class="r">${v.total}</span></div>
   </div>
   <div class="panel"><h3>Ritmo del mes</h3>
     <div class="steps" style="margin-top:10px;border:0">
       <div class="step"><span class="k">Tendencia al cierre</span><span class="d">${R.diasTrans ? 'Al promedio diario actual llegaría a ' + fmtMk(v.tend) : 'Se calcula con el primer día de ventas'}</span><span class="r">${R.diasTrans ? fmtP(v.tendPct) : '—'}</span></div>
       <div class="step"><span class="k">Necesita por día hábil</span><span class="d">${DQ > 0 ? 'Para llegar al 100% del total en los ' + DQ + ' días que quedan' + (pvOf(v).realT > v.realT ? ', descontando ' + fmtMk(pvOf(v).realT - v.realT) + ' de preventa ya cargada' : '') : 'Mes cerrado'}</span><span class="r" style="font-size:20px">${DQ > 0 && v.objT > pvOf(v).realT ? fmtMk((v.objT - pvOf(v).realT) / DQ) : (DQ ? '✓' : '—')}</span></div>
-      <div class="step"><span class="k">Cupones posibles</span><span class="d">Si cumple todas sus marcas y las ${GBR.length} coberturas</span><span class="r">${v.maxPosible}</span></div>
+      <div class="step"><span class="k">Cupones posibles</span><span class="d">Si cumple todas sus marcas, las ${GBR.length} coberturas y la planificación</span><span class="r">${v.maxPosible}</span></div>
     </div></div></div>`;
   // marcas
   const rows = CFG.brands.map((b,i) => ({ b, o: v.obj[i], r: v.real[i], rp: pvOf(v).real[i] })).filter(x => x.o > 0).sort((a,b) => (a.r/a.o >= 1) - (b.r/b.o >= 1) || b.o - a.o);
@@ -894,7 +1033,7 @@ function viewReglas(){
   return `<div class="prose">
   <h2>Cómo funciona el concurso</h2>
   <p>Cada vendedor y cada supervisor junta cupones durante el mes según su cumplimiento. A fin de mes se sortea la moto entre todos los cupones: cuantos más cupones, más chances. <b>Pepsico no participa</b>; todas las demás marcas (incluidas Peñaflor y New PGA) cuentan.</p>
-  <p class="formula">Total de cupones = A (hasta ${P.cupMarcas}) + B (${P.cupPlus}) + C (hasta ${GBR.length}) · máximo ${P.tope}</p>
+  <p class="formula">Total de cupones = A (hasta ${P.cupMarcas}) + B (${P.cupPlus}) + C (hasta ${GBR.length}) · máximo ${P.tope} · más D (${P.cupPlan || 0}) por planificar bien</p>
   <h3>A · Puntos por marca (hasta ${P.cupMarcas} cupones)</h3>
   <p>Cada marca que llega al objetivo del mes (real ÷ objetivo ≥ ${fmtP(P.cumpl)}) suma puntos según su <b>peso en el objetivo total</b> del vendedor: puntos de la marca = objetivo de la marca ÷ objetivo total × 100. Así, las marcas más importantes valen más. Con todas las marcas al 100% se llega a 100 puntos. <b>Cada ${P.ptsCup} puntos, 1 cupón</b> (redondeado para abajo), hasta ${P.cupMarcas} cupones: el máximo se alcanza con ${P.ptsCup * P.cupMarcas} puntos. Si una marca no tiene objetivo (o está en 0) no suma.</p>
   <p class="note">Ejemplo: objetivo total $ 20 M; Peñaflor $ 6 M (30 puntos), Georgalos $ 4 M (20 puntos), Ledesma $ 2 M (10 puntos). Si llega al 100% en esas tres, junta 60 puntos = 4 cupones.</p>
@@ -923,6 +1062,8 @@ function viewReglas(){
   <p><b>Qué venta cuenta:</b> la venta facturada por fecha de comprobante del 1 al 31 de ${CFG.mes.label}, <b>más la preventa</b> ya cargada con entrega en el mes (cuenta con su fecha de entrega; si después hay rechazos, se descuentan). Se toma el importe neto (sin IVA) e incluye devoluciones y ajustes.</p>
   <p><b>Objetivos:</b> hasta que estén los de ${CFG.mes.label} se usan los del modelo como provisorios.</p>
   <p><b>Qué viene fijo del modelo</b> (Modelo de incentivo Oct 26): la cartera de clientes de cada vendedor (${Object.values(CFG.cart).reduce((a,c) => a + c.length, 0).toLocaleString('es-AR')} clientes), la lista de artículos Georgalos y los parámetros.</p>
+  <h3>D · Planificación del día (${P.cupPlan || 0} cupones aparte del tope)</h3>
+  <p>Desde el ${P.planIni ? fmtDate(P.planIni) : '—'}, cada marca con objetivo del mes en cada día hábil es <b>1 punto posible</b>. El objetivo del día que cargás en el form se compara con el <b>promedio de tu última y penúltima visita</b> (mismo día de la semana anterior y de dos semanas antes): entre el ${Math.round(((P.planBanda || [0.8])[0]) * 100)}% y el ${Math.round(((P.planBanda || [0, 1.2])[1]) * 100)}% y sin quedar por debajo de lo necesario para el mes es <b>realista</b> y suma 1 punto; más alto es <b>ambicioso</b> y suma solo si llegás; más bajo, por debajo de lo necesario o sin cargar no suma. Con el ${Math.round((P.planUmbral || 0.7) * 100)}% de los puntos posibles del mes ganás ${P.cupPlan || 0} cupones, que se suman aunque estés en el tope. El detalle está en la pestaña "¿Planifiqué bien?".</p>
   <h3>Cuánto traer por día</h3><p>Las etiquetas "por día" toman lo que falta para el 100% del objetivo, le descuentan la <b>preventa ya cargada</b> que todavía no se facturó (pedidos a entregar este mes) y lo dividen por los días hábiles que quedan (${DQ} hoy; después de las 16 h se cuenta desde el día siguiente). En ámbar si va atrasado contra el ritmo del mes. La preventa no suma cupones hasta que se factura.</p>
   <p class="note">${meta}</p>
   </div>`;
@@ -1086,7 +1227,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
