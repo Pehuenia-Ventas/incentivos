@@ -173,6 +173,7 @@ td.zero{color:var(--muted)}
     </div>
     <div class="status"><span id="stData" class="chip"></span></div>
   </header>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
   <main id="view"></main>
 </div>
 <script>
@@ -188,7 +189,7 @@ const dow = f => new Date(f + 'T12:00:00').getDay(); // 0 domingo
 const fechas = Object.keys(S.d).sort();
 const pad2 = n => (n < 10 ? '0' : '') + n;
 const ini = CFG.mes.y + '-' + pad2(CFG.mes.m) + '-01', fin = fechas.length ? fechas[fechas.length - 1] : ini;
-const st = { desde: ini, hasta: fin, dias: [], ven: 'todos', orden: 'total' };
+const st = { desde: ini, hasta: fin, dias: [], ven: 'todos', orden: 'total', tab: 'fact' };
 try { Object.assign(st, JSON.parse(localStorage.getItem('kfac_ui') || '{}')); } catch (e) {}
 if (st.desde < ini) st.desde = ini; if (st.hasta > fin || st.hasta < ini) st.hasta = fin;
 const save = () => { try { localStorage.setItem('kfac_ui', JSON.stringify(st)); } catch (e) {} };
@@ -253,8 +254,107 @@ function odiaView(A){
   }
   return h + '</div>';
 }
-document.addEventListener('change', e => { if (e.target.id === 'odDia') { st.odDia = e.target.value; save(); render(); } });
+document.addEventListener('change', e => { const id = e.target.id; if (['odDia', 'odVen', 'plVen', 'plDia', 'plSug'].includes(id)) { st[id] = e.target.value; save(); render(); } });
+/* ===================== ¿Planifiqué bien? (KAF) =====================
+   Mismo criterio que la Moto: el objetivo del día cargado en el form se compara con el promedio de la última y la penúltima visita
+   (mismo día 7 y 14 días antes, por fecha de carga) y con lo necesario para llegar al objetivo del mes de la marca.
+   Solo cuentan las marcas del form en las que el vendedor tiene objetivo del mes. Verde 1 punto · amarillo 1 si llegó · rojo / sin cargar 0. */
+const PLK = Object.assign({ ini: null, banda: [0.8, 1.2], umbral: 0.7, cup: 0 }, CFG.plan || {});
+function planEvalK(cod){
+  if (!OBJ || !PLK.ini) return null;
+  const SO = CFG.shortOf || {}, H = (CFG.habiles || []).filter(f => f.startsWith(ini.slice(0, 7))).sort(), hoy = S.hoy || fin;
+  const lo = PLK.banda[0], hi = PLK.banda[1], D = S.d || {}, C = S.dc || S.d || {};
+  const sale = (f, k) => ((D[f] || {})[cod] || {})[k] || 0, vis = (f, k) => ((C[f] || {})[cod] || {})[k] || 0;
+  const menos = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+  const marcas = S.provs.map((p, k) => ({ k, short: SO[String(p).trim().toUpperCase().replace(/\s+/g, ' ')], om: OBJ.OD * OBJ.NH * OBJ.w(cod, k) })).filter(b => b.short && b.om > 0);
+  const F = (CFG.objDia || {})[cod] || {}, dias = H.filter(d => d >= PLK.ini);
+  const evalDia = d => { const rest = H.filter(x => x >= d).length, F1 = F[d] || {};
+    return marcas.map(b => { const k = b.k; let antes = 0; for (const f of fechas) if (f < d) antes += sale(f, k);
+      const nec = rest ? Math.max(0, b.om - antes) / rest : 0, v1 = vis(menos(d, 7), k), v2 = vis(menos(d, 14), k), vv = [v1, v2].filter(x => x > 0);
+      const ref = vv.length ? vv.reduce((a, c) => a + c, 0) / vv.length : 0, base = ref > 0 ? ref : nec;
+      const fv = F1[b.short], carg = fv != null && fv !== '' && isFinite(+fv), plan = carg ? +fv : null, venta = d <= hoy ? sale(d, k) : 0;
+      let sem = 'n'; if (carg) { const r = base > 0 ? plan / base : (plan > 0 ? Infinity : 1); sem = (nec > 0 && plan + 1 < nec) || r < lo - 1e-9 ? 'r' : r > hi + 1e-9 ? 'a' : 'v'; }
+      const llego = carg && plan > 0 && venta >= plan - 0.5, pt = d > hoy ? 0 : sem === 'v' ? 1 : sem === 'a' && llego ? 1 : 0;
+      return { i: k, short: b.short, v1, v2, ref, nec, carg, plan, venta, sem, llego, pt, ratio: carg && base > 0 ? plan / base : null }; }); };
+  const det = dias.map(d => ({ d, its: evalDia(d) })), jug = det.filter(x => x.d <= hoy);
+  const pts = jug.reduce((a, x) => a + x.its.reduce((b, y) => b + y.pt, 0), 0), posibles = dias.length * marcas.length, umbral = Math.ceil(PLK.umbral * posibles - 1e-9);
+  const quedan = det.filter(x => x.d > hoy).length * marcas.length + jug.filter(x => x.d === hoy).reduce((a, x) => a + x.its.filter(y => !y.pt).length, 0);
+  const cnt = k => jug.reduce((a, x) => a + x.its.filter(y => y.sem === k).length, 0);
+  return { marcas, dias, det, pts, posibles, umbral, quedan, ok: posibles > 0 && pts >= umbral, alcanzable: pts + quedan >= umbral, nV: cnt('v'), nA: cnt('a'), nR: cnt('r'), nN: cnt('n'), jugadas: jug.length * marcas.length, evalDia, H, hoy };
+}
+function viewPlanK(){
+  const fF = f => f.slice(8, 10) + '/' + f.slice(5, 7), DNs = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'], dn = f => DNs[new Date(f + 'T12:00:00').getDay()];
+  const $f = n => '$' + Math.round(n || 0).toLocaleString('es-AR'), r1k = n => Math.round((n || 0) / 1000) * 1000;
+  const menos = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+  const pctT = x => x == null || x === Infinity ? '—' : Math.round(x * 100) + '%';
+  const motivoR = x => x.carg && x.nec > 0 && x.plan + 1 < x.nec;
+  const SEM = { v: ['good', 'Realista'], a: ['warn', 'Ambicioso'], r: ['bad', 'Bajo'], n: ['na', 'No planificó'] };
+  const semTag = x => `<span class="cell ${SEM[x.sem][0]}">${x.sem === 'r' && motivoR(x) ? 'No llega al mes' : SEM[x.sem][1]}</span>`;
+  if (!OBJ || !PLK.ini) return '<div class="section"><p class="note">La evaluación de la planificación se activa con la próxima actualización.</p></div>';
+  const lo = PLK.banda[0], hi = PLK.banda[1], umbP = PLK.umbral;
+  let h = `<details class="howto"><summary>Cómo se evalúa la planificación</summary><ul>` + [
+    '<b>Referencia</b>: el promedio de lo que vendiste en esa marca en la <b>última y la penúltima visita</b> (el mismo día de la semana anterior y de dos semanas antes, por fecha de carga). Si en una de las dos no vendiste, se usa la otra; si no vendiste en ninguna, la referencia es lo que necesitás por día para llegar al mes.',
+    '<b>Necesario</b>: lo que te falta del objetivo del mes en la marca ÷ los días hábiles que quedan (incluido ese día). El objetivo del mes por marca es el de la sección "Objetivo por marca".',
+    '<span class="cell good">Realista</span>: cargaste entre el ' + Math.round(lo * 100) + '% y el ' + Math.round(hi * 100) + '% de la referencia y alcanza para el mes → <b>suma 1 punto</b>.',
+    '<span class="cell warn">Ambicioso</span>: más del ' + Math.round(hi * 100) + '% de la referencia → <b>suma 1 punto solo si llegás</b> a lo planificado ese día.',
+    '<span class="cell bad">Bajo</span> / <span class="cell bad">No llega al mes</span>: menos del ' + Math.round(lo * 100) + '% de la referencia, o menos de lo necesario para el mes → <b>no suma</b>, aunque llegues.',
+    '<span class="cell na">No planificó</span>: no cargaste objetivo de esa marca en el form → no suma. Solo cuentan las marcas del form en las que tenés objetivo del mes.',
+    'Desde el ' + fF(PLK.ini) + ' cada marca de cada día hábil es 1 punto posible. La meta es juntar el <b>' + Math.round(umbP * 100) + '% de los puntos posibles</b> del mes' + (PLK.cup ? ' (' + PLK.cup + ' cupones)' : '') + '.'
+  ].map(x => '<li>' + x + '</li>').join('') + '</ul></details>';
+  const sel = vend.some(v => String(v.cod) === String(st.plVen)) ? String(st.plVen) : 'todos';
+  h += `<div class="dfil"><label>Vendedor<select id="plVen"><option value="todos">Todos (ranking)</option>${vend.map(v => `<option value="${v.cod}" ${String(v.cod) === sel ? 'selected' : ''}>${v.cod} · ${esc(titleCase(v.nom))}</option>`).join('')}</select></label></div>`;
+  if (sel === 'todos') {
+    const rk = vend.map(v => ({ v, p: planEvalK(v.cod) })).filter(x => x.p).sort((a, b) => b.p.pts / (b.p.umbral || 1) - a.p.pts / (a.p.umbral || 1));
+    return h + `<div class="section"><div class="panel-h"><h3>Puntaje de planificación</h3></div><div class="tw"><table id="tPlR"><thead><tr><th class="l sticky1">Vendedor</th><th>Marcas</th><th>Puntos</th><th>Necesita</th><th>Posibles del mes</th><th>Realista</th><th>Ambicioso</th><th>Bajo</th><th>No planificó</th><th class="l">Estado</th></tr></thead><tbody>` +
+      rk.map(({ v, p }) => `<tr class="click" data-plven="${v.cod}" style="cursor:pointer"><td class="l sticky1 name">${v.cod} · ${esc(titleCase(v.nom))}</td><td>${p.marcas.length}</td><td class="tot">${p.pts}</td><td>${p.umbral}</td><td class="muted">${p.posibles}</td><td>${p.nV}</td><td>${p.nA}</td><td>${p.nR}</td><td>${p.nN}</td><td class="l">${p.ok ? '<span class="cell good">✓ cumplido</span>' : p.alcanzable ? `<span class="cell warn">faltan ${p.umbral - p.pts}</span>` : '<span class="cell bad">ya no llega</span>'}</td></tr>`).join('') +
+      `</tbody></table></div><p class="note">Tocá un vendedor para ver su detalle. "Necesita" es el ${Math.round(umbP * 100)}% de los puntos posibles del mes (desde el ${fF(PLK.ini)}).</p></div>`;
+  }
+  const v = vend.find(x => String(x.cod) === sel), p = planEvalK(v.cod), hoy = p.hoy, H = p.H;
+  if (!p.marcas.length) return h + '<p class="note">Sin marcas del form con objetivo del mes.</p>';
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Puntos de planificación</span><span class="v">${p.pts}<span class="muted" style="font-size:18px"> / ${p.umbral}</span></span><span class="s">necesita ${p.umbral} de ${p.posibles} posibles (${p.marcas.length} marcas × ${p.dias.length} días)</span></div>` +
+    `<div class="kpi"><span class="eyebrow">Meta del mes</span><span class="v">${p.ok ? '✓' : p.alcanzable ? Math.max(0, p.umbral - p.pts) : '✗'}</span><span class="s">${p.ok ? 'cumplida' : p.alcanzable ? 'puntos que faltan · quedan ' + p.quedan + ' por jugar' : 'con lo que queda ya no se llega'}</span></div>` +
+    `<div class="kpi"><span class="eyebrow">Cómo viene</span><span class="v" style="font-size:20px"><span class="cell good">${p.nV}</span> <span class="cell warn">${p.nA}</span> <span class="cell bad">${p.nR}</span> <span class="cell na">${p.nN}</span></span><span class="s">realista · ambicioso · bajo · no planificó (${p.jugadas} marcas-día evaluadas)</span></div></div>`;
+  /* 1 · Semáforo del día */
+  const conForm = Object.keys((CFG.objDia || {})[v.cod] || {}), dSel = H.filter(d => d <= hoy && (d >= PLK.ini || conForm.includes(d)));
+  if (dSel.length) {
+    const defD = dSel.filter(d => d < hoy).pop() || dSel[dSel.length - 1], dia = st.plDia && dSel.includes(st.plDia) ? st.plDia : defD, its = p.evalDia(dia), pas = dia < hoy, cuenta = dia >= PLK.ini;
+    const qp = x => { const ref = x.ref > 0 ? `tus visitas (${$f(x.ref)})` : `lo necesario (${$f(x.nec)}), porque no vendiste en las dos visitas`;
+      if (x.sem === 'n') return 'No cargaste objetivo para esta marca.'; if (motivoR(x)) return `Planificaste ${$f(x.plan)}, pero necesitabas ${$f(x.nec)} por día para llegar al mes.`;
+      const b = `Planificaste el ${pctT(x.ratio)} de ${ref}.`; if (x.sem === 'r') return b + ' Quedó corto.'; if (x.sem === 'a') return b + (x.llego ? ' Llegaste: suma.' : pas ? ' No llegaste: no suma.' : ' Si llegás, suma.'); return b + (x.llego ? ' Y llegaste.' : ''); };
+    const T = k => its.reduce((a, x) => a + (+x[k] || 0), 0);
+    h += `<div class="section"><div class="panel-h"><h3>Semáforo del día</h3><span style="flex:1"></span><label class="muted">Día <select id="plDia">${dSel.map(d => `<option value="${d}" ${d === dia ? 'selected' : ''}>${dn(d)} ${fF(d)}${d === hoy ? ' · hoy (en curso)' : ''}${d < PLK.ini ? ' · práctica' : ''}</option>`).join('')}</select></label></div>`;
+    if (!cuenta) h += `<p class="note">El ${fF(dia)} es de práctica: se muestra para ver cómo se evalúa, pero los puntos cuentan desde el ${fF(PLK.ini)}.</p>`;
+    h += `<div class="tw"><table id="tPlD"><thead><tr><th class="l sticky1">Marca</th><th>Última visita<br><span class="muted" style="font-weight:500">${dn(menos(dia, 7))} ${fF(menos(dia, 7))}</span></th><th>Penúltima<br><span class="muted" style="font-weight:500">${fF(menos(dia, 14))}</span></th><th>Referencia</th><th>Necesario</th><th>Planificado</th><th>% de la ref.</th><th class="l">Planificación</th><th>Vendido</th><th class="l">Punto</th><th class="l">Qué pasó</th></tr></thead><tbody>` +
+      its.map(x => `<tr><td class="l sticky1 name">${esc(x.short)}</td><td>${x.v1 ? $f(x.v1) : '—'}</td><td>${x.v2 ? $f(x.v2) : '—'}</td><td>${x.ref ? $f(x.ref) : '—'}</td><td class="ink2">${$f(x.nec)}</td><td class="tot">${x.carg ? $f(x.plan) : '—'}</td><td>${pctT(x.ratio)}</td><td class="l">${semTag(x)}</td><td>${$f(x.venta)}</td><td class="l">${x.pt ? '<span class="cell good">+1</span>' : x.sem === 'a' && !pas ? '<span class="cell na">en juego</span>' : '<span class="cell na">0</span>'}</td><td class="l" style="white-space:normal;min-width:220px">${qp(x)}</td></tr>`).join('') +
+      `</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${$f(T('v1'))}</td><td>${$f(T('v2'))}</td><td>${$f(T('ref'))}</td><td>${$f(T('nec'))}</td><td>${$f(T('plan'))}</td><td>${T('ref') ? pctT(T('plan') / T('ref')) : '—'}</td><td></td><td>${$f(T('venta'))}</td><td class="l"><b>${cuenta ? T('pt') : 0}</b> de ${its.length}</td><td></td></tr></tfoot></table></div></div>`;
+  }
+  /* 3 · Tendencia por marca */
+  const jug = p.det.filter(x => x.d <= hoy);
+  const desv = i => { let pl = 0, ve = 0; for (const x of jug) { if (x.d >= hoy) continue; const y = x.its.find(z => z.i === i); if (y && y.carg) { pl += y.plan; ve += y.venta; } } return ve > 0 ? pl / ve - 1 : null; };
+  if (jug.length) { const L = { v: 'R', a: 'A', r: 'B', n: '–' };
+    h += `<div class="section"><div class="panel-h"><h3>Tendencia por marca</h3></div><p class="note" style="margin-top:0">R realista · A ambicioso · B bajo / no llega al mes · – no planificó. Con borde, los días que sumaron punto.</p><div class="tw"><table id="tPlT"><thead><tr><th class="l sticky1">Marca</th>${jug.map(x => `<th style="text-align:center">${dn(x.d)}<br>${fF(x.d)}</th>`).join('')}<th>Puntos</th><th class="l">Desvío (planificado vs. vendido)</th></tr></thead><tbody>` +
+      p.marcas.map(b => { const cs = jug.map(x => x.its.find(z => z.i === b.k)), dv = desv(b.k);
+        return `<tr><td class="l sticky1 name">${esc(b.short)}</td>${cs.map(y => `<td style="text-align:center"><span class="cell ${SEM[y.sem][0]}" style="min-width:30px;${y.pt ? 'outline:2px solid var(--good);outline-offset:1px' : ''}" title="${y.carg ? 'Planificado ' + $f(y.plan) + ' · vendido ' + $f(y.venta) : 'No planificó'}">${L[y.sem]}</span></td>`).join('')}<td class="tot">${cs.reduce((a, y) => a + y.pt, 0)}</td><td class="l">${dv == null ? '<span class="muted">sin datos</span>' : Math.abs(dv) < 0.1 ? '<span class="cell good">planifica justo</span>' : `<span class="cell ${dv > 0 ? 'warn' : 'bad'}">${dv > 3 ? 'más del +300%' : (dv > 0 ? '+' : '') + Math.round(dv * 100) + '%'} · planifica ${dv > 0 ? 'arriba' : 'abajo'} de lo que vende</span>`}</td></tr>`; }).join('') + `</tbody></table></div></div>`; }
+  /* 4 · Sugerido para el form */
+  const prox = H.filter(d => d >= hoy).slice(0, 5), HR = (+new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false })) % 24;
+  if (prox.length) {
+    const defS = HR < 12 && prox[0] === hoy ? hoy : (prox.find(d => d > hoy) || prox[0]), ds = st.plSug && prox.includes(st.plSug) ? st.plSug : defS, its = p.evalDia(ds);
+    h += `<div class="section"><div class="panel-h"><h3>Sugerido para cargar en el form</h3><span style="flex:1"></span><label class="muted">Día <select id="plSug">${prox.map(d => `<option value="${d}" ${d === ds ? 'selected' : ''}>${dn(d)} ${fF(d)}${d === hoy ? ' · hoy' : ''}</option>`).join('')}</select></label></div><p class="note" style="margin-top:0">Para quedar en verde, cargá un objetivo dentro del <b>rango verde</b>: entre el ${Math.round(lo * 100)}% y el ${Math.round(hi * 100)}% de las visitas y no menos de lo necesario para el mes.${CFG.odUrl ? ` Form: <a href="${esc(CFG.odUrl)}" target="_blank" rel="noopener">${esc(CFG.odUrl)}</a>` : ''}</p>`;
+    h += `<div class="tw"><table id="tPlS"><thead><tr><th class="l sticky1">Marca</th><th>Última visita<br><span class="muted" style="font-weight:500">${fF(menos(ds, 7))}</span></th><th>Penúltima<br><span class="muted" style="font-weight:500">${fF(menos(ds, 14))}</span></th><th>Referencia</th><th>Necesario</th><th>Rango verde</th><th>Sugerido</th><th class="l">Ojo</th></tr></thead><tbody>` +
+      its.map(x => { const base = x.ref > 0 ? x.ref : x.nec, mn = Math.max(lo * base, x.nec), mx = hi * base, sinV = mn > mx + 1, dv = desv(x.i), sug = base > 0 ? r1k(Math.max(base, x.nec)) : 0;
+        const ojo = sinV ? `Para llegar al mes necesita más del ${Math.round(hi * 100)}% de las visitas: queda ambicioso, suma solo si llega.` : dv != null && dv > 0.2 ? `Viene planificando ${dv > 3 ? 'más del 300%' : Math.round(dv * 100) + '%'} arriba de lo que vende.` : dv != null && dv < -0.2 ? 'Viene vendiendo más de lo que planifica: puede subirlo.' : '';
+        return `<tr><td class="l sticky1 name">${esc(x.short)}</td><td>${x.v1 ? $f(x.v1) : '—'}</td><td>${x.v2 ? $f(x.v2) : '—'}</td><td>${x.ref ? $f(x.ref) : '—'}</td><td class="ink2">${$f(x.nec)}</td><td>${base > 0 ? (sinV ? '<span class="cell warn">no hay verde</span>' : $f(r1k(mn)) + ' a ' + $f(r1k(mx))) : '—'}</td><td class="tot">${sug ? $f(sug) : '—'}</td><td class="l" style="white-space:normal;min-width:220px">${ojo}</td></tr>`; }).join('') + `</tbody></table></div></div>`;
+  }
+  return h;
+}
+const TABSK = [['fact', 'Facturación por marca'], ['odia', 'Objetivo del día'], ['plan', '¿Planifiqué bien?']];
+function viewOdiaK(){ if (!OBJ || !(CFG.habiles || []).length) return '<p class="note">Sin objetivo del mes cargado.</p>'; const SO = CFG.shortOf || {}, nm = p => SO[String(p).trim().toUpperCase().replace(/\s+/g, ' ')] || titleCase(p);
+  return odiaView({ brands: S.provs.map((p, k) => ({ k, name: nm(p), short: nm(p) })), vend: vend.map(v => ({ cod: v.cod, nom: v.nom })), objMes: (c, k) => OBJ.OD * OBJ.NH * OBJ.w(c, k), sale: (c, f, k) => ((S.d[f] || {})[c] || {})[k] || 0, vis: (c, f, k) => (((S.dc || S.d)[f] || {})[c] || {})[k] || 0, visNota: S.dc ? 'según la fecha de carga del pedido' : 'según la fecha de factura', fechas, habiles: CFG.habiles.filter(f => f.startsWith(ini.slice(0, 7))), hoy: S.hoy || fin, form: CFG.objDia || {}, formUrl: CFG.odUrl || '', st, esc, tc: titleCase }); }
 function render(){
+  if (!TABSK.some(x => x[0] === st.tab)) st.tab = 'fact';
+  document.getElementById('tabs').innerHTML = TABSK.map(([k, l]) => `<button class="tab" role="tab" type="button" data-ktab="${k}" aria-selected="${st.tab === k}">${l}</button>`).join('');
+  if (st.tab === 'odia') { document.getElementById('view').innerHTML = viewOdiaK(); return; }
+  if (st.tab === 'plan') { document.getElementById('view').innerHTML = viewPlanK(); return; }
   const vs = vend.filter(v => st.ven === 'todos' || String(v.cod) === st.ven);
   const sel = fechas.filter(f => f >= st.desde && f <= st.hasta && (!st.dias.length || st.dias.includes(String(dow(f)))));
   const P = S.provs, tot = P.map(() => ({})), totV = {}, porDia = {};
@@ -282,8 +382,6 @@ function render(){
     const rb = P2.map(k => ({ k, o: odB(k, cs), r: saleB(k, cs) })).filter(x => x.o > 0 || Math.abs(x.r) >= 1).sort((a, b) => b.o - a.o);
     h += `<div class="section"><div class="panel-h"><h3>Objetivo por marca${vs.length === 1 ? ' · ' + vs[0].cod + ' · ' + esc(titleCase(vs[0].nom)) : ''}</h3><span style="flex:1"></span><button class="btn small" type="button" data-export="tOb" data-name="objetivo_kaf_marcas">Exportar a Excel (CSV)</button></div><div class="tw"><table id="tOb"><thead><tr><th class="l sticky1">Marca</th><th>Peso</th><th>Objetivo por día</th>${vs.length > 1 ? vs.map(v => `<th>${v.cod} · ${esc(titleCase(v.nom).split(' ')[0])} / día</th>`).join('') : ''}<th>Objetivo a la fecha</th><th>Facturado</th><th>Cumplimiento</th><th class="l">De acá a fin de mes</th></tr></thead><tbody>${rb.map(x => `<tr><td class="l sticky1 name">${esc(titleCase(S.provs[x.k]))}</td><td class="ink2">${oD ? (100 * x.o / oD).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + '%' : '—'}</td><td class="tot">${fmtM(x.o)}</td>${vs.length > 1 ? vs.map(v => { const o = O.OD * O.w(v.cod, x.k); return o >= 1 ? `<td>${fmtM(o)}</td>` : '<td class="zero">0</td>'; }).join('') : ''}<td>${fmtM(x.o * O.DJ)}</td><td>${fmtM(x.r)}</td><td>${pct(x.r, x.o * O.DJ)}</td><td class="l">${x.o > 0 ? need(x.o, x.r) : ''}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total</td><td>100%</td><td>${fmtM(oD)}</td>${vs.length > 1 ? vs.map(v => `<td>${fmtM(odV(v.cod))}</td>`).join('') : ''}<td>${fmtM(oD * O.DJ)}</td><td>${fmtM(rM)}</td><td>${pct(rM, oD * O.DJ)}</td><td class="l">${need(oD, rM)}</td></tr></tfoot></table></div></div></div>`;
   }
-  if (OBJ && (CFG.habiles || []).length) { const SO = CFG.shortOf || {}, nm = p => SO[String(p).trim().toUpperCase().replace(/\s+/g, ' ')] || titleCase(p);
-    h += odiaView({ brands: S.provs.map((p, k) => ({ k, name: nm(p), short: nm(p) })), vend: vs.map(v => ({ cod: v.cod, nom: v.nom })), venSel: false, objMes: (c, k) => OBJ.OD * OBJ.NH * OBJ.w(c, k), sale: (c, f, k) => ((S.d[f] || {})[c] || {})[k] || 0, vis: (c, f, k) => (((S.dc || S.d)[f] || {})[c] || {})[k] || 0, visNota: S.dc ? 'según la fecha de carga del pedido (lo cargado ese día, ya facturado)' : 'según la fecha de factura', fechas, habiles: CFG.habiles.filter(f => f.startsWith(ini.slice(0, 7))), hoy: S.hoy || fin, form: CFG.objDia || {}, formUrl: CFG.odUrl || '', st: { ...st, odVen: 'todos' }, esc, tc: titleCase }); }
   const cell = n => Math.abs(n) < 1 ? '<td class="zero">0</td>' : `<td>${fmtM(n)}</td>`;
   h += `<div class="section"><div class="panel-h"><h3>Facturación por marca y vendedor</h3><span style="flex:1"></span><button class="btn small" type="button" data-export="tK" data-name="facturacion_kaf_por_marca">Exportar a Excel (CSV)</button></div><div class="tw"><table id="tK"><thead><tr><th class="l sticky1">Marca</th>${vs.map(v => `<th>${v.cod} · ${esc(titleCase(v.nom).split(' ')[0])}</th>`).join('')}${vs.length > 1 ? '<th>Total</th>' : ''}<th>% del total</th></tr></thead><tbody>${rowsB.map(r => `<tr><td class="l sticky1 name">${esc(titleCase(r.p))}</td>${vs.map(v => cell(tot[r.i][v.cod] || 0)).join('')}${vs.length > 1 ? `<td class="tot">${Math.abs(r.t) < 1 ? '0' : fmtM(r.t)}</td>` : ''}<td class="ink2">${T ? (100 * r.t / T).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + '%' : '—'}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total</td>${vs.map(v => `<td>${fmtM(totV[v.cod] || 0)}</td>`).join('')}${vs.length > 1 ? `<td>${fmtM(T)}</td>` : ''}<td>100%</td></tr></tfoot></table></div></div>`;
   const ODS = OBJ ? vs.reduce((a, v) => a + S.provs.reduce((b, p, k) => b + OBJ.OD * OBJ.w(v.cod, k), 0), 0) : 0;
@@ -292,6 +390,8 @@ function render(){
 }
 document.addEventListener('change', e => { const id = e.target.id; if (id === 'fDesde') st.desde = e.target.value || ini; else if (id === 'fHasta') st.hasta = e.target.value || fin; else if (id === 'fVen') st.ven = e.target.value; else if (id === 'fOrd') st.orden = e.target.value; else return; if (st.hasta < st.desde) st.hasta = st.desde; save(); render(); });
 document.addEventListener('click', e => {
+  const tb = e.target.closest('[data-ktab]'); if (tb) { st.tab = tb.dataset.ktab; save(); render(); window.scrollTo(0, 0); return; }
+  const pv = e.target.closest('[data-plven]'); if (pv) { st.plVen = pv.dataset.plven; save(); render(); return; }
   const d = e.target.closest('[data-dia]'); if (d) { const k = d.dataset.dia; if (k === 'todos') st.dias = []; else st.dias = st.dias.includes(k) ? st.dias.filter(x => x !== k) : st.dias.concat(k); save(); render(); return; }
   if (e.target.id === 'fReset') { st.desde = ini; st.hasta = fin; st.dias = []; save(); render(); return; }
   const ex = e.target.closest('[data-export]'); if (ex) { const tbl = document.getElementById(ex.dataset.export); if (!tbl) return; const lines = [...tbl.querySelectorAll('tr')].map(tr => [...tr.children].map(td => '"' + td.textContent.replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"').join(';')); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv' })); a.download = ex.dataset.name + '_' + st.desde + '_' + st.hasta + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
