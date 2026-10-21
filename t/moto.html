@@ -492,8 +492,8 @@ function exportBtn(id, name){ return `<button class="btn small" type="button" da
 /* ===================== Pestañas ===================== */
 const SOLO = CFG.solo || null;
 const GTAB = (CFG.gaona && (!SOLO || CFG.gaona.obj[SOLO] != null) ? [['gaona','Gaona']] : []).concat(CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.p10 && (!SOLO || CFG.p10.obj[SOLO]) ? [['p10','Peñaflor']] : [], CFG.inn ? [['inn','Batalla innovaciones']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
-const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['batalla','Batalla Georgalos']].concat(GTAB, [['reglas','Cómo funciona']]) : [
-  ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, [
+const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['batalla','Batalla Georgalos']].concat(GTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : [
+  ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(GTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [
   ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
 if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
@@ -1168,6 +1168,30 @@ function p10Marcas(cods, sel){
     `</tbody><tfoot><tr><td class="l sticky1">Marcas cumplidas</td><td colspan="5" class="l">${rows.filter(x => x.o > 0 && x.r >= x.o).length} de ${rows.filter(x => x.o > 0).length}</td>${team ? `<td colspan="3" class="l">${rows.filter(x => T('obj', x.i) > 0 && T('real', x.i) >= T('obj', x.i)).length} de ${rows.filter(x => T('obj', x.i) > 0).length}</td>` : ''}</tr></tfoot></table></div></div>`;
   return h;
 }
+/* ===================== Tostadas de arroz Molinos Ala =====================
+   Unidades del mes (venta menos rechazos, por fecha de carga) de los artículos de la lista, por vendedor, contra el objetivo por vendedor. */
+function viewTost(){
+  const T = CFG.tost; if (!T) return '';
+  const Q = (SNAP && SNAP.tost) || {}, A = T.arts, O = T.obj, fN = n => Math.round(n || 0).toLocaleString('es-AR');
+  const vs = T.vend.filter(v => !SOLO || String(v.cod) === String(SOLO)).map(v => { const q = Q[v.cod] || {}, a = A.map((x, i) => (q.a || [])[i] || 0); return { ...v, a, u: a.reduce((s, x) => s + x, 0), n: q.n || 0 }; });
+  const pc = u => O > 0 ? u / O : 0, ct = p => p >= 1 - 1e-9 ? 'good' : p >= DJ / (DJ + DQ || 1) - 1e-9 ? 'warn' : 'bad';
+  const cellT = u => `<span class="cell ${ct(pc(u))}">${pc(u) >= 1 - 1e-9 ? '✓ ' : ''}${Math.floor(pc(u) * 100)}%</span>`;
+  const falta = u => u >= O ? '<span class="cell good">✓ cumplido</span>' : `faltan ${fN(O - u)} u.`;
+  const xDia = u => u >= O ? '' : !DQ ? '<span class="need bad">mes cerrado</span>' : `<span class="need ${u < O * DJ / (DJ + DQ || 1) ? 'late' : ''}">${fN(Math.ceil((O - u) / DQ))} u. por día</span>`;
+  let h = howto('Cómo se lee', ['Unidades de ' + esc(CFG.mes.label) + ' de las tostadas y crackers de arroz Molinos Ala de la lista, <b>venta menos rechazos</b>, por fecha de carga del pedido.', '<b>Objetivo: ' + fN(O) + ' unidades por vendedor</b> en el mes. Participan todos los vendedores (Moto y KAF).', 'Artículos incluidos: ' + A.map(esc).join(' · ') + '.']);
+  if (vs.length === 1) {
+    const v = vs[0];
+    h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Unidades vendidas</span><span class="v">${fN(v.u)} <span class="muted" style="font-size:20px">/ ${fN(O)}</span></span><span class="s">${cellT(v.u)} del objetivo · ${v.n} clientes</span></div><div class="kpi"><span class="eyebrow">Para llegar</span><span class="v" style="font-size:24px">${v.u >= O ? '✓ cumplido' : fN(O - v.u) + ' u.'}</span><span class="s">${xDia(v.u) || 'objetivo cumplido'}</span></div></div>`;
+    h += `<div class="tw"><table id="tTost"><thead><tr><th class="l sticky1">Artículo</th><th>Unidades</th><th>% del total</th></tr></thead><tbody>${A.map((x, i) => `<tr><td class="l sticky1 name">${esc(x)}</td><td class="tot">${fN(v.a[i])}</td><td>${v.u > 0 ? Math.round(100 * v.a[i] / v.u) + '%' : '—'}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${fN(v.u)}</td><td></td></tr></tfoot></table></div>`;
+    return h;
+  }
+  const rk = vs.slice().sort((a, b) => b.u - a.u), tu = vs.reduce((s, v) => s + v.u, 0), ok = vs.filter(v => v.u >= O).length;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Unidades del equipo</span><span class="v">${fN(tu)}</span><span class="s">objetivo ${fN(O * vs.length)} (${vs.length} vendedores × ${fN(O)})</span></div><div class="kpi"><span class="eyebrow">Vendedores en el objetivo</span><span class="v">${ok} <span class="muted" style="font-size:20px">/ ${vs.length}</span></span><span class="s">con ${fN(O)} unidades o más</span></div></div>`;
+  h += `<div class="panel-h"><span class="muted">${vs.length} vendedores</span>${exportBtn('tTost', 'tostadas_ala')}</div><div class="tw"><table id="tTost"><thead><tr><th class="l sticky1">Vendedor</th><th>Unidades</th><th>Cumplimiento</th><th class="l">Faltan</th><th class="l">Por día</th><th>Clientes</th>${A.map(x => `<th title="${esc(x)}">${esc(x.replace(/Tostadas de Arroz|T\. de Arroz|T\. Arroz M A|Molinos Ala|Tostadi/gi, '').trim()).slice(0, 22)}</th>`).join('')}</tr></thead><tbody>` +
+    rk.map(v => `<tr><td class="l sticky1 name">${v.cod} · ${esc(titleCase(v.nom))}</td><td class="tot">${fN(v.u)}</td><td>${cellT(v.u)}</td><td class="l">${falta(v.u)}</td><td class="l">${xDia(v.u)}</td><td>${v.n}</td>${v.a.map(x => `<td>${x ? fN(x) : '<span class="muted">0</span>'}</td>`).join('')}</tr>`).join('') +
+    `</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${fN(tu)}</td><td>${cellT(tu / vs.length)}</td><td></td><td></td><td>${vs.reduce((s, v) => s + v.n, 0)}</td>${A.map((x, i) => `<td>${fN(vs.reduce((s, v) => s + v.a[i], 0))}</td>`).join('')}</tr></tfoot></table></div>`;
+  return h;
+}
 function viewP10(){
   const PC = CFG.p10; if (!PC) return '';
   const PV = (SNAP && SNAP.p10) || {};
@@ -1241,7 +1265,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
