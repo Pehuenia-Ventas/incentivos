@@ -399,7 +399,142 @@ function needTag(obj, conPV, money){ const f = obj - conPV; if (!(obj > 0)) retu
 const pvTxt = (d, money) => d > 0 ? `<span class="muted">+${money ? fmtK(d) : d} preventa</span>` : '';
 const pgTab = (PG ? [['batallapg','Batalla P&amp;G']] : []).concat(CFG.inn ? [['inn','Batalla innovaciones']] : [], CFG.gaona ? [['gaona','Gaona']] : [], CFG.lit && (!SOLO || CFG.lit.obj[SOLO]) ? [['litros','Litros']] : [], CFG.esp && (!SOLO || CFG.esp.obj[SOLO]) ? [['esp','Espumantes']] : []);
 const GGT = CFG.gg && Object.keys(CFG.gg.obj || {}).some(c => !SOLO || String(c) === String(SOLO)) ? [['georgalos','Georgalos']] : [];
-const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(GGT, CFG.gaona ? [['gaona','Gaona']] : [], CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, GGT, CFG.tost ? [['tost','Tostadas Ala']] : [], CFG.eq ? [['equipo','Equipo 1 a 27']] : [], [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
+/* ===================== P&G trimestral por categoría (oct a dic) ===================== */
+const PGQ = CFG.pgq || null;
+const PGQV = PGQ ? Object.keys(PGQ.vend).filter(c => !SOLO || String(c) === String(SOLO)) : [];
+const PGQTAB = PGQ && PGQV.length ? [['pgq','P&amp;G trimestre'], ['pgqb','Batalla categorías P&amp;G']] : [];
+const qN = n => Math.round(n || 0).toLocaleString('es-AR');
+const qM = n => (n || 0).toLocaleString('es-AR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const q$ = n => { const a = Math.abs(n || 0); if (a >= 1e6) return '$ ' + ((n || 0) / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + ' M'; if (a >= 1e3) return '$ ' + Math.round((n || 0) / 1e3).toLocaleString('es-AR') + ' mil'; return '$ ' + Math.round(n || 0).toLocaleString('es-AR'); };
+const PGQ_HOY = (SNAP && SNAP.hoy) || new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+const PGQ_HORA = (+new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false })) % 24;
+function pgqDias(){
+  const H = PGQ.habiles, hoyReal = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const rest = H.filter(d => PGQ_HORA >= 16 ? d > hoyReal : d >= hoyReal).length;
+  return { tot: H.length, rest, trans: H.length - rest, esp: H.length ? (H.length - rest) / H.length : 0 };
+}
+function pgqVend(cod){
+  const o = PGQ.vend[cod], s = (SNAP && SNAP.pgq && SNAP.pgq.v && SNAP.pgq.v[cod]) || {}, nc = PGQ.cats.length, z = () => new Array(nc).fill(0);
+  const u = s.u || z(), m = s.m || z(), i = s.i || z(), c = s.c || {};
+  const sur = z(), ccc = { A: 0, D: 0, K: 0, O: 0 };
+  for (const cli in c) { const [mask, ch] = c[cli]; if (!mask) continue; ccc[ch] = (ccc[ch] || 0) + 1; if (ch === 'A' || ch === 'D') for (let j = 0; j < nc; j++) if (mask & (1 << j)) sur[j]++; }
+  const v = (CFG.vend || []).find(x => String(x.cod) === String(cod));
+  return { cod, nom: v ? v.nom : 'Vendedor ' + cod, o, u, m, i, c, sur, ccc, d: s.d || {} };
+}
+function pgqSum(list){
+  const nc = PGQ.cats.length, z = () => new Array(nc).fill(0), add = (a, b) => a.map((x, j) => x + (b[j] || 0));
+  const r = { o: { m: z(), u: z(), i: z(), sur: z(), ccc: [0, 0, 0] }, u: z(), m: z(), i: z(), sur: z(), ccc: { A: 0, D: 0, K: 0, O: 0 }, d: {} };
+  for (const x of list) { r.o.m = add(r.o.m, x.o.m); r.o.u = add(r.o.u, x.o.u); r.o.i = add(r.o.i, x.o.i); r.o.sur = add(r.o.sur, x.o.sur); r.o.ccc = add(r.o.ccc, x.o.ccc); r.u = add(r.u, x.u); r.m = add(r.m, x.m); r.i = add(r.i, x.i); r.sur = add(r.sur, x.sur); for (const k in x.ccc) r.ccc[k] = (r.ccc[k] || 0) + x.ccc[k]; for (const f in x.d) { const a = r.d[f] = r.d[f] || [0, 0, 0]; x.d[f].forEach((y, j) => a[j] += y); } }
+  return r;
+}
+const pgqSum1 = a => (a || []).reduce((s, x) => s + (x || 0), 0);
+function pgqCls(p, D){ if (p == null) return 'na'; if (p >= 1 - 1e-9) return 'good'; return p >= D.esp - 1e-9 ? 'warn' : 'bad'; }
+function pgqCell(r, o, D, txt){ if (!(o > 0)) return '<span class="cell na">—</span>'; let p = r / o; if (Math.abs(p) < 0.005) p = 0; return `<span class="cell ${pgqCls(p, D)}">${p >= 1 - 1e-9 ? '✓ ' : ''}${txt != null ? txt : fmtP(p)}</span>`; }
+function pgqPorDia(r, o, D, unit){ const f = o - r; if (!(o > 0)) return '<span class="muted">—</span>'; if (f <= 0) return '<span class="cell good">✓ listo</span>'; if (!D.rest) return '<span class="muted">cerrado</span>'; return qN(Math.ceil(f / D.rest - 1e-9)) + (unit ? ' ' + unit : ''); }
+function pgqLegend(D){ return `<div class="legend"><span><span class="cell good">✓ 100%</span> objetivo cumplido</span><span><span class="cell warn">${fmtP(D.esp)}</span> en ritmo (igual o arriba del ${fmtP(D.esp)} del trimestre que ya pasó)</span><span><span class="cell bad">20%</span> atrasado contra el ritmo</span></div>`; }
+function pgqSelVen(id, sel, todos){
+  if (SOLO || PGQV.length < 2) return '';
+  return `<label for="${id}">Vendedor <select id="${id}">${todos ? `<option value="todos" ${sel === 'todos' ? 'selected' : ''}>Todos</option>` : ''}${PGQV.map(c => { const v = pgqVend(c); return `<option value="${c}" ${String(sel) === String(c) ? 'selected' : ''}>${esc(titleCase(v.nom))}</option>`; }).join('')}</select></label>`;
+}
+function pgqNota(){
+  const sp = SNAP && SNAP.pgq;
+  const f = sp && sp.maxF ? 'Ventas hasta el ' + sp.maxF.slice(8, 10) + '/' + sp.maxF.slice(5, 7) : 'Todavía no hay ventas cargadas del trimestre';
+  return `<p class="note">${f}. ${esc(PGQ.label)}: ${PGQ.habiles.length} días hábiles (lunes a viernes, sin feriados ${PGQ.feriados.map(x => x.slice(8, 10) + '/' + x.slice(5, 7)).join(', ')}).</p>`;
+}
+function viewPGQ(){
+  const D = pgqDias();
+  const sel = SOLO ? String(SOLO) : (st.qVen || 'todos');
+  const list = PGQV.map(pgqVend);
+  const X = sel === 'todos' ? pgqSum(list) : list.find(x => String(x.cod) === String(sel)) || list[0];
+  const nc = PGQ.cats.length;
+  let h = '';
+  h += howto('Cómo se lee esta pantalla', [
+    '<b>MSU</b> (unidad estadística de P&amp;G) = unidades vendidas × stat factor del artículo ÷ 1.000. Es la medida con la que P&amp;G mide el objetivo del trimestre.',
+    '<b>Objetivo por categoría</b>: el de la empresa menos el peso de los mayoristas (lo que compraron los mayoristas y cash &amp; carry en jul–sep). Se repartió entre KAF y el equipo de Juan según lo que vendió cada grupo en jul–sep, y dentro de cada grupo por universo de clientes.',
+    '<b>Unidades y facturación</b>: el objetivo en MSU pasado a unidades con el mix de artículos de jul–sep y a pesos con el precio promedio de septiembre (importe neto, sin IVA). Cuentan las ventas menos los rechazos.',
+    '<b>Por día</b>: lo que falta para el objetivo dividido por los ' + D.rest + ' días hábiles que quedan del trimestre.',
+    '<b>CCC</b>: clientes distintos con al menos 1 unidad P&amp;G en el trimestre, por canal. <b>Surtido</b>: clientes de autoservicio y almacén que compraron la categoría en el trimestre' + (list.some(x => x.o && PGQ.vend[x.cod].g === 'kaf') ? '; en las KAF, Cabello, Afeitado y Suavizantes piden el ' + fmtP(PGQ.kafPct) + ' de la cartera' : '') + '.'
+  ], !(SNAP && SNAP.pgq && SNAP.pgq.maxF));
+  h += `<div class="filters" style="margin-bottom:12px">${pgqSelVen('qVen', sel, true)}</div>`;
+  const mO = pgqSum1(X.o.m), mR = pgqSum1(X.m), uO = pgqSum1(X.o.u), uR = pgqSum1(X.u), iO = pgqSum1(X.o.i), iR = pgqSum1(X.i);
+  const cO = pgqSum1(X.o.ccc), cR = (X.ccc.A || 0) + (X.ccc.D || 0) + (X.ccc.K || 0);
+  const bar = (r, o) => `<div class="bar"><i style="width:${Math.min(o ? r / o : 0, 1) * 100}%"></i><b style="left:${D.esp * 100}%"></b></div>`;
+  h += `<div class="kpis">
+    <div class="kpi"><span class="eyebrow">MSU del trimestre</span><span class="v">${qM(mR)} <span class="muted" style="font-size:20px">/ ${qM(mO)}</span></span><span class="s"><b>${fmtP(mO ? mR / mO : null)}</b> del objetivo · esperado a hoy ${fmtP(D.esp)}</span>${bar(mR, mO)}</div>
+    <div class="kpi"><span class="eyebrow">Unidades</span><span class="v">${qN(uR)} <span class="muted" style="font-size:20px">/ ${qN(uO)}</span></span><span class="s">${uO - uR > 0 ? 'faltan ' + qN(uO - uR) + (D.rest ? ' · <b>' + qN(Math.ceil((uO - uR) / D.rest)) + ' por día hábil</b>' : '') : '<b style="color:var(--good)">cumplido</b>'}</span>${bar(uR, uO)}</div>
+    <div class="kpi"><span class="eyebrow">Facturación P&amp;G</span><span class="v">${q$(iR)}</span><span class="s">de ${q$(iO)} · <b>${fmtP(iO ? iR / iO : null)}</b>${iO - iR > 0 && D.rest ? ' · ' + q$((iO - iR) / D.rest) + ' por día' : ''}</span>${bar(iR, iO)}</div>
+    <div class="kpi"><span class="eyebrow">CCC del trimestre</span><span class="v">${qN(cR)} <span class="muted" style="font-size:20px">/ ${qN(cO)}</span></span><span class="s">clientes con compra P&amp;G (AASS + almacén + kiosco)</span>${bar(cR, cO)}</div>
+    <div class="kpi"><span class="eyebrow">Días hábiles</span><span class="v">${D.trans} <span class="muted" style="font-size:20px">/ ${D.tot}</span></span><span class="s">quedan ${D.rest} del trimestre</span></div>
+  </div>`;
+  h += pgqLegend(D);
+  h += `<div class="panel-h"><h3>Objetivo por categoría</h3>${exportBtn('tPgq', 'pg_trimestre_categorias')}</div>`;
+  h += `<div class="tw"><table id="tPgq"><thead><tr><th class="l sticky1">Categoría</th><th>Obj. MSU</th><th>Real MSU</th><th>% MSU</th><th>Obj. unid.</th><th>Vendidas</th><th>Faltan</th><th>Unid. por día</th><th>Obj. $</th><th>Facturado</th><th>% $</th><th>Surtido</th></tr></thead><tbody>`;
+  for (let j = 0; j < nc; j++) h += `<tr><td class="l name sticky1">${esc(PGQ.cats[j])}</td><td>${qM(X.o.m[j])}</td><td>${qM(X.m[j])}</td><td>${pgqCell(X.m[j], X.o.m[j], D)}</td><td>${qN(X.o.u[j])}</td><td>${qN(X.u[j])}</td><td>${X.o.u[j] - X.u[j] > 0 ? qN(X.o.u[j] - X.u[j]) : '—'}</td><td><b>${pgqPorDia(X.u[j], X.o.u[j], D)}</b></td><td>${q$(X.o.i[j])}</td><td>${q$(X.i[j])}</td><td>${pgqCell(X.i[j], X.o.i[j], D)}</td><td>${pgqCell(X.sur[j], X.o.sur[j], D, X.sur[j] + ' / ' + X.o.sur[j])}</td></tr>`;
+  h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${qM(mO)}</td><td>${qM(mR)}</td><td>${pgqCell(mR, mO, D)}</td><td>${qN(uO)}</td><td>${qN(uR)}</td><td>${uO - uR > 0 ? qN(uO - uR) : '—'}</td><td><b>${pgqPorDia(uR, uO, D)}</b></td><td>${q$(iO)}</td><td>${q$(iR)}</td><td>${pgqCell(iR, iO, D)}</td><td></td></tr></tfoot></table></div>`;
+  const CHN = [['A', 'Autoservicios'], ['D', 'Almacenes'], ['K', 'Kioscos']];
+  h += `<div class="section"><div class="panel-h"><h3>CCC por canal</h3><span class="muted" style="font-size:13px">clientes únicos con compra P&amp;G en el trimestre</span></div><div class="tw"><table><thead><tr><th class="l">Canal</th><th>Objetivo</th><th>Con compra</th><th>%</th><th>Faltan</th><th>Clientes por día</th></tr></thead><tbody>`;
+  CHN.forEach(([k, l], j) => { const o = X.o.ccc[j], r = X.ccc[k] || 0; h += `<tr><td class="l name">${l}</td><td>${qN(o)}</td><td>${qN(r)}</td><td>${pgqCell(r, o, D)}</td><td>${o - r > 0 ? qN(o - r) : '—'}</td><td>${pgqPorDia(r, o, D)}</td></tr>`; });
+  h += `</tbody></table></div>${X.ccc.O ? `<p class="note">Además ${X.ccc.O} clientes de otros canales (mayoristas, fiambrerías, etc.) que no cuentan para el CCC por canal.</p>` : ''}</div>`;
+  if (sel === 'todos' && list.length > 1) {
+    const mode = st.qMode || 'pct';
+    h += `<div class="section"><div class="panel-h"><h3>Vendedores por categoría</h3><span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label for="qMode" class="muted" style="font-size:13px">Mostrar <select id="qMode"><option value="pct" ${mode === 'pct' ? 'selected' : ''}>% MSU</option><option value="dia" ${mode === 'dia' ? 'selected' : ''}>Unidades por día</option><option value="fact" ${mode === 'fact' ? 'selected' : ''}>% facturación</option><option value="sur" ${mode === 'sur' ? 'selected' : ''}>Surtido (clientes)</option><option value="obj" ${mode === 'obj' ? 'selected' : ''}>Objetivo en unidades</option></select></label>${exportBtn('tPgqV', 'pg_trimestre_vendedores')}</span></div>`;
+    const cell = (x, j) => mode === 'pct' ? pgqCell(x.m[j], x.o.m[j], D) : mode === 'dia' ? pgqPorDia(x.u[j], x.o.u[j], D) : mode === 'fact' ? pgqCell(x.i[j], x.o.i[j], D) : mode === 'sur' ? pgqCell(x.sur[j], x.o.sur[j], D, x.sur[j] + ' / ' + x.o.sur[j]) : qN(x.o.u[j]);
+    const tot = x => mode === 'pct' ? pgqCell(pgqSum1(x.m), pgqSum1(x.o.m), D) : mode === 'dia' ? pgqPorDia(pgqSum1(x.u), pgqSum1(x.o.u), D) : mode === 'fact' ? pgqCell(pgqSum1(x.i), pgqSum1(x.o.i), D) : mode === 'sur' ? '' : qN(pgqSum1(x.o.u));
+    h += `<div class="tw"><table id="tPgqV"><thead><tr><th class="l sticky1">Vendedor</th>${PGQ.short.map(s => `<th>${esc(s)}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+    for (const x of list) h += `<tr class="click" data-qven="${x.cod}"><td class="l name sticky1">${esc(titleCase(x.nom))}</td>${PGQ.short.map((s, j) => `<td>${cell(x, j)}</td>`).join('')}<td>${tot(x)}</td></tr>`;
+    h += `</tbody></table></div></div>`;
+  }
+  h += pgqNota();
+  return h;
+}
+function viewPGQB(){
+  const D = pgqDias(), nc = PGQ.cats.length;
+  const sel = SOLO ? String(SOLO) : (st.qbVen || String(PGQV[0]));
+  const dSel = st.qbDia || 'todos', solo = st.qbSolo || 'todos', cSel = st.qbCat == null ? 'todas' : st.qbCat;
+  const pool = PGQV.filter(c => sel === 'todos' || String(c) === String(sel)).map(pgqVend);
+  let h = howto('Cómo se usa la batalla de categorías', [
+    'Una fila por cliente de la cartera y una columna por categoría P&amp;G. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = compró al menos 1 unidad de la categoría en el trimestre (descontando rechazos). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no la compró.',
+    'Filtrá por <b>día de visita</b> para armar la recorrida: arriba quedan los clientes con más categorías por abrir.',
+    'Arriba de cada categoría: clientes de autoservicio y almacén con ✓ contra el objetivo de surtido.'
+  ], false);
+  h += `<div class="filters" style="margin-bottom:10px">${pgqSelVen('qbVen', sel, true)}
+    <div class="daychips" role="group" aria-label="Día de visita">${[['todos', 'Todos los días']].concat(Object.entries(DIAS).filter(([k]) => k !== '6'), [['0', 'Sin día']]).map(([k, l]) => `<button type="button" class="daychip" data-qdia="${k}" aria-pressed="${String(dSel) === String(k)}">${l}</button>`).join('')}</div>
+    <label for="qbSolo">Mostrar <select id="qbSolo"><option value="todos" ${solo === 'todos' ? 'selected' : ''}>Todos los clientes</option><option value="sin" ${solo === 'sin' ? 'selected' : ''}>Sin compra P&amp;G en el trimestre</option><option value="falta" ${solo === 'falta' ? 'selected' : ''}>Con alguna categoría en ✗</option><option value="cat" ${solo === 'cat' ? 'selected' : ''}>Sin la categoría elegida</option></select></label>
+    <label for="qbCat">Categoría <select id="qbCat"><option value="todas">Todas</option>${PGQ.cats.map((c, j) => `<option value="${j}" ${String(cSel) === String(j) ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>`;
+  const tot = pgqSum(pool);
+  h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">${PGQ.short.map((s, j) => `<div class="kpi" style="padding:10px 12px"><span class="eyebrow" style="font-size:11px">${esc(s)}</span><span class="v" style="font-size:22px">${tot.sur[j]} <span class="muted" style="font-size:15px">/ ${tot.o.sur[j]}</span></span><span class="s">${tot.o.sur[j] - tot.sur[j] > 0 ? 'faltan ' + (tot.o.sur[j] - tot.sur[j]) : '<b style="color:var(--good)">cumplido</b>'}</span></div>`).join('')}</div>`;
+  const CHL = { A: 'AASS', D: 'Almacén', K: 'Kiosco', O: 'Otro' };
+  const rows = [];
+  for (const x of pool) {
+    const cart = PGQ.cart[x.cod] || {};
+    const ids = new Set(Object.keys(cart).concat(Object.keys(x.c)));
+    for (const k of ids) {
+      const ca = cart[k], cc = x.c[k], mask = cc ? cc[0] : 0, ch = (ca && ca[0]) || (cc && cc[1]) || 'O', dia = ca ? ca[1] || 0 : 0;
+      if (dSel !== 'todos' && String(dia) !== String(dSel)) continue;
+      const has = PGQ.cats.map((c, j) => !!(mask & (1 << j))), n = has.filter(Boolean).length;
+      if (solo === 'sin' && n) continue;
+      if (solo === 'falta' && n === nc) continue;
+      if (solo === 'cat' && cSel !== 'todas' && has[+cSel]) continue;
+      rows.push({ k, x, ch, dia, has, n, nuevo: !ca });
+    }
+  }
+  rows.sort((a, b) => (a.dia || 9) - (b.dia || 9) || (cSel !== 'todas' ? a.has[+cSel] - b.has[+cSel] : 0) || a.n - b.n || (+a.k) - (+b.k));
+  h += `<div class="panel-h"><span class="muted">${rows.length.toLocaleString('es-AR')} clientes${dSel !== 'todos' ? ' · ' + (DIAS[dSel] || 'Sin día') : ''}</span>${exportBtn('tPgqB', 'batalla_categorias_pg')}</div>`;
+  const shown = rows.slice(0, 1500);
+  h += `<div class="tw"><table id="tPgqB"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Dirección</th>${sel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Canal</th><th class="l">Día</th>${PGQ.short.map(s => `<th style="text-align:center">${esc(s)}</th>`).join('')}<th>Categorías</th></tr></thead><tbody>`;
+  for (const r of shown) h += `<tr><td class="l sticky1 name">${esc(r.k)}${r.nuevo ? ' <span class="muted" title="Compró pero no está en la cartera">*</span>' : ''}</td><td class="l">${esc((typeof cliTxt === 'function' ? cliTxt(r.k) : '') || '—')}</td>${sel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.x.nom))}</td>` : ''}<td class="l ink2">${CHL[r.ch] || 'Otro'}</td><td class="l ink2">${DIAS[r.dia] || 'Sin día'}</td>${r.has.map(y => `<td style="text-align:center">${y ? '<span class="bt-yes">✓</span>' : '<span class="bt-no">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${nc}</td></tr>`;
+  h += '</tbody></table></div>';
+  if (rows.length > shown.length) h += `<p class="note">Se muestran los primeros ${shown.length.toLocaleString('es-AR')} clientes; filtrá por vendedor o día para ver el resto.</p>`;
+  h += `<p class="note">* Compró en el trimestre pero no figura en la cartera del vendedor.</p>` + pgqNota();
+  return h;
+}
+document.addEventListener('change', e => { const id = e.target.id; if (id === 'qVen' || id === 'qMode' || id === 'qbVen' || id === 'qbSolo' || id === 'qbCat') { st[id] = e.target.value; saveUI(); render(); } });
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-qdia]'); if (d) { st.qbDia = d.dataset.qdia; saveUI(); render(); return; }
+  const v = e.target.closest('[data-qven]'); if (v) { e.stopPropagation(); st.qVen = v.dataset.qven; saveUI(); render(); window.scrollTo({ top: 0 }); }
+}, true);
+
+const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(PGQTAB, GGT, CFG.gaona ? [['gaona','Gaona']] : [], CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, PGQTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, PGQTAB, GGT, CFG.tost ? [['tost','Tostadas Ala']] : [], CFG.eq ? [['equipo','Equipo 1 a 27']] : [], [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
 if (!TABS.some(x => x[0] === st.tab)) st.tab = SOLO ? 'ficha' : 'resumen';
 if (SOLO) { st.ven = SOLO; st.bVen = String(SOLO); st.gVen = String(SOLO); }
 function renderTabs(){ $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join(''); }
@@ -915,7 +1050,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? computeP(CFG, { ...SNAP, v: SNAP.pv.v || {}, pg: SNAP.pv.pg || SNAP.pg }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = (R.sumV + R.sumS) ? v.cup / (R.sumV + R.sumS) : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, puntos: viewPuntos, tost: viewTost, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, inn: viewInn, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, puntos: viewPuntos, tost: viewTost, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, pgq: viewPGQ, pgqb: viewPGQB, inn: viewInn, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
 }
 async function exportTable(id, name){
