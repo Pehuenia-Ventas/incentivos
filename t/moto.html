@@ -629,7 +629,7 @@ document.addEventListener('click', e => {
 
 const TABS = SOLO ? [['ficha','Mis cupones'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['batalla','Batalla Georgalos']].concat(PGQTAB, GTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : [
   ['resumen','Resumen'], ['cupones','Cupones por vendedor'], ['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']].concat(PGQTAB, GTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [
-  ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
+  ['analisis','Análisis por vendedor'], ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
 if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
 function renderTabs(){
@@ -1405,12 +1405,82 @@ function viewEsp(){
 }
 document.addEventListener('click', e => { const d = e.target.closest('[data-espdia]'); if (d) { st.espD = d.dataset.espdia; saveUI(); render(); return; } const r = e.target.closest('[data-espv]'); if (r) { st.espV = r.dataset.espv; saveUI(); render(); } });
 document.addEventListener('change', e => { if (e.target.id === 'espV') { st.espV = e.target.value; saveUI(); render(); } else if (e.target.id === 'espS') { st.espS = e.target.value; saveUI(); render(); } else if (e.target.id === 'espM') { st.espM = e.target.value; saveUI(); render(); } });
+/* ===================== Análisis por vendedor (solo General) =====================
+   Puntaje de 0 a 100 para comparar vendedores de equipos con marcas distintas: cada indicador se mide contra los objetivos PROPIOS
+   del vendedor (solo las marcas en las que tiene objetivo) y contra el ritmo esperado a hoy, así nadie gana o pierde por vender marcas más caras. */
+const ANW = [
+  { k: 'venta', l: 'Venta total vs. ritmo', w: 30 },
+  { k: 'marcas', l: 'Marcas en ritmo', w: 20 },
+  { k: 'geo', l: 'Cobertura Georgalos', w: 15 },
+  { k: 'cart', l: 'Cartera activa', w: 15 },
+  { k: 'plan', l: 'Planificación', w: 10 },
+  { k: 'tost', l: 'Tostadas Ala', w: 10 }
+];
+function analStats(){
+  const esp = Math.max(R.esperado || 0, 1e-9), CD = (SNAP && SNAP.cd) || {}, T = CFG.tost, TQ = (SNAP && SNAP.tost) || {};
+  let ritmoT = esp;
+  if (T) { const hab = d => { const w = new Date(d + 'T12:00:00Z').getUTCDay(); return w > 0 && w < 6 && !(T.feriados || []).includes(d); }; const ds = []; for (let t = Date.parse(T.desde + 'T12:00:00Z'); t <= Date.parse(T.hasta + 'T12:00:00Z'); t += 864e5) { const d = new Date(t).toISOString().slice(0, 10); if (hab(d)) ds.push(d); } const hoyT = (SNAP && SNAP.hoy) || HOYAR; ritmoT = ds.length ? Math.max(ds.filter(d => d <= hoyT).length / ds.length, 1e-9) : 1; }
+  const cap = x => Math.max(0, Math.min(x, 1.25)) / 1.25;
+  return R.vs.map(v => {
+    const ib = v.obj.map((o, i) => o > 0 ? i : -1).filter(i => i >= 0);
+    const idxB = ib.map(i => ({ i, o: v.obj[i], r: v.real[i], p: v.real[i] / v.obj[i], g: v.real[i] / v.obj[i] / esp }));
+    const enR = idxB.filter(x => x.g >= 1 - 1e-9).length;
+    const cobP = (v.cobPct || []).filter(p => p != null), geoIdx = cobP.length ? cobP.reduce((a, p) => a + Math.min(p / esp, 1.25), 0) / cobP.length : null;
+    const cart = (CFG.cart[v.nom] || []).map(String), mine = CD[v.cod] || {}, act = cart.filter(k => mine[k] && Object.values(mine[k]).some(x => x > 0)).length, cartP = cart.length ? act / cart.length : null;
+    const pl = v.plan || {}, planR = pl.jugadas ? pl.pts / pl.jugadas : null;
+    const tu = T ? ((TQ[v.cod] || {}).a || []).reduce((a, b) => a + b, 0) : 0, tIdx = T ? (tu / T.obj) / ritmoT : null;
+    const c = {
+      venta: { val: v.objT ? v.pct / esp : null, txt: v.objT ? fmtP(v.pct) + ' del mes · ' + fmtP(v.pct / esp) + ' del ritmo' : '—', pts: v.objT ? cap(v.pct / esp) : 0 },
+      marcas: { val: ib.length ? enR / ib.length : null, txt: ib.length ? enR + ' de ' + ib.length + ' marcas' : '—', pts: ib.length ? enR / ib.length : 0 },
+      geo: { val: geoIdx, txt: geoIdx == null ? '—' : v.nCob + ' de ' + cobP.length + ' cumplidas · ' + fmtP(geoIdx) + ' del ritmo', pts: geoIdx == null ? 0 : geoIdx / 1.25 },
+      cart: { val: cartP, txt: cartP == null ? '—' : act + ' de ' + cart.length + ' clientes (' + fmtP(cartP) + ')', pts: cartP == null ? 0 : cartP },
+      plan: { val: planR, txt: planR == null ? 'sin datos' : pl.pts + ' pts de ' + pl.jugadas + ' marcas-día (' + fmtP(planR) + ')', pts: planR == null ? 0 : planR },
+      tost: { val: tIdx, txt: T ? fmtN(tu) + ' de ' + fmtN(T.obj) + ' u. · ' + fmtP(tIdx) + ' del ritmo' : '—', pts: T ? cap(tIdx) : 0 }
+    };
+    const score = ANW.reduce((a, x) => a + x.w * c[x.k].pts, 0);
+    const byGap = idxB.slice().sort((a, b) => a.g - b.g), byBest = idxB.slice().sort((a, b) => b.g - a.g);
+    return { v, c, score, idxB, byGap, byBest, act, cartN: cart.length, tu };
+  });
+}
+function viewAnalisis(){
+  const all = analStats(), sel = new Set(vendFiltered().map(v => v.cod));
+  const L = all.filter(x => sel.has(x.v.cod)).sort((a, b) => b.score - a.score);
+  if (!L.length) return emptyBanner();
+  const esp = R.esperado || 0, bN = i => esc(CFG.brands[i].short), med = ['🥇', '🥈', '🥉'];
+  const sc = s => `<span class="cell ${s >= 70 ? 'good' : s >= 50 ? 'warn' : 'bad'}" style="min-width:52px">${Math.round(s)}</span>`;
+  const ci = (x, k) => { const p = x.c[k].pts, w = ANW.find(y => y.k === k).w; return `<td title="${esc(x.c[k].txt)}"><span class="cell ${p >= 0.8 ? 'good' : p >= 0.55 ? 'warn' : 'bad'}" style="min-width:46px">${(Math.round(w * p * 10) / 10).toLocaleString('es-AR')}</span></td>`; };
+  let h = emptyBanner();
+  h += howto('Cómo se arma el puntaje', [
+    'Puntaje de <b>0 a 100</b> para comparar vendedores de equipos distintos. <b>Cada indicador se mide contra los objetivos propios de cada vendedor</b> (solo las marcas en las que tiene objetivo: el equipo de Florencia Libera no vende Peñaflor, New PGA ni Pilares, así que esas marcas no le restan) y contra el ritmo esperado a hoy (' + fmtP(esp) + ' del mes).',
+    ANW.map(x => '<b>' + x.l + '</b> (' + x.w + ' pts)').join(' · ') + '.',
+    '<b>Venta total vs. ritmo</b>: lo facturado ÷ objetivo total, comparado con el ' + fmtP(esp) + ' esperado; ir al 125% del ritmo o más da el máximo. <b>Marcas en ritmo</b>: proporción de sus marcas con objetivo que van igual o arriba del ritmo (premia vender parejo y no solo una marca grande).',
+    '<b>Cobertura Georgalos</b>: avance de sus coberturas contra el ritmo. <b>Cartera activa</b>: clientes de su cartera con alguna compra en las últimas 3 semanas. <b>Planificación</b>: puntos de "¿Planifiqué bien?" ÷ marcas-día evaluadas. <b>Tostadas Ala</b>: unidades contra las 900 y el ritmo del período.',
+    'Es una herramienta de gestión: no cambia cupones ni premios. Tocá un vendedor para ver su detalle.'
+  ]);
+  const teams = [...new Set(L.map(x => x.v.sup))];
+  const avg = (arr, f) => arr.length ? arr.reduce((a, x) => a + f(x), 0) / arr.length : 0;
+  h += `<div class="kpis">${teams.map(s => { const m = L.filter(x => x.v.sup === s); return `<div class="kpi"><span class="eyebrow">Equipo ${esc(supName(s))}</span><span class="v">${Math.round(avg(m, x => x.score))}<span class="muted" style="font-size:18px"> pts promedio</span></span><span class="s">${m.length} vendedores · mejor: ${esc(titleCase(m[0].v.nom))} (${Math.round(m[0].score)})</span></div>`; }).join('')}<div class="kpi"><span class="eyebrow">Ritmo esperado a hoy</span><span class="v">${fmtP(esp)}</span><span class="s">${R.diasTrans} de ${R.diasTot} días hábiles</span></div></div>`;
+  h += `<div class="section"><div class="panel-h"><h3>Ranking de vendedores</h3>${exportBtn('tAn', 'ranking_vendedores')}</div><div class="tw"><table id="tAn"><thead><tr><th>#</th><th class="l sticky1">Vendedor</th><th class="l">Equipo</th><th>Puntaje</th>${ANW.map(x => `<th title="${esc(x.l)}">${esc(x.l)}<br><span class="muted" style="font-weight:500">${x.w} pts</span></th>`).join('')}<th>Tendencia al cierre</th><th class="l">Mejor marca</th><th class="l">A reforzar</th></tr></thead><tbody>` +
+    L.map((x, k) => { const b = x.byBest[0], g = x.byGap[0]; return `<tr class="click" data-anven="${x.v.cod}" ${String(st.anVen) === String(x.v.cod) ? 'style="background:var(--accent-soft)"' : ''}><td><b>${med[k] || k + 1}</b></td><td class="l sticky1 name">${x.v.cod} · ${esc(titleCase(x.v.nom))}</td><td class="l ink2">${esc(supName(x.v.sup))}</td><td>${sc(x.score)}</td>${ANW.map(y => ci(x, y.k)).join('')}<td>${R.diasTrans ? cellP(x.v.tendPct) : '—'}</td><td class="l">${b ? bN(b.i) + ' <span class="muted">' + fmtP(b.p) + '</span>' : '—'}</td><td class="l">${g && g.g < 1 ? bN(g.i) + ' <span class="muted">' + fmtP(g.p) + '</span>' : '<span class="cell good">todas en ritmo</span>'}</td></tr>`; }).join('') +
+    `</tbody></table></div><p class="note">Los números de cada columna son los puntos que suma en ese indicador (pasá el mouse para ver el detalle). Verde: 80% o más del máximo del indicador · ámbar: 55% a 80% · rojo: menos.</p></div>`;
+  /* Detalle del vendedor elegido */
+  const x = L.find(y => String(y.v.cod) === String(st.anVen)) || L[0], v = x.v, pos = L.indexOf(x) + 1;
+  const fuertes = ANW.filter(y => x.c[y.k].pts >= 0.8).map(y => y.l), flojos = ANW.filter(y => x.c[y.k].pts < 0.55).sort((a, b) => b.w * (1 - x.c[b.k].pts) - a.w * (1 - x.c[a.k].pts));
+  const gan = flojos.map(y => ({ l: y.l, pts: y.w * (Math.min(1, 0.8) - x.c[y.k].pts) })).filter(y => y.pts > 0.5);
+  h += `<div class="section"><div class="panel-h"><h3>Detalle · ${pos}° ${esc(titleCase(v.nom))}</h3><span class="muted">${esc(supName(v.sup))} · ${Math.round(x.score)} pts</span></div>`;
+  h += `<div class="grid2"><div class="steps">${ANW.map(y => `<div class="step"><span class="k">${esc(y.l)}</span><span class="d">${esc(x.c[y.k].txt)}</span><span class="r" style="font-size:20px">${(Math.round(y.w * x.c[y.k].pts * 10) / 10).toLocaleString('es-AR')}<span class="muted" style="font-size:13px"> / ${y.w}</span></span></div>`).join('')}<div class="step total"><span class="k">Puntaje</span><span class="d">puesto ${pos} de ${L.length}</span><span class="r">${Math.round(x.score)}</span></div></div>`;
+  h += `<div class="panel"><h3>Lectura</h3><ul style="margin:10px 0 0;padding-left:18px;display:grid;gap:8px">${fuertes.length ? `<li><b>Fuerte en</b>: ${fuertes.map(esc).join(', ')}.</li>` : ''}${flojos.length ? `<li><b>Para mejorar</b>: ${flojos.map(y => esc(y.l)).join(', ')}.</li>` : '<li>Todos los indicadores en buen nivel.</li>'}${gan.length ? `<li><b>Dónde están los puntos</b>: llevar ${gan.slice(0, 2).map(y => esc(y.l.toLowerCase()) + ' al 80% suma unos ' + Math.round(y.pts) + ' pts').join('; ')}.</li>` : ''}<li><b>Tendencia</b>: al ritmo actual cerraría en ${fmtMk(v.tend)} (${fmtP(v.tendPct)} del objetivo total)${v.objT - v.realT > 0 && DQ ? '; necesita ' + fmtMk((v.objT - v.realT) / DQ) + ' por día hábil' : ''}.</li>${x.byGap.length ? `<li><b>Marcas más atrasadas</b>: ${x.byGap.filter(b => b.g < 1).slice(0, 3).map(b => bN(b.i) + ' (' + fmtP(b.p) + ', faltan ' + fmtMk(b.o - b.r) + ')').join(', ') || 'ninguna'}.</li>` : ''}<li><b>Cartera</b>: ${x.cartN - x.act > 0 ? (x.cartN - x.act) + ' clientes sin compra en las últimas 3 semanas' : 'todos sus clientes compraron'}.</li></ul></div></div>`;
+  h += `<div class="tw" style="margin-top:14px"><table id="tAnB"><thead><tr><th class="l sticky1">Marca</th><th>Objetivo</th><th>Facturado</th><th>Cumplimiento</th><th>vs. ritmo</th><th>Falta</th><th class="l">Por día</th></tr></thead><tbody>${x.byGap.map(b => `<tr><td class="l sticky1 name">${bN(b.i)}</td><td>${fmtMk(b.o)}</td><td>${fmtMk(b.r)}</td><td>${cellP(b.p)}</td><td><span class="cell ${b.g >= 1 ? 'good' : b.g >= 0.8 ? 'warn' : 'bad'}">${fmtP(b.g)}</span></td><td>${b.o - b.r > 0 ? fmtMk(b.o - b.r) : '—'}</td><td class="l">${needTag(b.o, b.r, true)}</td></tr>`).join('')}</tbody></table></div><p class="note">Marcas ordenadas de la más atrasada a la más adelantada contra el ritmo del mes.</p></div>`;
+  return h;
+}
+document.addEventListener('click', e => { const r = e.target.closest('[data-anven]'); if (r) { st.anVen = r.dataset.anven; saveUI(); render(); } });
+
 function render(){
   R = compute(CFG, SNAP);
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
