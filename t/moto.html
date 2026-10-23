@@ -160,6 +160,10 @@ details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
 @media (max-width:560px){h1{font-size:28px}.kpi .v{font-size:28px}.wrap{padding-inline:16px}}
+.cobtags{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.cobtag{border-top:4px solid var(--line)}.cobtag.good{border-top-color:var(--good)}.cobtag.warn{border-top-color:var(--warn)}.cobtag.bad{border-top-color:var(--bad)}
+.cobtag.good .bar i{background:var(--good)}.cobtag.warn .bar i{background:var(--warn)}.cobtag.bad .bar i{background:var(--bad)}
+.cobtag .v{font-size:30px}
 </style>
 
 <div class="wrap">
@@ -969,14 +973,25 @@ function viewCobertura(){
     'Cada línea tiene su lista de artículos (está en "Cómo funciona"). Si sale un artículo nuevo, hay que agregarlo a la lista.',
     'En la <b>Ficha del vendedor</b> está la lista de clientes que compraron cada marca en septiembre y todavía no en octubre: es la lista para salir a buscar.'
   ]);
-  h += `<div class="panel-h"><span class="muted">Celda: clientes con compra / clientes a alcanzar</span>${exportBtn('tCob','cobertura_georgalos')}</div>`;
+  /* etiquetas con el avance total de cada línea (vendedores filtrados) */
+  const tot = GBR.map((g,i) => { let n = 0, need = 0, np = 0, ok = 0; for (const v of vs) { n += v.cobCnt[i]; np += Math.max(pvOf(v).cobCnt[i], v.cobCnt[i]); need += v.need[i]; if (v.need[i] && v.cobCnt[i] >= v.need[i]) ok++; } return { n, np, need, ok, p: need ? n / need : null, falta: Math.max(need - n, 0) }; });
+  h += `<div class="cobtags">${GBR.map((g,i) => { const t = tot[i]; return `<div class="kpi cobtag ${cls(t.p)}"><span class="eyebrow">${esc(GSHORT[g])}</span><span class="v">${t.p == null ? '—' : fmtP(t.p)}</span><div class="bar"><i style="width:${Math.min((t.p || 0) * 100, 100)}%"></i>${R.diasTrans ? `<b style="left:${Math.min(R.esperado * 100, 100)}%"></b>` : ''}</div><span class="s"><b>${t.n.toLocaleString('es-AR')}</b> de ${t.need.toLocaleString('es-AR')} clientes · ${t.falta ? '<b>faltan ' + t.falta.toLocaleString('es-AR') + '</b>' : '✓ cumplido'}</span><span class="s muted">${t.ok} de ${vs.length} vendedores cumplidos${t.np > t.n ? ' · +' + (t.np - t.n) + ' en preventa' : ''}</span></div>`; }).join('')}</div>`;
+  const MODES = [['cli','Clientes (cubiertos / a alcanzar)'], ['pct','% de avance'], ['falta','Clientes que faltan']];
+  const md = MODES.some(m => m[0] === st.cobMode) ? st.cobMode : 'cli';
+  h += `<div class="panel-h"><label class="muted" for="cobMode" style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600">Ver <select id="cobMode">${MODES.map(([k,l]) => `<option value="${k}" ${k===md?'selected':''}>${l}</option>`).join('')}</select></label>${exportBtn('tCob','cobertura_georgalos')}</div>`;
   h += statusLegend();
   h += `<div class="tw"><table id="tCob"><thead><tr><th class="l sticky1">Vendedor</th><th>Cartera</th><th>A alcanzar</th>${GBR.map(g => `<th>${GSHORT[g]}</th>`).join('')}<th>Marcas cubiertas</th></tr></thead><tbody>`;
-  const c = (n, need, np) => { const p = need ? n / need : null; return `<span class="cell ${cls(p)}">${p >= 1 ? '✓ ' : ''}${n} / ${need}</span>${np > n ? '<br><span class="muted" style="font-size:12px">+' + (np - n) + ' preventa</span>' : ''}${p < 1 ? '<br>' + needTag(need, np, false) : ''}`; };
+  const c = (n, need, np) => { const p = need ? n / need : null, f = Math.max(need - n, 0), ok = p >= 1 - 1e-12;
+    const main = md === 'pct' ? (p == null ? '—' : (ok ? '✓ ' : '') + fmtP(p)) : md === 'falta' ? (!need ? '—' : ok ? '✓ cumplido' : 'faltan ' + f) : (ok ? '✓ ' : '') + n + ' / ' + need;
+    const sub = md === 'cli' ? (p < 1 ? '<br>' + needTag(need, np, false) : '') : md === 'pct' ? `<br><span class="muted" style="font-size:12px">${n} / ${need}</span>` : (p < 1 && need ? '<br>' + needTag(need, np, false) : '');
+    return `<span class="cell ${cls(p)}">${main}</span>${np > n ? '<br><span class="muted" style="font-size:12px">+' + (np - n) + ' preventa</span>' : ''}${sub}`; };
   for (const v of vs) h += `<tr class="click" data-ven="${v.cod}"><td class="l name sticky1">${esc(titleCase(v.nom))}</td><td>${v.cartera}</td><td>${v.need[0]}</td>${GBR.map((g,i) => `<td>${c(v.cobCnt[i], v.need[i], pvOf(v).cobCnt[i])}</td>`).join('')}<td class="tot">${v.nCob}</td></tr>`;
-  h += '</tbody></table></div>';
+  h += '</tbody>';
+  if (vs.length > 1) { const cart = vs.reduce((a, v) => a + v.cartera, 0); h += `<tfoot><tr><td class="l sticky1">Total (${vs.length} vendedores)</td><td>${cart}</td><td>${tot[0].need}</td>${GBR.map((g,i) => { const t = tot[i]; return `<td><span class="cell ${cls(t.p)}">${md === 'pct' ? fmtP(t.p) : md === 'falta' ? (t.falta ? 'faltan ' + t.falta.toLocaleString('es-AR') : '✓ cumplido') : t.n.toLocaleString('es-AR') + ' / ' + t.need.toLocaleString('es-AR')}</span></td>`; }).join('')}<td class="tot">${vs.reduce((a, v) => a + v.nCob, 0)}</td></tr></tfoot>`; }
+  h += '</table></div>';
   return h;
 }
+document.addEventListener('change', e => { if (e.target.id === 'cobMode') { st.cobMode = e.target.value; saveUI(); render(); } });
 
 /* ===================== Supervisores ===================== */
 function viewSupervisores(){
