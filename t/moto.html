@@ -962,8 +962,7 @@ function viewCobertura(){
   const vs = vendFiltered();
   let h = emptyBanner();
   h += howto('Cómo se mide la cobertura Georgalos', [
-    '<b>Cliente cubierto</b>: cliente de la cartera del vendedor que en el mes le compró <b>al menos ' + (CFG.minUnid || 3) + ' unidades</b> de la línea, sumando todos sus artículos. Los rechazos restan.',
-    '<b>Displays y estuches</b> (Flynn Paff, Palitos, Lengüetazo, Chocolatín, Sin azúcares, Mantecol bocado/barra/bañado, etc.): 1 display o estuche ya cubre al cliente.',
+    '<b>Cliente cubierto</b>: cliente de la cartera del vendedor que en el mes le compró <b>al menos 1 unidad</b> (suelta o display) de la línea, sumando todos sus artículos. Los rechazos restan.',
     '<b>Cobertura general</b>: lo mismo, pero con todos los productos Georgalos juntos (alfajores, galletitas, Flow, etc.). La línea Fiestas no cuenta.',
     '<b>Clientes a alcanzar</b> = cartera × el % de cada línea (' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + '), redondeado hacia arriba. Ej.: cartera de 260 clientes con 10% → 26 clientes.',
     'Cada línea en la que se llega a esa cantidad suma 1 cupón (C), y la cobertura general suma 1 más: hasta ' + GBR.length + ' cupones por cobertura.',
@@ -1060,7 +1059,7 @@ function viewBatalla(){
   const pool = R.vs.filter(v => vSel === 'todos' || String(v.cod) === String(vSel));
   let h = emptyBanner();
   h += howto('Cómo se usa la batalla', [
-    'Una fila por cliente de la cartera y una columna por línea Georgalos más la cobertura general. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = ya está cubierto este mes (al menos ' + (CFG.minUnid || 3) + ' unidades de la línea, o 1 display/estuche; los rechazos restan). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no la compró.',
+    'Una fila por cliente de la cartera y una columna por línea Georgalos más la cobertura general. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = ya está cubierto este mes (al menos 1 unidad de la línea, suelta o display; los rechazos restan). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no la compró.',
     'Filtrá por <b>vendedor</b> y por <b>día de visita</b> para armar la recorrida del día: los clientes con más ✗ arriba. Con un día elegido aparecen dos columnas con <b>lo que compró cada cliente en las últimas dos visitas</b> (ese día de la semana, hace 7 y 14 días; todas las marcas menos Pepsico, por fecha de carga del pedido).',
     'El día de visita sale de la ruta de preventa de cada cliente en septiembre (ruta terminada en 1 = lunes, 2 = martes, … 5 = viernes). Los clientes sin compras en septiembre quedan como "Sin día".',
     'Arriba de cada marca: clientes con ✓ sobre los que hacen falta para el cupón de cobertura (cartera × el % de cada línea: ' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + ').'
@@ -1177,7 +1176,7 @@ function viewReglas(){
   <h3>C · Cupones por cobertura Georgalos</h3>
   <p>${P.cupCob} cupón por cada línea Georgalos en la que los clientes cubiertos del mes llegan al objetivo, y 1 más por la cobertura general de todos los productos Georgalos:</p>
   <div class="tw"><table><thead><tr><th class="l">Marca</th><th>Objetivo % cartera</th><th class="l">Ejemplo: cartera de 260 clientes</th></tr></thead><tbody>${GBR.map(g => `<tr><td class="l name">${g}</td><td>${fmtP(CFG.cobObj[g])}</td><td class="l">Necesita ${ceilX(260 * CFG.cobObj[g])} clientes con compra</td></tr>`).join('')}</tbody></table></div>
-  <p class="note">Cliente cubierto = cliente de la cartera del vendedor que en el mes compró al menos ${CFG.minUnid || 3} unidades de la línea (o 1 display/estuche), vendidas por ese vendedor. Cuentan las ventas menos los rechazos. La cobertura general toma todos los productos de Georgalos salvo la línea Fiestas.</p>
+  <p class="note">Cliente cubierto = cliente de la cartera del vendedor que en el mes compró al menos 1 unidad de la línea (suelta o display), vendidas por ese vendedor. Cuentan las ventas menos los rechazos. La cobertura general toma todos los productos de Georgalos salvo la línea Fiestas.</p>
   ${Object.keys(CFG.cobObj).filter(g => g !== 'Cobertura general').map(g => `<details class="cli"><summary><span>Artículos de ${esc(g)}</span><span class="muted">${Object.entries(CFG.arts).filter(([a,l]) => l === g).length}</span></summary><ol>${Object.entries(CFG.arts).filter(([a,l]) => l === g).map(([a]) => `<li>${esc(a)}${(CFG.display || []).includes(a) ? ' · <b>display</b>' : ''}</li>`).join('')}</ol></details>`).join('')}
   <h3>Supervisores</h3>
   <p>Mismas reglas, calculadas sobre el total de su equipo. En A, para los supervisores <b>todas las marcas valen lo mismo</b>: cada marca del equipo al 100% suma 100 ÷ cantidad de marcas con objetivo (con 19 marcas, unos 5 puntos cada una), y <b>cada ${P.ptsCupSup} puntos es 1 cupón</b> (hasta ${P.cupMarcas}). Así, para el máximo hace falta crecer en la mitad de las marcas o más. Supervisores y vendedores participan del mismo sorteo.</p>
@@ -1606,7 +1605,7 @@ function geoFicha(c){
   let h = `<p class="gmu">${esc(titleCase(v.nom))} · visita ${(DIAS[CFG.dia[c]] || 'sin día').toLowerCase()}</p>`;
   const G = ord(GBR.map((g, i) => ({ t: GSHORT[g], ok: v.cobList[i].includes(c), pr: v.cobCnt[i] < v.need[i] })));
   const fG = G.filter(x => !x.ok).length;
-  h += `<div class="gsec"><h4>Georgalos · ${fG ? fG + ' para sumar' : 'todo cubierto'}</h4><p class="gmu">Cubre con ${CFG.minUnid || 3} unidades de la línea (o 1 display). Con borde: líneas en las que todavía no llegás al cupón.</p><div class="gch">${G.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
+  h += `<div class="gsec"><h4>Georgalos · ${fG ? fG + ' para sumar' : 'todo cubierto'}</h4><p class="gmu">Cubre con 1 unidad de la línea (suelta o display). Con borde: líneas en las que todavía no llegás al cupón.</p><div class="gch">${G.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
   const PC = CFG.p10;
   if (PC && PC.sub && PC.sub[c] && SNAP && SNAP.p10) {
     const e = (SNAP.p10[v.cod] || {})[c] || [0, 0, []], set = new Set(e[2] || []), sub = PC.sub[c];
