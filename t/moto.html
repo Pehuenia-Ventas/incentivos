@@ -967,7 +967,7 @@ function viewCobertura(){
   let h = emptyBanner();
   h += howto('Cómo se mide la cobertura Georgalos', [
     '<b>Cliente cubierto</b>: cliente de la cartera del vendedor que en el mes le compró <b>al menos 1 unidad</b> (suelta o display) de la línea, sumando todos sus artículos. Los rechazos restan.',
-    '<b>Cobertura general</b>: lo mismo, pero con todos los productos Georgalos juntos (alfajores, galletitas, Flow, etc.). La línea Fiestas no cuenta.',
+    '<b>Cobertura general</b>: lo mismo, pero con todos los productos Georgalos juntos (alfajores, galletitas, Flow, Fiestas, etc.).',
     '<b>Clientes a alcanzar</b> = cartera × el % de cada línea (' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + '), redondeado hacia arriba. Ej.: cartera de 260 clientes con 10% → 26 clientes.',
     'Cada línea en la que se llega a esa cantidad suma 1 cupón (C), y la cobertura general suma 1 más: hasta ' + GBR.length + ' cupones por cobertura.',
     'Cada línea tiene su lista de artículos (está en "Cómo funciona"). Si sale un artículo nuevo, hay que agregarlo a la lista.',
@@ -1192,7 +1192,7 @@ function viewReglas(){
   <h3>C · Cupones por cobertura Georgalos</h3>
   <p>${P.cupCob} cupón por cada línea Georgalos en la que los clientes cubiertos del mes llegan al objetivo, y 1 más por la cobertura general de todos los productos Georgalos:</p>
   <div class="tw"><table><thead><tr><th class="l">Marca</th><th>Objetivo % cartera</th><th class="l">Ejemplo: cartera de 260 clientes</th></tr></thead><tbody>${GBR.map(g => `<tr><td class="l name">${g}</td><td>${fmtP(CFG.cobObj[g])}</td><td class="l">Necesita ${ceilX(260 * CFG.cobObj[g])} clientes con compra</td></tr>`).join('')}</tbody></table></div>
-  <p class="note">Cliente cubierto = cliente de la cartera del vendedor que en el mes compró al menos 1 unidad de la línea (suelta o display), vendidas por ese vendedor. Cuentan las ventas menos los rechazos. La cobertura general toma todos los productos de Georgalos salvo la línea Fiestas.</p>
+  <p class="note">Cliente cubierto = cliente de la cartera del vendedor que en el mes compró al menos 1 unidad de la línea (suelta o display), vendidas por ese vendedor. Cuentan las ventas menos los rechazos. La cobertura general toma todos los productos de Georgalos, Fiestas incluida.</p>
   ${Object.keys(CFG.cobObj).filter(g => g !== 'Cobertura general').map(g => `<details class="cli"><summary><span>Artículos de ${esc(g)}</span><span class="muted">${Object.entries(CFG.arts).filter(([a,l]) => l === g).length}</span></summary><ol>${Object.entries(CFG.arts).filter(([a,l]) => l === g).map(([a]) => `<li>${esc(a)}${(CFG.display || []).includes(a) ? ' · <b>display</b>' : ''}</li>`).join('')}</ol></details>`).join('')}
   <h3>Supervisores</h3>
   <p>Mismas reglas, calculadas sobre el total de su equipo. En A, para los supervisores <b>todas las marcas valen lo mismo</b>: cada marca del equipo al 100% suma 100 ÷ cantidad de marcas con objetivo (con 19 marcas, unos 5 puntos cada una), y <b>cada ${P.ptsCupSup} puntos es 1 cupón</b> (hasta ${P.cupMarcas}). Así, para el máximo hace falta crecer en la mitad de las marcas o más. Supervisores y vendedores participan del mismo sorteo.</p>
