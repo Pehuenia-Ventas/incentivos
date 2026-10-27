@@ -348,8 +348,25 @@ function viewPlanK(){
   return h;
 }
 const TABSK = [['fact', 'Facturación por marca'], ['odia', 'Objetivo del día'], ['plan', '¿Planifiqué bien?']];
+/* ===================== Carga de objetivos diarios por supervisor (solo tableros generales) =====================
+   Desde el primer día con objetivos cargados en el form hasta el último día con alguna carga: días hábiles en que cada vendedor cargó su objetivo. */
+function cargaODHtml(o){
+  const OD = o.objDia || {}, all = []; for (const c in OD) for (const f in OD[c]) all.push(f);
+  if (!all.length) return '';
+  all.sort(); const ini = o.desde && o.desde > all[0] ? o.desde : all[0], fin = all[all.length - 1];
+  const H = (o.habiles || []).filter(d => d >= ini && d <= fin).sort(); if (!H.length) return '';
+  const ff = f => f.slice(8, 10) + '/' + f.slice(5, 7), pc = x => Math.round(x * 100) + '%', cl = x => x >= 0.9 ? 'good' : x >= 0.7 ? 'warn' : 'bad';
+  const rows = o.vend.map(v => { const F = OD[v.cod] || {}, ok = H.filter(d => F[d]), falta = H.filter(d => !F[d]); return { ...v, ok: ok.length, n: H.length, p: ok.length / H.length, falta }; });
+  const grps = [...new Set(rows.map(r => r.grp))];
+  let h = `<div class="section"><h3 style="margin-bottom:4px">Carga de objetivos diarios</h3><p class="note" style="margin-top:0">Días hábiles desde el ${ff(ini)} (primer día con el form) hasta el ${ff(fin)}: ${H.length} días. Porcentaje = días en que el vendedor cargó su objetivo ÷ días hábiles. Verde 90% o más · ámbar 70% a 89% · rojo menos de 70%.</p>`;
+  h += `<div class="kpis">${grps.map(g => { const rs = rows.filter(r => r.grp === g), ok = rs.reduce((a, r) => a + r.ok, 0), n = rs.reduce((a, r) => a + r.n, 0), p = n ? ok / n : 0, full = rs.filter(r => r.ok === r.n).length;
+    return `<div class="kpi"><span class="eyebrow">${esc(g)}</span><span class="v"><span class="cell ${cl(p)}" style="font-size:inherit;min-width:0">${pc(p)}</span></span><span class="s">${ok} de ${n} cargas · ${rs.length} vendedores · ${full} cargaron todos los días</span></div>`; }).join('')}</div>`;
+  rows.sort((a, b) => grps.indexOf(a.grp) - grps.indexOf(b.grp) || a.p - b.p || a.cod - b.cod);
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th><th class="l">Supervisor</th><th>Días cargados</th><th>% de carga</th><th class="l">Días sin cargar</th></tr></thead><tbody>${rows.map(r => `<tr><td class="l name sticky1">${r.cod} · ${esc(titleCase(r.nom))}</td><td class="l ink2">${esc(r.grp)}</td><td>${r.ok} / ${r.n}</td><td><span class="cell ${cl(r.p)}">${pc(r.p)}</span></td><td class="l muted" style="white-space:normal;min-width:180px">${r.falta.length ? r.falta.map(ff).join(' · ') : '—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+  return h;
+}
 function viewOdiaK(){ if (!OBJ || !(CFG.habiles || []).length) return '<p class="note">Sin objetivo del mes cargado.</p>'; const SO = CFG.shortOf || {}, nm = p => SO[String(p).trim().toUpperCase().replace(/\s+/g, ' ')] || titleCase(p);
-  return odiaView({ brands: S.provs.map((p, k) => ({ k, name: nm(p), short: nm(p) })), vend: vend.map(v => ({ cod: v.cod, nom: v.nom })), objMes: (c, k) => OBJ.OD * OBJ.NH * OBJ.w(c, k), sale: (c, f, k) => ((S.d[f] || {})[c] || {})[k] || 0, vis: (c, f, k) => (((S.dc || S.d)[f] || {})[c] || {})[k] || 0, visNota: S.dc ? 'según la fecha de carga del pedido' : 'según la fecha de factura', fechas, habiles: CFG.habiles.filter(f => f.startsWith(ini.slice(0, 7))), hoy: S.hoy || fin, form: CFG.objDia || {}, formUrl: CFG.odUrl || '', st, esc, tc: titleCase }); }
+  return cargaODHtml({ objDia: CFG.objDia, habiles: CFG.habiles, vend: vend.map(v => ({ cod: v.cod, nom: v.nom, grp: 'Equipo KAF' })) }) + odiaView({ brands: S.provs.map((p, k) => ({ k, name: nm(p), short: nm(p) })), vend: vend.map(v => ({ cod: v.cod, nom: v.nom })), objMes: (c, k) => OBJ.OD * OBJ.NH * OBJ.w(c, k), sale: (c, f, k) => ((S.d[f] || {})[c] || {})[k] || 0, vis: (c, f, k) => (((S.dc || S.d)[f] || {})[c] || {})[k] || 0, visNota: S.dc ? 'según la fecha de carga del pedido' : 'según la fecha de factura', fechas, habiles: CFG.habiles.filter(f => f.startsWith(ini.slice(0, 7))), hoy: S.hoy || fin, form: CFG.objDia || {}, formUrl: CFG.odUrl || '', st, esc, tc: titleCase }); }
 function render(){
   if (!TABSK.some(x => x[0] === st.tab)) st.tab = 'fact';
   document.getElementById('tabs').innerHTML = TABSK.map(([k, l]) => `<button class="tab" role="tab" type="button" data-ktab="${k}" aria-selected="${st.tab === k}">${l}</button>`).join('');
