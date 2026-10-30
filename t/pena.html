@@ -546,7 +546,7 @@ function renderHeader(){
   if (SNAP && SNAP.nMes > 0) { sd.className = 'chip good'; sd.textContent = 'Actualizado ' + (SNAP.cuando ? new Date(SNAP.cuando).toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires'}) : fmtDate(SNAP.maxM)); }
   else { sd.className = 'chip warn'; sd.textContent = SNAP ? 'Sin ventas de ' + CFG.mes.label : 'Sin ventas de octubre cargadas'; }
   $('#stDias').textContent = 'Días hábiles: ' + R.diasTrans + ' de ' + R.diasTot + (DQ ? ' · quedan ' + DQ + ' para vender' : '');
-  const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = 'Objetivos de octubre cargados'; } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; }
+  const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = CFG.mes.m === 10 ? 'Objetivos de octubre cargados' : 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0]; } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; }
 }
 function banners(){
   let h = '';
