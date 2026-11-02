@@ -809,7 +809,7 @@ function cargaODHtml(o){
   const OD = o.objDia || {}, all = []; for (const c in OD) for (const f in OD[c]) all.push(f);
   if (!all.length) return '';
   all.sort(); const ini = o.desde && o.desde > all[0] ? o.desde : all[0], fin = all[all.length - 1];
-  const H = (o.habiles || []).filter(d => d >= ini && d <= fin).sort(); if (!H.length) return '';
+  const FER = ['2026-10-12','2026-11-23','2026-12-07','2026-12-08','2026-12-25'], HS = new Set(o.habiles || []); for (let t = Date.parse(ini + 'T12:00:00Z'); t <= Date.parse(fin + 'T12:00:00Z'); t += 864e5) { const dd = new Date(t), k = dd.toISOString().slice(0, 10), w = dd.getUTCDay(); if (w > 0 && w < 6 && !FER.includes(k)) HS.add(k); } const H = [...HS].filter(d => d >= ini && d <= fin).sort(); if (!H.length) return '';
   const ff = f => f.slice(8, 10) + '/' + f.slice(5, 7), pc = x => Math.round(x * 100) + '%', cl = x => x >= 0.9 ? 'good' : x >= 0.7 ? 'warn' : 'bad';
   const rows = o.vend.map(v => { const F = OD[v.cod] || {}, ok = H.filter(d => F[d]), falta = H.filter(d => !F[d]); return { ...v, ok: ok.length, n: H.length, p: ok.length / H.length, falta }; });
   const grps = [...new Set(rows.map(r => r.grp))];
