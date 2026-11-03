@@ -379,9 +379,10 @@ function cellP(p, min){ return p == null ? '<span class="cell na">—</span>' : 
 function tickets(n){ let h = '<span class="tickets" aria-label="' + n + ' cupones">'; for (let i = 0; i < 10; i++) h += '<i class="' + (i < n ? 'a' : '') + '"></i>'; return h + '</span>'; }
 function howto(title, items, open){ return `<details class="howto" ${open ? 'open' : ''}><summary>${esc(title)}</summary><ul>${items.map(i => '<li>' + i + '</li>').join('')}</ul></details>`; }
 function exportBtn(id, name){ return `<button class="btn small" type="button" data-export="${id}" data-name="${esc(name)}">Exportar a Excel (CSV)</button>`; }
-const legendP = () => `<div class="legend"><span><span class="cell good">✓ 100%</span> puntaje completo</span><span><span class="cell warn">85%</span> suma parte de los puntos (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> debajo del mínimo: 0 puntos</span></div>`;
+const legendP = () => SINP ? `<div class="legend"><span><span class="cell good">✓ 100%</span> objetivo cumplido</span><span><span class="cell warn">85%</span> cerca (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> lejos del objetivo</span></div>` : `<div class="legend"><span><span class="cell good">✓ 100%</span> puntaje completo</span><span><span class="cell warn">85%</span> suma parte de los puntos (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> debajo del mínimo: 0 puntos</span></div>`;
 
 const SOLO = CFG.solo || null;
+const SINP = !!CFG.sinInc; /* noviembre: terminó el incentivo; se mide solo la venta (sin puntos, cupones ni sorteo) */
 const PG = CFG.pg || null;
 const PGB = PG ? PG.brands : [];
 const SOLOV = SOLO ? CFG.vend.find(v => String(v.cod) === String(SOLO)) : null;
@@ -535,12 +536,14 @@ document.addEventListener('click', e => {
 }, true);
 
 const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].concat(PGQTAB, GGT, CFG.gaona ? [['gaona','Gaona']] : [], CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : SOLO ? [['ficha','Mis puntos'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, PGQTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [['reglas','Cómo funciona']]) : [['resumen','Resumen'], ['puntos','Puntos y cupones'], ['marcas','Avance por marca'], ['batalla','Batalla de marcas']].concat(pgTab, PGQTAB, GGT, CFG.tost ? [['tost','Tostadas Ala']] : [], CFG.eq ? [['equipo','Equipo 1 a 27']] : [], [['supervisor','Supervisor'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']]);
-if (!TABS.some(x => x[0] === st.tab)) st.tab = SOLO ? 'ficha' : 'resumen';
+if (SINP) for (let i = TABS.length - 1; i >= 0; i--) if (['puntos','reglas','supervisor','ficha'].includes(TABS[i][0])) TABS.splice(i, 1);
+if (!TABS.some(x => x[0] === st.tab)) st.tab = SINP ? TABS[0][0] : SOLO ? 'ficha' : 'resumen';
 if (SOLO) { st.ven = SOLO; st.bVen = String(SOLO); st.gVen = String(SOLO); }
 function renderTabs(){ $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join(''); }
 function renderHeader(){
   $('#mesLabel').textContent = CFG.mes.label;
-  if (SOLOPG) { const h1 = document.querySelector('h1'); if (h1 && h1.firstChild && h1.firstChild.nodeType === 3) h1.firstChild.textContent = 'Incentivo P&G · '; }
+  if (SINP) { const h1 = document.querySelector('h1'); if (h1 && h1.firstChild && h1.firstChild.nodeType === 3) h1.firstChild.textContent = 'Seguimiento Peñaflor · '; document.title = 'Seguimiento Peñaflor'; }
+  if (SOLOPG) { const h1 = document.querySelector('h1'); if (h1 && h1.firstChild && h1.firstChild.nodeType === 3) h1.firstChild.textContent = SINP ? 'Seguimiento P&G · ' : 'Incentivo P&G · '; }
   if (SOLO) { $('#soloName').textContent = ' · ' + titleCase(CFG.vend[0].nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
   const sd = $('#stData');
   if (SNAP && SNAP.nMes > 0) { sd.className = 'chip good'; sd.textContent = 'Actualizado ' + (SNAP.cuando ? new Date(SNAP.cuando).toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires'}) : fmtDate(SNAP.maxM)); }
@@ -550,7 +553,7 @@ function renderHeader(){
 }
 function banners(){
   let h = '';
-  if (!OBJ && st.tab !== 'objetivos') h += `<div class="empty" style="border-color:var(--warn)"><div><h3>Objetivos de ${CFG.mes.label} pendientes</h3><p>Se usan como <b>provisorios</b> los objetivos que trae el modelo (cuadros de Peñaflor del 24/09). Los puntos y cupones son orientativos hasta cargar los definitivos.</p></div>${SOLO ? '' : '<button class="btn" type="button" data-tab="objetivos">Ver objetivos</button>'}</div>`;
+  if (!OBJ && st.tab !== 'objetivos') h += `<div class="empty" style="border-color:var(--warn)"><div><h3>Objetivos de ${CFG.mes.label} pendientes</h3><p>Se usan como <b>provisorios</b> los objetivos que trae el modelo (cuadros de Peñaflor del 24/09). ${SINP ? 'Se miden contra esos objetivos hasta cargar los definitivos.' : 'Los puntos y cupones son orientativos hasta cargar los definitivos.'}</p></div>${SOLO ? '' : '<button class="btn" type="button" data-tab="objetivos">Ver objetivos</button>'}</div>`;
   if (!SNAP || !SNAP.nMes) h += `<div class="empty"><div><h3>Todavía no hay ventas de ${CFG.mes.label}</h3><p>El CCC y las marcas arrancan en 0 hasta que entren las ventas facturadas de ${CFG.mes.label}.</p></div><button class="btn primary edit-only" type="button" data-action="load">Cargar ventas</button></div>`;
   return h;
 }
@@ -559,6 +562,7 @@ function banners(){
 function viewResumen(){
   const s = R.sups[0];
   let h = banners();
+  if (SINP) return h + viewResumenSin(s);
   h += howto('Cómo se lee esta pantalla', [
     '<b>CCC</b>: clientes distintos <b>de la cartera del vendedor</b> que compraron Peñaflor en ' + CFG.mes.label + ', descontando los rechazos. Vale hasta ' + P.ptsCCC + ' puntos.',
     '<b>Marcas</b>: para cada una de las 11 marcas, clientes distintos de la cartera que la compraron en <b>' + CFG.mes.label + '</b> llevando al menos <b>6 unidades netas del mismo producto en una misma boleta</b>, ya descontados los rechazos (Gordon\'s: 1 unidad). Entre todas valen hasta ' + P.ptsMarcas + ' puntos.',
@@ -573,6 +577,27 @@ function viewResumen(){
     <div class="kpi"><span class="eyebrow">Cupones en juego</span><span class="v">${R.sumV + R.sumS}</span><span class="s">${R.sumV} de vendedores + ${R.sumS} del supervisor · ${R.vs.filter(v => v.participa).length} de ${R.vs.length} vendedores participan</span></div>
   </div>`;
   h += `<div class="stack"><div class="panel"><div class="panel-h"><h3>Ranking de puntos</h3><span class="muted" style="font-size:13px">tocá un nombre para ver su ficha · piso ${fmt1(R.escV[0].desde)} pts</span></div>${ranking()}</div>
+    <div class="panel"><div class="panel-h"><h3>CCC acumulado del equipo</h3><span class="muted" style="font-size:13px">línea punteada = ritmo para llegar al objetivo</span></div>${chartCCC()}</div></div>`;
+  return h;
+}
+function viewResumenSin(s){
+  let h = `<div class="empty" style="border-color:var(--accent)"><div><h3>${esc(CFG.mes.label)}: sin incentivo</h3><p>Terminó el concurso Peñaflor: este mes no hay puntos, cupones ni sorteo. El tablero sigue midiendo la venta igual que en octubre: CCC, clientes por marca${PG ? ', P&amp;G' : ''} y las batallas.</p></div></div>`;
+  h += howto('Cómo se lee esta pantalla', [
+    '<b>CCC</b>: clientes distintos <b>de la cartera del vendedor</b> que compraron Peñaflor en ' + CFG.mes.label + ', descontando los rechazos.',
+    '<b>Marcas</b>: para cada una de las 11 marcas, clientes distintos de la cartera que la compraron en ' + CFG.mes.label + ' llevando al menos <b>6 unidades netas del mismo producto en una misma boleta</b> (Gordon\'s: 1 unidad).',
+    ...(PG ? ['<b>P&amp;G</b>: cobertura (clientes de la cartera con algún producto P&amp;G) y sell out en pesos, contra su objetivo.'] : []),
+    'Los objetivos son los mismos de octubre hasta definir los de ' + CFG.mes.label + '.'
+  ], !SNAP || !SNAP.nMes);
+  h += `<div class="kpis">
+    <div class="kpi"><span class="eyebrow">CCC del equipo</span><span class="v">${s.real[0]} <span class="muted" style="font-size:20px">/ ${s.obj[0]}</span></span><span class="s">${fmtP(s.pct[0])} del objetivo · ritmo esperado ${fmtP(R.esperado)}</span></div>
+    <div class="kpi"><span class="eyebrow">Marcas al 100% (equipo)</span><span class="v">${s.pct.slice(1).filter(p => p >= 1).length} <span class="muted" style="font-size:20px">/ ${CFG.brands.length}</span></span><span class="s">${R.diasRest} días hábiles por delante</span></div>
+    ${s.pg && s.pg.on ? `<div class="kpi"><span class="eyebrow">P&amp;G del equipo</span><span class="v">${s.pg.cobR} <span class="muted" style="font-size:20px">/ ${s.pg.cobO} clientes</span></span><span class="s">cobertura ${fmtP(s.pg.pCob)} · sell out ${fmtMM(s.pg.soR)} de ${fmtMM(s.pg.soO)} (${fmtP(s.pg.pSo)})</span></div>` : ''}
+  </div>`;
+  const rows = R.vs.filter(v => (v.obj || []).some(x => x > 0) || (v.pg && v.pg.on)).slice().sort((a, b) => ((b.pct && b.pct[0]) || 0) - ((a.pct && a.pct[0]) || 0));
+  const pc = (r, o, min) => o > 0 ? cellP(r / o, min) : '<span class="cell na">—</span>';
+  h += `<div class="stack"><div class="panel"><div class="panel-h"><h3>Avance por vendedor</h3>${exportBtn('tAv','avance_penaflor')}</div><div class="tw" style="border:0"><table id="tAv"><thead><tr><th class="l">Vendedor</th><th>CCC</th><th>% CCC</th><th>Marcas al 100%</th>${PG ? '<th>P&amp;G cobertura</th><th>P&amp;G sell out</th>' : ''}</tr></thead><tbody>` +
+    rows.map(v => `<tr><td class="l name">${esc(titleCase(v.nom))}</td><td>${v.real[0]} / ${v.obj[0]}</td><td>${pc(v.real[0], v.obj[0], P.minCCC)}</td><td>${v.obj.some(x => x > 0) ? v.obj.slice(1).filter((o, i) => o > 0 && v.real[i + 1] >= o).length + ' de ' + CFG.brands.length : '—'}</td>${PG ? `<td>${v.pg && v.pg.on ? pc(v.pg.cobR, v.pg.cobO, P.minMarca) : '—'}</td><td>${v.pg && v.pg.on ? pc(v.pg.soR, v.pg.soO, P.minMarca) : '—'}</td>` : ''}</tr>`).join('') +
+    `</tbody><tfoot><tr><td class="l">Equipo</td><td>${s.real[0]} / ${s.obj[0]}</td><td>${pc(s.real[0], s.obj[0], P.minCCC)}</td><td>${s.pct.slice(1).filter(p => p >= 1).length} de ${CFG.brands.length}</td>${PG ? `<td>${s.pg && s.pg.on ? pc(s.pg.cobR, s.pg.cobO, P.minMarca) : '—'}</td><td>${s.pg && s.pg.on ? pc(s.pg.soR, s.pg.soO, P.minMarca) : '—'}</td>` : ''}</tr></tfoot></table></div></div>
     <div class="panel"><div class="panel-h"><h3>CCC acumulado del equipo</h3><span class="muted" style="font-size:13px">línea punteada = ritmo para llegar al objetivo</span></div>${chartCCC()}</div></div>`;
   return h;
 }
@@ -627,7 +652,7 @@ function viewMarcas(){
   let h = banners();
   h += howto('Cómo se lee el avance', [
     'Cada celda compara los <b>clientes con compra</b> contra el objetivo de clientes del vendedor. CCC y marcas son del mes (marca: 6 u. del mismo producto en una compra; Gordon\'s 1 u.).',
-    'Verde: ya tiene el puntaje completo. Ámbar: suma parte de los puntos. Rojo: debajo del mínimo, no suma.',
+    SINP ? 'Verde: objetivo cumplido. Ámbar: cerca (marcas desde ' + fmtP(P.minMarca) + ', CCC desde ' + fmtP(P.minCCC) + '). Rojo: lejos del objetivo.' : 'Verde: ya tiene el puntaje completo. Ámbar: suma parte de los puntos. Rojo: debajo del mínimo, no suma.',
     'Con el selector podés ver el %, los clientes con compra, cuántos faltan o <b>cuánto traer por día</b>: lo que falta (descontando la preventa ya cargada) dividido los ' + DQ + ' días hábiles que quedan. En ámbar si va atrasado contra el ritmo del mes.'
   ]);
   h += `<div class="filters" style="margin-bottom:10px"><label for="mMode">Mostrar <select id="mMode"><option value="pct" ${mode==='pct'?'selected':''}>% de cumplimiento</option><option value="real" ${mode==='real'?'selected':''}>Clientes con compra / objetivo</option><option value="falta" ${mode==='falta'?'selected':''}>Clientes que faltan</option><option value="dia" ${mode==='dia'?'selected':''}>Cuánto traer por día (con preventa)</option></select></label><span style="flex:1"></span>${exportBtn('tMar','avance_marcas')}</div>${legendP()}`;
@@ -991,8 +1016,8 @@ function viewGeorgalos(){
   let h = banners();
   h += howto('Cómo se mide Georgalos', [
     'Cobertura de las ' + G.lines.length + ' líneas de Georgalos, igual que en el incentivo de la Moto: el cliente cubre una línea si en ' + CFG.mes.label + ' compró al menos <b>1 unidad</b> de esa línea (suelta o display), descontando rechazos. <b>General Georgalos</b> cuenta cualquier producto Georgalos.',
-    'Objetivo por línea (mismos que la Moto, sobre su cartera de ' + Object.keys((CFG.base || {})[v.cod] || {}).length + ' clientes): ' + G.short.map((s, i) => esc(s) + ' ' + fmtP(Array.isArray(G.pct) ? G.pct[i] : G.pct) + ' (' + v.gg.lin[i].o + ' clientes)').join(' · ') + '. <b>Cada línea al 100% da 1 cupón</b> (General Georgalos es la CCC de Georgalos), hasta ' + G.lines.length + ' cupones, que se suman a los cupones de P&amp;G.']);
-  h += `<div class="kpis">${v.gg.lin.map(x => `<div class="kpi"><span class="eyebrow">${esc(x.s)}</span><span class="v">${x.n} <span class="muted" style="font-size:20px">/ ${x.o}</span></span><span class="s">${fmtP(x.p)} · ${x.ok ? '1 cupón' : 'cupón al 100%'}</span><span>${x.n >= x.o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${x.o - x.n}</span>`}</span><div class="bar"><i style="width:${Math.min(x.p || 0, 1) * 100}%"></i></div></div>`).join('')}</div>`;
+    'Objetivo por línea (mismos que la Moto, sobre su cartera de ' + Object.keys((CFG.base || {})[v.cod] || {}).length + ' clientes): ' + G.short.map((s, i) => esc(s) + ' ' + fmtP(Array.isArray(G.pct) ? G.pct[i] : G.pct) + ' (' + v.gg.lin[i].o + ' clientes)').join(' · ') + '. ' + (SINP ? 'General Georgalos es la CCC de Georgalos. Este mes es solo seguimiento: no hay cupones.' : '<b>Cada línea al 100% da 1 cupón</b> (General Georgalos es la CCC de Georgalos), hasta ' + G.lines.length + ' cupones, que se suman a los cupones de P&amp;G.')]);
+  h += `<div class="kpis">${v.gg.lin.map(x => `<div class="kpi"><span class="eyebrow">${esc(x.s)}</span><span class="v">${x.n} <span class="muted" style="font-size:20px">/ ${x.o}</span></span><span class="s">${fmtP(x.p)} · ${SINP ? (x.ok ? 'cumplida' : 'objetivo al 100%') : x.ok ? '1 cupón' : 'cupón al 100%'}</span><span>${x.n >= x.o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${x.o - x.n}</span>`}</span><div class="bar"><i style="width:${Math.min(x.p || 0, 1) * 100}%"></i></div></div>`).join('')}</div>`;
   const base = (CFG.base || {})[v.cod] || {}, cli = v.gg.cli;
   const rows = Object.keys(base).map(c => { const s = new Set(cli[c] || []); return { c, dia: base[c][0] || 0, has: G.lines.map((l, i) => s.has(i)), n: s.size }; });
   const list = rows.filter(r => (fil !== 'sin' || !r.n) && (fil !== 'falta' || r.n < G.lines.length) && (dSel === 'todos' || String(r.dia) === String(dSel))).sort((a, b) => (a.dia || 9) - (b.dia || 9) || a.n - b.n);
@@ -1017,7 +1042,7 @@ function viewInn(){
     'Una fila por <b>autoservicio tradicional</b> de la cartera y una columna por línea de innovación. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = el cliente ya tiene la línea: alguna vez desde el 01/02/25 compró <b>6 unidades del mismo producto en una misma boleta</b> (Gordon\'s y Bossa Nova: 1). <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no: es la venta a buscar.',
     'Con borde punteado: cubierta este mes. En ámbar: este mes compró algo pero no llegó a las unidades de una misma compra.',
     'Arriba, la cobertura de cada línea (clientes con ✓ ÷ autoservicios) contra el objetivo de cobertura pedido.',
-    'Es una batalla para trabajar la cartera: no cambia los puntos ni los cupones del incentivo.']);
+    (SINP ? 'Es una batalla para trabajar la cartera.' : 'Es una batalla para trabajar la cartera: no cambia los puntos ni los cupones del incentivo.')]);
   const vSelHtml = SOLO ? '' : `<label for="iVen">Vendedor <select id="iVen"><option value="todos" ${vSel==='todos'?'selected':''}>Todos</option>${cods.map(c => `<option value="${c}" ${String(c)===vSel?'selected':''}>${c} · ${esc(nomV(c))}</option>`).join('')}</select></label>`;
   h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(118px,1fr))">${L.map((l, i) => { const n = all.filter(r => r.has[i]).length, p = U ? n / U : null, o = l.obj != null ? Math.ceil(U * l.obj - 1e-9) : null; return `<div class="kpi" style="padding:10px 12px"><span class="eyebrow" style="font-size:11px">${esc(l.l)}</span><span class="v" style="font-size:22px">${n} <span class="muted" style="font-size:14px">/ ${U}</span></span><span class="s">${fmtP(p)}${o != null ? ' · obj. ' + fmtP(l.obj) : ''}</span><span>${o == null ? '<span class="need">sin objetivo</span>' : n >= o ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">faltan ${o - n}</span>`}</span></div>`; }).join('')}</div>`;
   h += `<div class="filters" style="margin:14px 0 10px">${vSelHtml}<div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(Object.entries(DIAS).filter(([k]) => k !== '6'), [['0','Sin día']]).map(([k,l]) => `<button type="button" class="daychip" data-idia="${k}" aria-pressed="${String(dSel)===String(k)}">${l}</button>`).join('')}</div><label for="iSolo">Mostrar <select id="iSolo"><option value="todos" ${solo==='todos'?'selected':''}>Todos los clientes</option><option value="obj" ${solo==='obj'?'selected':''}>Con ✗ en líneas con objetivo</option></select></label></div>`;
@@ -1070,7 +1095,7 @@ async function exportTable(id, name){
 }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-tab]'); if (t) { st.tab = t.dataset.tab; saveUI(); render(); window.scrollTo({top:0}); return; }
-  const vr = e.target.closest('[data-ven]'); if (vr) { st.ven = +vr.dataset.ven; st.tab = 'ficha'; saveUI(); render(); window.scrollTo({top:0}); return; }
+  const vr = e.target.closest('[data-ven]'); if (vr && !SINP) { st.ven = +vr.dataset.ven; st.tab = 'ficha'; saveUI(); render(); window.scrollTo({top:0}); return; }
   const bd = e.target.closest('[data-bdia]'); if (bd) { st.bDia = bd.dataset.bdia; saveUI(); render(); return; }
   const gd = e.target.closest('[data-gdia]'); if (gd) { st.gDia = gd.dataset.gdia; saveUI(); render(); return; }
   const ex = e.target.closest('[data-export]'); if (ex) { exportTable(ex.dataset.export, ex.dataset.name); return; }

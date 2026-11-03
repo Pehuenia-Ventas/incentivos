@@ -636,6 +636,7 @@ const TABS = SOLO ? [['ficha', SINM ? 'Mi mes' : 'Mis cupones'], ['marcas','Avan
   ['resumen','Resumen']].concat(SINM ? [] : [['cupones','Cupones por vendedor']], [['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']]).concat(PGQTAB, GTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [
   ['analisis','Análisis por vendedor'], ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
+if (SINM) { const ri = TABS.findIndex(x => x[0] === 'reglas'); if (ri >= 0) TABS.splice(ri, 1); if (st.tab === 'reglas') st.tab = SOLO ? 'ficha' : 'resumen'; }
 if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
 function renderTabs(){
   $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join('');
