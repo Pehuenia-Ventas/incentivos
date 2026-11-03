@@ -653,7 +653,7 @@ function renderHeader(){
   $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
   $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn','pgq','pgqb'].includes(st.tab);
   if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
-  const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = SINM ? 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0] : 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
+  const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = SINM && !OBJ.mes ? 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0] : 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
 }
 function objBanner(){
   if (OBJ) return '';
