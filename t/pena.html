@@ -382,7 +382,8 @@ function exportBtn(id, name){ return `<button class="btn small" type="button" da
 const legendP = () => SINP ? `<div class="legend"><span><span class="cell good">✓ 100%</span> objetivo cumplido</span><span><span class="cell warn">85%</span> cerca (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> lejos del objetivo</span></div>` : `<div class="legend"><span><span class="cell good">✓ 100%</span> puntaje completo</span><span><span class="cell warn">85%</span> suma parte de los puntos (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> debajo del mínimo: 0 puntos</span></div>`;
 
 const SOLO = CFG.solo || null;
-const SINP = !!CFG.sinInc; /* noviembre: terminó el incentivo; se mide solo la venta (sin puntos, cupones ni sorteo) */
+const SINP = !!CFG.sinInc;
+const TRIM = CFG.trimMarcas || null; /* marcas trimestrales: lo cumplido en meses anteriores del trimestre ya cuenta (✓ punteado) */ /* noviembre: terminó el incentivo; se mide solo la venta (sin puntos, cupones ni sorteo) */
 const PG = CFG.pg || null;
 const PGB = PG ? PG.brands : [];
 const SOLOV = SOLO ? CFG.vend.find(v => String(v.cod) === String(SOLO)) : null;
@@ -584,7 +585,7 @@ function viewResumenSin(s){
   let h = `<div class="empty" style="border-color:var(--accent)"><div><h3>${esc(CFG.mes.label)}: sin incentivo</h3><p>Terminó el concurso Peñaflor: este mes no hay puntos, cupones ni sorteo. El tablero sigue midiendo la venta igual que en octubre: CCC, clientes por marca${PG ? ', P&amp;G' : ''} y las batallas.</p></div></div>`;
   h += howto('Cómo se lee esta pantalla', [
     '<b>CCC</b>: clientes distintos <b>de la cartera del vendedor</b> que compraron Peñaflor en ' + CFG.mes.label + ', descontando los rechazos.',
-    '<b>Marcas</b>: para cada una de las 11 marcas, clientes distintos de la cartera que la compraron en ' + CFG.mes.label + ' llevando al menos <b>6 unidades netas del mismo producto en una misma boleta</b> (Gordon\'s: 1 unidad).',
+    '<b>Marcas</b>: para cada una de las 11 marcas, clientes distintos de la cartera que la compraron ' + (TRIM ? '<b>en el trimestre</b> (desde ' + TRIM.desde + '; lo ya cumplido sigue contando)' : 'en ' + CFG.mes.label) + ' llevando al menos <b>6 unidades netas del mismo producto en una misma boleta</b> (Gordon\'s: 1 unidad).',
     ...(PG ? ['<b>P&amp;G</b>: cobertura (clientes de la cartera con algún producto P&amp;G) y sell out en pesos, contra su objetivo.'] : []),
     'Los objetivos son los mismos de octubre hasta definir los de ' + CFG.mes.label + '.'
   ], !SNAP || !SNAP.nMes);
@@ -651,7 +652,7 @@ function viewMarcas(){
   const mode = st.mMode || 'pct';
   let h = banners();
   h += howto('Cómo se lee el avance', [
-    'Cada celda compara los <b>clientes con compra</b> contra el objetivo de clientes del vendedor. CCC y marcas son del mes (marca: 6 u. del mismo producto en una compra; Gordon\'s 1 u.).',
+    'Cada celda compara los <b>clientes con compra</b> contra el objetivo de clientes del vendedor. ' + (TRIM ? 'El CCC es del mes; <b>las marcas son del trimestre</b> (los clientes que ya cumplieron en ' + TRIM.desde + ' siguen contando)' : 'CCC y marcas son del mes') + ' (marca: 6 u. del mismo producto en una compra; Gordon\'s 1 u.).',
     SINP ? 'Verde: objetivo cumplido. Ámbar: cerca (marcas desde ' + fmtP(P.minMarca) + ', CCC desde ' + fmtP(P.minCCC) + '). Rojo: lejos del objetivo.' : 'Verde: ya tiene el puntaje completo. Ámbar: suma parte de los puntos. Rojo: debajo del mínimo, no suma.',
     'Con el selector podés ver el %, los clientes con compra, cuántos faltan o <b>cuánto traer por día</b>: lo que falta (descontando la preventa ya cargada) dividido los ' + DQ + ' días hábiles que quedan. En ámbar si va atrasado contra el ritmo del mes.'
   ]);
@@ -679,9 +680,9 @@ function viewBatalla(){
   const pool = R.vs.filter(v => !v.soloPG && (vSel === 'todos' || String(v.cod) === String(vSel)));
   let h = banners();
   h += howto('Cómo se usa la batalla', [
-    'Una fila por cliente del vendedor y una columna por marca. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = compró la marca en ' + CFG.mes.label + ' (6 u. del mismo producto en una compra; Gordon\'s 1 u.) y ya cuenta. <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = no la compró: es la venta a buscar.',
+    'Una fila por cliente del vendedor y una columna por marca. <span class="bt-yes" style="width:22px;height:22px;font-size:14px">✓</span> = compró la marca en ' + CFG.mes.label + ' (6 u. del mismo producto en una compra; Gordon\'s 1 u.) y ya cuenta.' + (TRIM ? ' <span class="bt-yes" style="width:22px;height:22px;font-size:14px;background:transparent;border:2px dashed var(--good)">✓</span> = ya la cumplió en ' + TRIM.desde + ': <b>las marcas se miden en el trimestre</b>, así que también cuenta.' : '') + ' <span class="bt-no" style="width:22px;height:22px;font-size:14px">✗</span> = todavía no la cumplió: es la venta a buscar.',
     'Si un cliente compró menos de 6 unidades de un mismo producto en una boleta (o se las rechazaron), todavía no cuenta.',
-    'La columna <b>CCC</b> muestra si el cliente ya compró Peñaflor este mes (cuenta para el CCC).',
+    'La columna <b>CCC</b> muestra si el cliente ya compró Peñaflor este mes (cuenta para el CCC)' + (TRIM ? ': <b>el CCC arranca de cero cada mes</b>.' : '.'),
     'Clientes = la cartera del vendedor. El día de visita sale de la cartera o del último número de la ruta de preventa (1 = lunes … 5 = viernes).',
     'Con un día de visita elegido aparecen dos columnas con <b>lo que compró cada cliente en las últimas dos visitas</b> (ese día de la semana, hace 7 y 14 días; todas las marcas menos Pepsico, por fecha de carga del pedido).'
   ]);
@@ -701,7 +702,7 @@ function viewBatalla(){
   h += `<div class="panel-h"><span class="muted">${rows.length} clientes${dSel !== 'todos' ? ' · ' + (DIAS[dSel] || 'Sin día') : ''}</span>${exportBtn('tBat','batalla_penaflor')}</div>`;
   const VV = visitasDe(dSel);
   h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Dirección</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${visTh(VV)}<th style="text-align:center">CCC</th>${CFG.brands.map(b => `<th style="text-align:center">${esc(b)}</th>`).join('')}<th>Marcas</th></tr></thead><tbody>`;
-  for (const r of rows) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(cliTxt(r.c) || (r.nuevo ? 'Cliente nuevo' : '—'))}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.dia] || 'Sin día'}</td>${VV ? ventaVis(r.v.cod, r.c, VV[0]) + ventaVis(r.v.cod, r.c, VV[1]) : ''}<td style="text-align:center">${r.ccc ? '<span class="bt-yes" title="Compró Peñaflor el ' + r.ccc + '/' + pad2(CFG.mes.m) + '">✓</span>' : '<span class="bt-no" title="Sin compra Peñaflor este mes">✗</span>'}</td>${r.has.map((x,i) => `<td style="text-align:center">${x ? `<span class="bt-yes" ${r.mes[i] || !x ? '' : 'style="background:transparent;border:2px dashed var(--good)"'} title="${r.mes[i] ? 'Compró en ' + CFG.mes.label : 'Compró en el mes'}">✓</span>` : '<span class="bt-no" title="No compró en el mes">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${CFG.brands.length}</td></tr>`;
+  for (const r of rows) h += `<tr><td class="l sticky1 name">${esc(r.c)}</td><td class="l">${esc(cliTxt(r.c) || (r.nuevo ? 'Cliente nuevo' : '—'))}</td>${vSel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.v.nom))}</td>` : ''}<td class="l ink2">${DIAS[r.dia] || 'Sin día'}</td>${VV ? ventaVis(r.v.cod, r.c, VV[0]) + ventaVis(r.v.cod, r.c, VV[1]) : ''}<td style="text-align:center">${r.ccc ? '<span class="bt-yes" title="Compró Peñaflor el ' + r.ccc + '/' + pad2(CFG.mes.m) + '">✓</span>' : '<span class="bt-no" title="Sin compra Peñaflor este mes">✗</span>'}</td>${r.has.map((x,i) => `<td style="text-align:center">${x ? `<span class="bt-yes" ${r.mes[i] || !x ? '' : 'style="background:transparent;border:2px dashed var(--good)"'} title="${r.mes[i] ? 'Compró en ' + CFG.mes.label : TRIM ? 'Ya cumplió en ' + TRIM.desde + ' (trimestre)' : 'Compró en el mes'}">✓</span>` : '<span class="bt-no" title="No compró en el mes">✗</span>'}</td>`).join('')}<td><b>${r.n}</b> / ${CFG.brands.length}</td></tr>`;
   h += '</tbody></table></div>';
   return h;
 }
