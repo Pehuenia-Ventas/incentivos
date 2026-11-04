@@ -636,6 +636,7 @@ const TABS = SOLO ? [['ficha', SINM ? 'Mi mes' : 'Mis cupones'], ['marcas','Avan
   ['resumen','Resumen']].concat(SINM ? [] : [['cupones','Cupones por vendedor']], [['marcas','Avance por marca'], ['odia','Objetivo del día'], ['plan','¿Planifiqué bien?'], ['cobertura','Cobertura Georgalos'], ['batalla','Batalla Georgalos']]).concat(PGQTAB, GTAB, CFG.tost ? [['tost','Tostadas Ala']] : [], [
   ['analisis','Análisis por vendedor'], ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
+if (CFG.cierre) TABS.splice(1, 0, ['cierre', '¿Cómo cerré mi día?']);
 if (SINM) { const ri = TABS.findIndex(x => x[0] === 'reglas'); if (ri >= 0) TABS.splice(ri, 1); if (st.tab === 'reglas') st.tab = SOLO ? 'ficha' : 'resumen'; }
 if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
 function renderTabs(){
@@ -656,7 +657,7 @@ function renderHeader(){
       const ok = H.filter(d => F[d]).length, p = H.length ? ok / H.length : 0; let el = document.getElementById('stOD'); if (!el) { el = document.createElement('span'); el.id = 'stOD'; $('#stDias').after(el); }
       el.className = 'chip ' + (p >= 0.9 ? 'good' : p >= 0.7 ? 'warn' : 'bad'); el.textContent = 'Objetivos diarios de ' + CFG.mes.label.split(' ')[0] + ': ' + ok + ' de ' + H.length + ' días · ' + Math.round(p * 100) + '%'; el.title = 'Días de lunes a viernes de ' + CFG.mes.label + ' (feriados incluidos) en los que cargaste tu objetivo del día. Hoy cuenta cuando lo cargás.'; } }
   $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
-  $('#filters').hidden = SOLO || ['ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn','pgq','pgqb'].includes(st.tab);
+  $('#filters').hidden = SOLO || ['cierre','ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn','pgq','pgqb'].includes(st.tab);
   if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
   const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = SINM && !OBJ.mes ? 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0] : 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
 }
@@ -672,6 +673,56 @@ function emptyBanner(){
 }
 
 /* ===================== Resumen ===================== */
+/* ===================== ¿Cómo cerré mi día? =====================
+   Lo que trajo el vendedor en un día (por fecha de carga del pedido) contra lo que necesitaba por día para cerrar los objetivos:
+   necesitaba = lo que le faltaba al empezar ese día ÷ días hábiles que quedaban (incluido ese día). */
+function viewCierre(){
+  const C = CFG.cierre; if (!C) return '';
+  const cods = Object.keys(C).filter(c => C[c] && C[c].dias.length && (!SOLO || String(c) === String(SOLO)));
+  if (!cods.length) return '<div class="empty"><div><h3>Todavía no hay días con ventas</h3><p>La solapa se arma con las ventas del mes, día por día.</p></div></div>';
+  const sel = cods.includes(String(st.czV)) ? String(st.czV) : cods[0], X = C[sel], D = X.dias.includes(st.czD) ? st.czD : X.dias[X.dias.length - 1], e = X.d[D];
+  const $m = n => '$ ' + Math.round(n || 0).toLocaleString('es-AR'), n1 = n => (Math.round((n || 0) * 10) / 10).toLocaleString('es-AR', { maximumFractionDigits: 1 }), n0 = n => Math.round(n || 0).toLocaleString('es-AR');
+  const DN = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'], fd = d => DN[new Date(d + 'T12:00:00Z').getUTCDay()] + ' ' + d.slice(8, 10) + '/' + d.slice(5, 7);
+  const est = (hoy, nec) => { if (!(nec > 0)) return '<span class="cell good">✓ objetivo cumplido</span>'; const p = (hoy || 0) / nec; return `<span class="cell ${p >= 1 - 1e-9 ? 'good' : p >= 0.7 ? 'warn' : 'bad'}">${p >= 1 - 1e-9 ? '✓ ' : ''}${Math.round(p * 100)}%</span>`; };
+  const row = (l, hoy, nec, f, fn) => `<tr><td class="l sticky1 name">${l}</td><td class="tot">${f(hoy)}</td><td>${nec > 0 ? (fn || f)(nec) : '—'}</td><td>${est(hoy, nec)}</td></tr>`;
+  const tbl = (id, rows, c1) => `<div class="tw"><table id="${id}"><thead><tr><th class="l sticky1">${c1 || 'Indicador'}</th><th>Trajo</th><th>Necesitaba por día</th><th>Cumplimiento del día</th></tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  const sec = (t, sub, id, body) => `<div class="section"><div class="panel-h"><h3>${t}</h3>${sub ? `<span class="muted" style="font-size:13px">${sub}</span>` : ''}<span style="flex:1"></span>${exportBtn(id, 'cierre_' + id + '_' + D)}</div>${body}</div>`;
+  let h = howto('Cómo se lee', [
+    'Lo que trajiste el <b>' + fd(D) + '</b> (por fecha de carga del pedido, venta menos rechazos) contra lo que <b>necesitabas por día</b> para cerrar cada objetivo.',
+    '<b>Necesitaba por día</b> = lo que te faltaba al empezar ese día ÷ los días hábiles que quedaban, contando ese día (' + e.rest + ' en ' + esc(CFG.mes.label) + (e.pg && e.pg.rq ? '; ' + e.pg.rq + ' hasta fin del trimestre para P&amp;G' : '') + '). Si ya estaba cumplido, dice "objetivo cumplido".',
+    '<b>Clientes activados</b>: clientes de tu cartera que ese día pasaron a contar (Peñaflor y P&amp;G en el trimestre; Georgalos en el mes; el CCC en el mes).',
+    'En P&amp;G, clientes nuevos y unidades cuentan cuando el pedido se factura: lo del último día se completa con la factura.', 'Verde = trajo lo necesario o más · ámbar = 70% a 99% · rojo = menos de 70%.']);
+  h += `<div class="filters" style="margin-bottom:10px">${SOLO ? '' : `<label for="czV">Vendedor <select id="czV">${cods.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c} · ${esc(titleCase(C[c].nom))}</option>`).join('')}</select></label>`}
+    <div class="daychips" role="group" aria-label="Día">${X.dias.map(d => `<button type="button" class="daychip" data-czd="${d}" aria-pressed="${d === D}">${fd(d)}</button>`).join('')}</div></div>`;
+  const tF = e.fac.reduce((a, b) => a + b, 0), tN = e.facN.reduce((a, b) => a + b, 0);
+  const kpi = (t, hoy, nec, f) => `<div class="kpi"><span class="eyebrow">${t}</span><span class="v" style="font-size:24px">${f(hoy)}</span><span class="s">necesitaba ${nec > 0 ? f(nec) : '—'} por día</span><span>${est(hoy, nec)}</span></div>`;
+  h += `<div class="kpis">${kpi('Facturación del día', tF, tN, $m)}${kpi('Peñaflor', e.pen.fac, e.pen.facN, $m)}${e.pg ? kpi('P&amp;G', e.pg.fac, e.pg.facN, $m) : ''}${kpi('Georgalos', e.geo.fac, e.geo.facN, $m)}${kpi('Resto de las marcas', e.resto, e.restoN, $m)}</div>`;
+  /* venta por marca */
+  const mk = X.marcas.map((m, i) => ({ m, f: e.fac[i] || 0, n: e.facN[i] || 0 })).filter(x => x.f || x.n).sort((a, b) => b.n - a.n || b.f - a.f);
+  h += sec('Venta del día por marca', 'facturación en pesos', 'czM', tbl('czM', mk.map(x => row(esc(x.m), x.f, x.n, $m)).concat([`<tr style="font-weight:700"><td class="l sticky1">Total</td><td>${$m(tF)}</td><td>${$m(tN)}</td><td>${est(tF, tN)}</td></tr>`]), 'Marca'));
+  /* Peñaflor */
+  const P = e.pen, pr = [row('Facturación', P.fac, P.facN, $m)];
+  if (P.lit != null) pr.push(row('Litros', P.lit, P.litN, n1));
+  if (P.cA != null) pr.push(row(P.cD != null ? 'CCC autoservicios (clientes activados)' : 'CCC (clientes activados)', P.cA, P.cAN, n0, n1));
+  if (P.cD != null) pr.push(row('CCC tradicionales (clientes activados)', P.cD, P.cDN, n0, n1));
+  if (P.br) X.penBr.forEach((b, i) => pr.push(row(esc(b) + ' <span class="muted" style="font-size:12px">clientes</span>', P.br[i], P.brN[i], n0, n1)));
+  h += sec('Peñaflor', P.br ? 'clientes que activaron cada marca ese día' : '', 'czP', tbl('czP', pr));
+  /* P&G */
+  if (e.pg) { const G = e.pg, gr = [row('Facturación', G.fac, G.facN, $m)];
+    if (G.cats) { gr.push(row('Clientes nuevos', G.n, G.nN, n0, n1), row('Unidades', G.u, G.uN, n0, n1));
+      h += sec('P&amp;G', 'objetivo trimestral', 'czG', tbl('czG', gr) + `<div class="tw" style="margin-top:10px"><table id="czGc"><thead><tr><th class="l sticky1">Categoría</th><th>Clientes nuevos</th><th>Necesitaba</th><th>Unidades</th><th>Necesitaba</th><th>Facturación</th><th>Necesitaba</th></tr></thead><tbody>${G.cats.map((x, j) => `<tr><td class="l sticky1 name">${esc((G.short || [])[j] || '')}</td><td class="tot">${x.n}</td><td>${x.nN > 0 ? n1(x.nN) : '—'} ${est(x.n, x.nN)}</td><td class="tot">${n0(x.u)}</td><td>${x.uN > 0 ? n1(x.uN) : '—'} ${est(x.u, x.uN)}</td><td class="tot">${$m(x.i)}</td><td>${x.iN > 0 ? $m(x.iN) : '—'} ${est(x.i, x.iN)}</td></tr>`).join('')}</tbody></table></div>`); }
+    else h += sec('P&amp;G', '', 'czG', tbl('czG', gr)); }
+  /* Georgalos */
+  const Gg = e.geo, GS = { 'Chocolates': 'Chocolates', 'Caramelos blandos': 'Caramelos blandos', 'Chocolate en polvo': 'Chocolate en polvo', 'Pasta de maní': 'Pasta de maní', 'Galletitas Toddy': 'Galletitas Toddy', 'Cobertura general': 'General Georgalos (CCC)' };
+  const gr = [row('Facturación', Gg.fac, Gg.facN, $m)].concat(X.geoLin.map((l, i) => row(esc(GS[l] || l) + ' <span class="muted" style="font-size:12px">clientes nuevos</span>', Gg.lin[i], Gg.linN ? Gg.linN[i] : 0, n0, n1).replace(Gg.linN ? '' : '<span class="cell good">✓ objetivo cumplido</span>', Gg.linN ? '' : '<span class="muted">sin objetivo</span>')));
+  h += sec('Georgalos', 'clientes de la cartera que compraron la línea por primera vez en el mes', 'czO', tbl('czO', gr));
+  /* resto */
+  h += sec('Resto de las marcas', 'sin Peñaflor, Georgalos ni P&amp;G', 'czR', tbl('czR', [row('Total facturado', e.resto, e.restoN, $m)]));
+  return h;
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-czd]'); if (b) { st.czD = b.dataset.czd; saveUI(); render(); } });
+document.addEventListener('change', e => { if (e.target.id === 'czV') { st.czV = e.target.value; saveUI(); render(); } });
+
 function viewResumen(){
   const vs = vendFiltered();
   const objT = vs.reduce((a,v) => a + v.objT, 0), realT = vs.reduce((a,v) => a + v.realT, 0);
@@ -1537,7 +1588,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
