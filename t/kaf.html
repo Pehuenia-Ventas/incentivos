@@ -382,7 +382,11 @@ function viewCierre(){
   const C = CFG.cierre; if (!C) return '';
   const cods = Object.keys(C).filter(c => C[c] && C[c].dias.length && (!SOLO || String(c) === String(SOLO)));
   if (!cods.length) return '<div class="empty"><div><h3>Todavía no hay días con ventas</h3><p>La solapa se arma con las ventas del mes, día por día.</p></div></div>';
-  const sel = cods.includes(String(st.czV)) ? String(st.czV) : cods[0], X = C[sel], D = X.dias.includes(st.czD) ? st.czD : X.dias[X.dias.length - 1], e = X.d[D];
+  /* Todos: suma de los vendedores (cada número y lo que necesitaba por día se suman) */
+  const sumCz = list => { const add = (a, b) => { if (b == null) return a; if (a == null) return Array.isArray(b) ? b.map(x => typeof x === 'object' && x ? add(null, x) : x) : typeof b === 'object' ? add({}, b) : b; if (Array.isArray(b)) return b.map((x, i) => add(a[i], x)); if (typeof b === 'object') { for (const k in b) a[k] = (k === 'short' || k === 'rest' || k === 'rq') ? b[k] : add(a[k], b[k]); return a; } return typeof b === 'number' ? (a || 0) + b : b; };
+    const dias = [...new Set(list.flatMap(x => x.dias))].sort(), out = { cod: 'todos', nom: 'Todos', dias, d: {}, marcas: list[0].marcas, penBr: list[0].penBr, geoLin: list[0].geoLin };
+    for (const d of dias) { let acc = null; for (const x of list) if (x.d[d]) acc = add(acc, x.d[d]); if (acc && acc.geo && list.some(x => x.d[d] && x.d[d].geo && !x.d[d].geo.linN)) acc.geo.linN = list.some(x => x.d[d] && x.d[d].geo && x.d[d].geo.linN) ? acc.geo.linN : null; out.d[d] = acc; } return out; };
+  const cods2 = SOLO ? cods : ['todos'].concat(cods), sel = cods2.includes(String(st.czV)) ? String(st.czV) : cods2[0], X = sel === 'todos' ? sumCz(cods.map(c => C[c])) : C[sel], D = X.dias.includes(st.czD) ? st.czD : X.dias[X.dias.length - 1], e = X.d[D];
   const $m = n => '$ ' + Math.round(n || 0).toLocaleString('es-AR'), n1 = n => (Math.round((n || 0) * 10) / 10).toLocaleString('es-AR', { maximumFractionDigits: 1 }), n0 = n => Math.round(n || 0).toLocaleString('es-AR');
   const DN = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'], fd = d => DN[new Date(d + 'T12:00:00Z').getUTCDay()] + ' ' + d.slice(8, 10) + '/' + d.slice(5, 7);
   const est = (hoy, nec) => { if (!(nec > 0)) return '<span class="cell good">✓ objetivo cumplido</span>'; const p = (hoy || 0) / nec; return `<span class="cell ${p >= 1 - 1e-9 ? 'good' : p >= 0.7 ? 'warn' : 'bad'}">${p >= 1 - 1e-9 ? '✓ ' : ''}${Math.round(p * 100)}%</span>`; };
@@ -394,7 +398,7 @@ function viewCierre(){
     '<b>Necesitaba por día</b> = lo que te faltaba al empezar ese día ÷ los días hábiles que quedaban, contando ese día (' + e.rest + ' en ' + esc(CFG.mes.label) + (e.pg && e.pg.rq ? '; ' + e.pg.rq + ' hasta fin del trimestre para P&amp;G' : '') + '). Si ya estaba cumplido, dice "objetivo cumplido".',
     '<b>Clientes activados</b>: clientes de tu cartera que ese día pasaron a contar (Peñaflor y P&amp;G en el trimestre; Georgalos en el mes; el CCC en el mes).',
     'En P&amp;G, clientes nuevos y unidades cuentan cuando el pedido se factura: lo del último día se completa con la factura.', 'Verde = trajo lo necesario o más · ámbar = 70% a 99% · rojo = menos de 70%.']);
-  h += `<div class="filters" style="margin-bottom:10px">${SOLO ? '' : `<label for="czV">Vendedor <select id="czV">${cods.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c} · ${esc(titleCase(C[c].nom))}</option>`).join('')}</select></label>`}
+  h += `<div class="filters" style="margin-bottom:10px">${SOLO ? '' : `<label for="czV">Vendedor <select id="czV"><option value="todos" ${sel === 'todos' ? 'selected' : ''}>Todos</option>${cods.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c} · ${esc(titleCase(C[c].nom))}</option>`).join('')}</select></label>`}
     <div class="daychips" role="group" aria-label="Día">${X.dias.map(d => `<button type="button" class="daychip" data-czd="${d}" aria-pressed="${d === D}">${fd(d)}</button>`).join('')}</div></div>`;
   const tF = e.fac.reduce((a, b) => a + b, 0), tN = e.facN.reduce((a, b) => a + b, 0);
   const kpi = (t, hoy, nec, f) => `<div class="kpi"><span class="eyebrow">${t}</span><span class="v" style="font-size:24px">${f(hoy)}</span><span class="s">necesitaba ${nec > 0 ? f(nec) : '—'} por día</span><span>${est(hoy, nec)}</span></div>`;
