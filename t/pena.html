@@ -550,6 +550,11 @@ function renderHeader(){
   if (SNAP && SNAP.nMes > 0) { sd.className = 'chip good'; sd.textContent = 'Actualizado ' + (SNAP.cuando ? new Date(SNAP.cuando).toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires'}) : fmtDate(SNAP.maxM)); }
   else { sd.className = 'chip warn'; sd.textContent = SNAP ? 'Sin ventas de ' + CFG.mes.label : 'Sin ventas de octubre cargadas'; }
   $('#stDias').textContent = 'Días hábiles: ' + R.diasTrans + ' de ' + R.diasTot + (DQ ? ' · quedan ' + DQ + ' para vender' : '');
+  /* Etiqueta del link del vendedor: días con objetivo diario cargado ÷ días de lunes a viernes (feriados incluidos: se trabajan) desde que arrancó el form */
+  if (SOLO && CFG.objDia) { const F = CFG.objDia[SOLO] || CFG.objDia[String(SOLO)] || {}, hoyOD = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' }), ini0 = CFG.odIni || Object.keys(F).sort()[0], mIni = CFG.mes.y + '-' + String(CFG.mes.m).padStart(2, '0') + '-01', ini = ini0 && ini0 > mIni ? ini0 : mIni; /* solo el mes en curso */
+    if (ini) { const H = []; for (let t = Date.parse(ini + 'T12:00:00Z'); t <= Date.parse(hoyOD + 'T12:00:00Z'); t += 864e5) { const dd = new Date(t), w = dd.getUTCDay(), k = dd.toISOString().slice(0, 10); if (w > 0 && w < 6 && (k < hoyOD || F[k])) H.push(k); }
+      const ok = H.filter(d => F[d]).length, p = H.length ? ok / H.length : 0; let el = document.getElementById('stOD'); if (!el) { el = document.createElement('span'); el.id = 'stOD'; $('#stDias').after(el); }
+      el.className = 'chip ' + (p >= 0.9 ? 'good' : p >= 0.7 ? 'warn' : 'bad'); el.textContent = 'Objetivos diarios de ' + CFG.mes.label.split(' ')[0] + ': ' + ok + ' de ' + H.length + ' días · ' + Math.round(p * 100) + '%'; el.title = 'Días de lunes a viernes de ' + CFG.mes.label + ' (feriados incluidos) en los que cargaste tu objetivo del día. Hoy cuenta cuando lo cargás.'; } }
   const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = CFG.mes.m === 10 ? 'Objetivos de octubre cargados' : 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0]; } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; }
 }
 function banners(){
