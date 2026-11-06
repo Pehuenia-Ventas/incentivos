@@ -1337,7 +1337,7 @@ function pkpi(lbl, n, obj, sub){
 }
 function pfiltro(rows){
   const d = st.pDia || 'todos', q = (st.pQ || '').trim().toLowerCase();
-  return rows.filter(r => (d === 'todos' || (d === '0' ? !r.dm : (r.dm & (1 << +d)))) && (!q || (r.c + ' ' + r.n + ' ' + r.d + ' ' + r.s).toLowerCase().includes(q)));
+  return rows.filter(r => (d === 'todos' || (d === 'sd' ? !r.dm : (r.dm & (1 << +d)))) && (!q || (r.c + ' ' + r.n + ' ' + r.d + ' ' + r.s).toLowerCase().includes(q)));
 }
 function pcli(r, extra, right){
   return `<div class="pcli"><div class="pcli-m"><div><span class="muted">${esc(r.c)}</span> <b>${esc(r.n)}</b> <span class="chip" style="padding:1px 7px">${esc(r.t)}</span></div>
@@ -1382,7 +1382,7 @@ function viewPepsico(){
   h += `<div class="daychips" role="group" aria-label="Sección" style="margin-bottom:12px">${PSUBS.map(([k, l]) => `<button type="button" class="daychip" data-psub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</div>`;
   const usados = [0,1,2,3,4,5,6].filter(k => P0.rows.some(r => r.dm & (1 << k)));
   const dSel = st.pDia || 'todos';
-  h += `<div class="filters" style="margin-bottom:12px"><div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(usados.map(k => [String(k), PDIAS_L[k] + (k === hoyDow ? ' (hoy)' : '')]), P0.rows.some(r => !r.dm) ? [['0','Sin día']] : []).map(([k, l]) => `<button type="button" class="daychip" data-pdia="${k}" aria-pressed="${dSel === k}">${l}</button>`).join('')}</div>
+  h += `<div class="filters" style="margin-bottom:12px"><div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(usados.map(k => [String(k), PDIAS_L[k] + (k === hoyDow ? ' (hoy)' : '')]), P0.rows.some(r => !r.dm) ? [['sd','Sin día']] : []).map(([k, l]) => `<button type="button" class="daychip" data-pdia="${k}" aria-pressed="${dSel === k}">${l}</button>`).join('')}</div>
     <label for="pQ">Buscar <input id="pQ" type="search" value="${esc(st.pQ || '')}" placeholder="nombre, código o calle" style="border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;width:220px;max-width:100%"></label></div>`;
   h += `<div id="pBody">${pcuerpo()}</div>`;
   return h;
