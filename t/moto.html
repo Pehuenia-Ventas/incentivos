@@ -160,6 +160,18 @@ details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spinner{animation:none}}
 @media (max-width:560px){h1{font-size:28px}.kpi .v{font-size:28px}.wrap{padding-inline:16px}}
+.plist{display:grid;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.pcli{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--line)}
+.pcli:last-child{border-bottom:0}
+.pcli-m{min-width:0;flex:1}
+.pcli-d{font-size:13px;color:var(--ink2)}
+.pcli-x{font-size:13px;margin-top:3px}
+.pcli-r{text-align:right;flex:none}
+.pnum{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.1}
+.pskus{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.pskus .chip{white-space:normal;font-weight:500;font-size:12px}
+.kpis.pk{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:560px){.kpis.pk{gap:8px}.kpis.pk .kpi{padding:10px}.kpis.pk .kpi .v{font-size:22px}.kpis.pk .kpi .v .muted{font-size:14px!important}.kpis.pk .kpi .s{font-size:11px}.kpis.pk .eyebrow{font-size:10px;letter-spacing:.05em}}
 .cobtags{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
 .cobtag{border-top:4px solid var(--line)}.cobtag.good{border-top-color:var(--good)}.cobtag.warn{border-top-color:var(--warn)}.cobtag.bad{border-top-color:var(--bad)}
 .cobtag.good .bar i{background:var(--good)}.cobtag.warn .bar i{background:var(--warn)}.cobtag.bad .bar i{background:var(--bad)}
@@ -637,8 +649,9 @@ const TABS = SOLO ? [['ficha', SINM ? 'Mi mes' : 'Mis cupones'], ['marcas','Avan
   ['analisis','Análisis por vendedor'], ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
 if (CFG.cierre) TABS.splice(1, 0, ['cierre', '¿Cómo cerré mi día?']);
+if (SOLO && CFG.pep) TABS.unshift(['pepsico', 'Pepsico · Oportunidades']);
 if (SINM) { const ri = TABS.findIndex(x => x[0] === 'reglas'); if (ri >= 0) TABS.splice(ri, 1); if (st.tab === 'reglas') st.tab = SOLO ? 'ficha' : 'resumen'; }
-if (SOLO) { if (!TABS.some(x => x[0] === st.tab)) st.tab = 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
+if (SOLO) { try { if (CFG.pep && !localStorage.getItem('im_pep1')) { st.tab = 'pepsico'; localStorage.setItem('im_pep1', '1'); } } catch (e) {} if (!TABS.some(x => x[0] === st.tab)) st.tab = CFG.pep ? 'pepsico' : 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
 function renderTabs(){
   $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join('');
 }
@@ -658,6 +671,7 @@ function renderHeader(){
       el.className = 'chip ' + (p >= 0.9 ? 'good' : p >= 0.7 ? 'warn' : 'bad'); el.textContent = 'Objetivos diarios de ' + CFG.mes.label.split(' ')[0] + ': ' + ok + ' de ' + H.length + ' días · ' + Math.round(p * 100) + '%'; el.title = 'Días de lunes a viernes de ' + CFG.mes.label + ' (feriados incluidos) en los que cargaste tu objetivo del día. Hoy cuenta cuando lo cargás.'; } }
   $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
   $('#filters').hidden = SOLO || ['cierre','ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn','pgq','pgqb'].includes(st.tab);
+  ['#stData','#stDias','#stObj'].forEach(s => { const el = $(s); if (el) el.hidden = st.tab === 'pepsico'; });
   if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
   const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = SINM && !OBJ.mes ? 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0] : 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
 }
@@ -1306,6 +1320,127 @@ function viewReglas(){
   </div>`;
 }
 
+/* ===================== Pepsico · Oportunidades ===================== */
+/* Datos: CFG.pep, del tablero "Seguimiento cobertura Pepsico", se cargan con cada actualización de los tableros. */
+let PEP = null, PEP_LOADED = false;
+const PDIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const PDIAS_L = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const PCAT = { tp:'Tienda Perfecta', aval:'Falta validar', revisar:'A revisar', portaf:'Falta portafolio', ejec:'Falta puntaje', bajo:'Lejos', sin:'Sin censo' };
+const PCAT_ORD = { aval:0, revisar:1, portaf:2, ejec:3, bajo:4, sin:5, tp:6 };
+const PSUBS = [['cnc','No compradores'], ['fd','Fully Digital'], ['tp','Tienda Perfecta'], ['marcas','Coberturas por marca']];
+const pdias = m => PDIAS.filter((_, k) => m & (1 << k)).join(' · ') || 'Sin día';
+function pestado(e){ return e === 2 ? '<span class="chip good">CCC</span>' : e === 1 ? '<span class="chip warn">Pendiente</span>' : '<span class="chip bad">No compró</span>'; }
+function pbar(n, obj){ const p = obj ? Math.min(n / obj, 1) : 0; return `<div class="bar"><i style="width:${p * 100}%"></i></div>`; }
+function pkpi(lbl, n, obj, sub){
+  const f = obj ? Math.max(obj - n, 0) : 0;
+  return `<div class="kpi"><span class="eyebrow">${lbl}</span><span class="v">${fmtN(n)}${obj != null ? ` <span class="muted" style="font-size:20px">/ ${fmtN(obj)}</span>` : ''}</span><span class="s">${sub || (obj ? (f ? 'faltan <b>' + fmtN(f) + '</b>' : '<b style="color:var(--good)">Objetivo cumplido</b>') : '')}</span>${obj ? pbar(n, obj) : ''}</div>`;
+}
+function pfiltro(rows){
+  const d = st.pDia || 'todos', q = (st.pQ || '').trim().toLowerCase();
+  return rows.filter(r => (d === 'todos' || (d === '0' ? !r.dm : (r.dm & (1 << +d)))) && (!q || (r.c + ' ' + r.n + ' ' + r.d + ' ' + r.s).toLowerCase().includes(q)));
+}
+function pcli(r, extra, right){
+  return `<div class="pcli"><div class="pcli-m"><div><span class="muted">${esc(r.c)}</span> <b>${esc(r.n)}</b> <span class="chip" style="padding:1px 7px">${esc(r.t)}</span></div>
+    <div class="pcli-d">${esc(r.d)}${r.s ? ' · ' + esc(r.s) : ''} · <b>${pdias(r.dm)}</b></div>${extra ? `<div class="pcli-x">${extra}</div>` : ''}</div>${right ? `<div class="pcli-r">${right}</div>` : ''}</div>`;
+}
+function plista(rows, fx, fr, vacio){
+  if (!rows.length) return `<div class="empty" style="justify-content:center"><p>${vacio}</p></div>`;
+  return `<div class="plist">${rows.map(r => pcli(r, fx && fx(r), fr && fr(r))).join('')}</div>`;
+}
+function pexport(rows, cols, name){ PEXP = { rows, cols, name }; return `<button class="btn small" type="button" data-pexp="1">Exportar a Excel (CSV)</button>`; }
+let PEXP = null;
+async function pexportar(){
+  if (!PEXP) return;
+  const q = s => '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"';
+  const csv = '﻿' + [PEXP.cols.map(c => q(c[0])).join(';')].concat(PEXP.rows.map(r => PEXP.cols.map(c => q(c[1](r))).join(';'))).join('\r\n');
+  const dl = await cuse('downloads');
+  if (!dl) { toast('La descarga no está disponible en esta vista.'); return; }
+  try { await dl.save({ filename: PEXP.name + '_' + (PEP ? PEP.mes : '') + '.csv', data: new Blob([csv], { type: 'text/csv' }) }); }
+  catch (err) { if (err && err.code !== 'cancelled' && err.code !== 'declined') toast('No se pudo descargar: ' + (err.message || err.code || err)); }
+}
+const PCOLS_BASE = [['Cliente', r => r.c], ['Razón social', r => r.n], ['Dirección', r => r.d], ['Taxonomía', r => r.t], ['Sub ramo', r => r.s], ['Día de visita', r => pdias(r.dm)]];
+
+function viewPepsico(){
+  if (!PEP) return `<div class="empty"><div><h3>${PEP_LOADED ? 'Todavía no hay datos de Pepsico' : '<span class="spinner"></span> Cargando datos de Pepsico…'}</h3><p>${PEP_LOADED ? 'Los datos se cargan con cada actualización del tablero.' : ''}</p></div></div>`;
+  const P0 = PEP, K = P0.kpi, sub = st.pSub || 'cnc';
+  const cuando = new Date(P0.gen).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
+  const hoyDow = (new Date().getDay() + 6) % 7;
+  let h = `<div class="ficha-head"><div><span class="eyebrow">Pepsico · ${esc(P0.mesLabel || P0.mes)} · cartera ${fmtN(K.cart)} clientes</span><h2>Mis oportunidades</h2></div><span class="chip good" title="Tablero Seguimiento cobertura Pepsico">Datos al ${esc(cuando)}</span></div>`;
+  h += howto('Cómo se usa esta pantalla', [
+    '<b>No compradores</b>: clientes de tu cartera que todavía no tienen compra Pepsico que cuente en el mes (' + K.unidCCC + ' unidades netas o más). Si compró algo, te dice cuántas unidades le faltan.',
+    '<b>Fully Digital</b>: clientes que compran pero todavía no hacen el ' + K.fdPct + '% por Mi Negocio. Te dice cuánto tienen que cargar por la app (con IVA) para pasar a FD.',
+    '<b>Tienda Perfecta</b>: tiendas del censo más cerca de cumplir. "Falta validar" ya cumple y espera el OK del supervisor. Tocá "SKU faltantes" para ver los infaltables que no compró.',
+    '<b>Coberturas por marca</b>: qué marcas compró cada cliente este mes (✓ = 3 unidades netas o más). Arriba, cuántos clientes faltan para el objetivo de cada marca.',
+    'Usá los <b>días</b> para armar la recorrida y el buscador para encontrar un cliente. Los datos son los mismos del tablero de seguimiento Pepsico y se actualizan con cada actualización de este tablero.'
+  ]);
+  const cp = K.ccc + K.trans;
+  h += `<div class="kpis pk">
+    ${pkpi('Cobertura CCC', cp, K.objCCC, (K.objCCC ? (Math.max(K.objCCC - cp, 0) ? 'faltan <b>' + fmtN(K.objCCC - cp) + '</b> · ' : '<b style="color:var(--good)">Cumplido</b> · ') : '') + fmtN(K.ccc) + ' firmes + ' + fmtN(K.trans) + ' pendientes de liquidar')}
+    ${pkpi('Fully Digital', K.fdN, K.objFD)}
+    ${pkpi('Tienda Perfecta', K.tpN, K.objTP)}
+  </div>`;
+  h += `<div class="daychips" role="group" aria-label="Sección" style="margin-bottom:12px">${PSUBS.map(([k, l]) => `<button type="button" class="daychip" data-psub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</div>`;
+  const usados = [0,1,2,3,4,5,6].filter(k => P0.rows.some(r => r.dm & (1 << k)));
+  const dSel = st.pDia || 'todos';
+  h += `<div class="filters" style="margin-bottom:12px"><div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(usados.map(k => [String(k), PDIAS_L[k] + (k === hoyDow ? ' (hoy)' : '')]), P0.rows.some(r => !r.dm) ? [['0','Sin día']] : []).map(([k, l]) => `<button type="button" class="daychip" data-pdia="${k}" aria-pressed="${dSel === k}">${l}</button>`).join('')}</div>
+    <label for="pQ">Buscar <input id="pQ" type="search" value="${esc(st.pQ || '')}" placeholder="nombre, código o calle" style="border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;width:220px;max-width:100%"></label></div>`;
+  h += `<div id="pBody">${pcuerpo()}</div>`;
+  return h;
+}
+function pcuerpo(){
+  const P0 = PEP, K = P0.kpi, sub = st.pSub || 'cnc';
+  const rows = pfiltro(P0.rows);
+  const ordDia = (a, b) => (a.dm ? Math.log2(a.dm & -a.dm) : 9) - (b.dm ? Math.log2(b.dm & -b.dm) : 9);
+  const ordTax = (a, b) => String(a.t).localeCompare(String(b.t));
+  let h = '';
+  if (sub === 'cnc') {
+    const l = rows.filter(r => r.e === 0).sort((a, b) => (b.u > 0) - (a.u > 0) || ordDia(a, b) || ordTax(a, b) || a.n.localeCompare(b.n));
+    const conAlgo = l.filter(r => r.u > 0).length;
+    h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes sin compra que cuente${conAlgo ? ' · ' + conAlgo + ' ya compraron algo (arriba)' : ''}</span>${pexport(l, PCOLS_BASE.concat([['Unidades del mes', r => r.u], ['Faltan unidades', r => r.u > 0 ? Math.max(1, K.unidCCC - r.u) : K.unidCCC], ['Devolución $', r => r.dv]]), 'no_compradores')}</div>`;
+    h += plista(l, r => r.u > 0 ? `Compró <b>${fmtN(r.u)}</b> u. · le faltan <b>${Math.max(1, K.unidCCC - r.u)}</b> para que cuente` : r.dv > 0 ? `Rechazó / devolvió ${fmtM(r.dv)}` : '', r => pestado(r.e), 'No quedan clientes sin compra con este filtro.');
+  } else if (sub === 'fd') {
+    const l = rows.filter(r => r.e > 0 && !r.fd).sort((a, b) => a.f - b.f);
+    const sinApp = l.filter(r => !r.mn).length;
+    h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes que compran y no son FD${sinApp ? ' · ' + sinApp + ' nunca compraron por Mi Negocio este mes' : ''} · ordenados de más fácil a más difícil</span>${pexport(l, PCOLS_BASE.concat([['Compra Pepsico $', r => r.tot], ['Por Mi Negocio $', r => r.mn], ['% Mi Negocio', r => r.pm], ['Cargar por la app $', r => r.f]]), 'oportunidades_fd')}</div>`;
+    h += plista(l, r => `Compró ${fmtM(r.tot)} · por Mi Negocio ${fmtM(r.mn)} (<b>${r.pm}%</b>)`, r => `<div class="pnum">${fmtM(r.f)}</div><div class="muted" style="font-size:12px">cargar por la app</div>`, 'Todos los clientes que compran ya son Fully Digital con este filtro.');
+  } else if (sub === 'tp') {
+    const lejos = st.pLejos;
+    const l = rows.filter(r => r.k !== 'tp' && r.k !== 'sin' && (lejos || r.k !== 'bajo')).sort((a, b) => PCAT_ORD[a.k] - PCAT_ORD[b.k] || (b.tp ? b.tp[0] + b.tp[1] : 0) - (a.tp ? a.tp[0] + a.tp[1] : 0));
+    const ya = rows.filter(r => r.k === 'tp').length, nl = rows.filter(r => r.k === 'bajo').length;
+    const cnt = k => rows.filter(r => r.k === k).length;
+    h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">${['aval','revisar','portaf','ejec'].map(k => `<div class="kpi"><span class="eyebrow">${PCAT[k]}</span><span class="v" style="font-size:28px">${cnt(k)}</span></div>`).join('')}<div class="kpi"><span class="eyebrow">Ya son TP</span><span class="v" style="font-size:28px;color:var(--good)">${ya}</span></div></div>`;
+    h += `<div class="panel-h"><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="pLejos" ${lejos ? 'checked' : ''}> Mostrar también las ${nl} lejanas</label>${pexport(l, PCOLS_BASE.concat([['Estado TP', r => PCAT[r.k]], ['Puntaje', r => r.tp ? r.tp[0] : ''], ['% Portafolio', r => r.tp ? r.tp[1] : ''], ['SKU faltantes', r => (r.fl || []).map(i => P0.infal[i]).join(', ')]]), 'tienda_perfecta')}</div>`;
+    h += plista(l, r => `Puntaje <b>${r.tp ? r.tp[0] : '—'}</b> · portafolio <b>${r.tp ? r.tp[1] : '—'}%</b>${(r.fl || []).length ? ` <details class="cli" style="border:0;padding:4px 0 0"><summary><span>SKU faltantes</span><span class="muted">${r.fl.length}</span></summary><div class="pskus">${r.fl.map(i => `<span class="chip">${esc(P0.infal[i] || '')}</span>`).join('')}</div></details>` : ''}`, r => `<span class="chip ${r.k === 'aval' ? 'good' : r.k === 'bajo' ? '' : 'warn'}">${PCAT[r.k]}</span>`, 'No hay tiendas cerca de cumplir con este filtro.');
+  } else {
+    const M = P0.marcas, cart = K.cart;
+    const need = M.map(([, o]) => Math.ceil(cart * o / 100));
+    h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">${M.map(([m, o, n], b) => `<div class="kpi"><span class="eyebrow">${esc(m)} · obj ${o}%</span><span class="v" style="font-size:26px">${n} <span class="muted" style="font-size:16px">/ ${need[b]}</span></span><span class="s">${n >= need[b] ? '<b style="color:var(--good)">Cumplido</b>' : 'faltan <b>' + (need[b] - n) + '</b>'}</span>${pbar(n, need[b])}</div>`).join('')}</div>`;
+    const solo = st.pMSolo || 'falta';
+    const l = rows.filter(r => solo === 'todos' || (solo === 'falta' ? M.some((_, b) => !(r.mb & (1 << b))) : !r.mb)).sort((a, b) => ordDia(a, b) || pbits(a.mb) - pbits(b.mb) || a.n.localeCompare(b.n));
+    h += `<div class="panel-h"><label for="pMSolo" class="muted" style="font-size:13px">Mostrar <select id="pMSolo"><option value="falta" ${solo === 'falta' ? 'selected' : ''}>Con alguna marca sin comprar</option><option value="cero" ${solo === 'cero' ? 'selected' : ''}>Sin ninguna marca</option><option value="todos" ${solo === 'todos' ? 'selected' : ''}>Todos</option></select></label>${pexport(l, PCOLS_BASE.concat(M.map(([m], b) => [m, r => (r.mb & (1 << b)) ? 'Sí' : 'No'])), 'coberturas_marca')}</div>`;
+    const shown = l.slice(0, 800);
+    h += `<div class="tw"><table><thead><tr><th class="l sticky1">Cliente</th><th class="l">Día</th>${M.map(([m]) => `<th style="text-align:center">${esc(m)}</th>`).join('')}<th>Marcas</th></tr></thead><tbody>`;
+    for (const r of shown) h += `<tr><td class="l sticky1"><b>${esc(r.n)}</b><div class="muted" style="font-size:12px">${esc(r.c)} · ${esc(r.t)}</div></td><td class="l ink2">${pdias(r.dm)}</td>${M.map((_, b) => `<td style="text-align:center">${(r.mb & (1 << b)) ? '<span class="bt-yes" title="Compró">✓</span>' : '<span class="bt-no" title="No compró">✗</span>'}</td>`).join('')}<td><b>${pbits(r.mb)}</b> / ${M.length}</td></tr>`;
+    h += '</tbody></table></div>';
+    if (l.length > shown.length) h += `<p class="note">Se muestran los primeros ${shown.length} clientes: filtrá por día para ver el resto.</p>`;
+  }
+  return h;
+}
+function pbits(m){ let n = 0; while (m) { n += m & 1; m >>= 1; } return n; }
+document.addEventListener('click', e => {
+  const s = e.target.closest('[data-psub]'); if (s) { st.pSub = s.dataset.psub; saveUI(); render(); return; }
+  const d = e.target.closest('[data-pdia]'); if (d) { st.pDia = d.dataset.pdia; saveUI(); render(); return; }
+  if (e.target.closest('[data-pexp]')) pexportar();
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'pLejos') { st.pLejos = e.target.checked; saveUI(); render(); }
+  if (e.target.id === 'pMSolo') { st.pMSolo = e.target.value; saveUI(); render(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'pQ') { st.pQ = e.target.value; const b = document.getElementById('pBody'); if (b && PEP) b.innerHTML = pcuerpo(); }
+});
+PEP = CFG.pep || null; PEP_LOADED = true;
+
 /* ===================== Render principal ===================== */
 /* ===== Gaona: $ por caja sobre el objetivo, se paga si el equipo llega al objetivo general ===== */
 const fmtK = fmtMk;
@@ -1592,7 +1727,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { pepsico: viewPepsico, cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
