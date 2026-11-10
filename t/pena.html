@@ -1252,6 +1252,7 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
 .octc-me .sub{font-size:13px;color:var(--ink2,#4A5869)}
 .octc-sec{background:var(--surface,#fff);border:1px solid var(--line,#D5DCE6);border-radius:10px;padding:14px 16px;min-width:0}
 .octc-sec h3{margin:0 0 4px}
+.octc-sec h4{margin:14px 0 6px;font-size:14px}
 .octc-sec .note{font-size:12px;color:var(--muted,#738196);margin:4px 0 10px}
 .octc-tw{overflow-x:auto}
 .octc-tw table{border-collapse:collapse;width:100%;font-size:14px}
@@ -1262,37 +1263,76 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
 .octc-tw tfoot td{font-weight:700;background:var(--surface2,#EAEEF4)}
 .octc-cup{display:inline-block;min-width:34px;padding:2px 8px;border-radius:6px;font-weight:700;text-align:center;background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45)}
 .octc-cup.z{background:var(--surface2,#EAEEF4);color:var(--muted,#738196)}
+.octc-kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0 4px}
+.octc-kp div{background:var(--surface2,#EAEEF4);border-radius:8px;padding:9px 12px;min-width:0}
+.octc-kp b{display:block;font-size:20px;line-height:1.2}
+.octc-kp span{font-size:12px;color:var(--muted,#738196)}
+.octc-ok{color:var(--good,#1D7F45);font-weight:700}
+.octc-no{color:var(--bad,#B4232C);font-weight:700}
+.octc-bar{display:inline-block;width:90px;height:8px;border-radius:4px;background:var(--surface2,#EAEEF4);vertical-align:middle;margin-left:8px;overflow:hidden}
+.octc-bar i{display:block;height:100%;background:var(--accent,#2448C7)}
+.octc-bar i.ok{background:var(--good,#1D7F45)}
 </style>
 <script>
-/* Solapa "Cierre de octubre": cupones que juntó cada vendedor en cada concurso de octubre. Datos: CFG.octCierre (publicador). */
+/* Solapa "Cierre de octubre". En el link de cada vendedor: solo su cierre (cupones y alcance en cada objetivo). En los links generales: tablas del equipo. Datos: CFG.octCierre (publicador). */
 (function(){
   const O = (typeof CFG !== 'undefined' && CFG && CFG.octCierre) || null; if (!O) return;
   const ME = (typeof CFG !== 'undefined' && CFG && CFG.octMe) || null;
   const e = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const n = x => Math.round(x || 0).toLocaleString('es-AR');
+  const n1 = x => (x || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 });
   const mk = x => '$ ' + ((x || 0) / 1e6).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' M';
   const pc = (x, d) => x == null || x === '' || isNaN(x) ? '—' : (x * 100).toLocaleString('es-AR', { maximumFractionDigits: d || 0 }) + '%';
   const cup = t => `<span class="octc-cup${t ? '' : ' z'}">${t}</span>`;
+  const cu = t => t + ' ' + (t === 1 ? 'cupón' : 'cupones');
   const tc = s => String(s || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+  const ok = b => b ? '<span class="octc-ok">Sí</span>' : '<span class="octc-no">No</span>';
+  const bar = x => `<span class="octc-bar"><i class="${x >= 1 ? 'ok' : ''}" style="width:${Math.max(0, Math.min(1, x || 0)) * 100}%"></i></span>`;
   const isMe = r => ME && ((ME.cod != null && r.c === ME.cod) || (ME.car && r.n === ME.car));
-  function leyenda(){
-    const out = [];
-    if (!ME) return '';
-    const m = ME.cod != null ? O.moto.find(r => r.c === ME.cod) : null;
-    const k = ME.cod != null ? O.kaf.find(r => r.c === ME.cod) : null;
-    const c = ME.car ? O.car.find(r => r.n === ME.car) : null;
-    const tm = O.moto.reduce((a, r) => a + r.t, 0) + O.motoSup.reduce((a, r) => a + r.t, 0);
-    if (m) out.push(`<div class="big">${m.t} ${m.t === 1 ? 'cupón' : 'cupones'}</div><div class="sub">En el Incentivo Moto de octubre juntaste <b>${m.t}</b> ${m.t === 1 ? 'cupón' : 'cupones'} (A ${m.A} + B ${m.B} + C ${m.C} + D ${m.D}) de ${tm} en el sorteo: ${pc(m.p, 1)} de probabilidad.</div>`);
-    if (k) out.push(`<div class="big">${k.t} ${k.t === 1 ? 'cupón' : 'cupones'}</div><div class="sub">En el concurso Peñaflor KAF de octubre juntaste <b>${k.t}</b> ${k.t === 1 ? 'cupón' : 'cupones'} con ${n(k.pts)} puntos (${pc(k.pm)} del máximo): ${pc(k.p, 1)} de probabilidad en el sorteo.</div>`);
-    if (c) out.push(`<div class="big">${c.t} ${c.t === 1 ? 'cupón' : 'cupones'}</div><div class="sub">En Carrileros de octubre juntaste <b>${c.t}</b> ${c.t === 1 ? 'cupón' : 'cupones'}: ${pc(c.p, 1)} de probabilidad en el sorteo.</div>`);
-    if (!out.length) return '';
-    return `<div class="octc-me">${out.join('<div style="height:10px"></div>')}</div>`;
-  }
   function tabla(cols, rows, foot){
     return `<div class="octc-tw"><table><thead><tr>${cols.map(c => `<th class="${c.l ? 'l' : ''}">${c.h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr class="${isMe(r) ? 'me' : ''}">${cols.map(c => `<td class="${c.l ? 'l' : ''}">${c.v(r)}</td>`).join('')}</tr>`).join('')}</tbody>${foot ? `<tfoot>${foot}</tfoot>` : ''}</table></div>`;
   }
-  function view(){
-    let h = `<div class="octc-wrap">${leyenda()}`;
+  const kp = a => `<div class="octc-kp">${a.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
+  const cobT = (rows, h1) => tabla([{ h: h1, l: 1, v: r => e(r[0]) }, { h: 'Clientes', v: r => n(r[1]) }, { h: 'Objetivo', v: r => n(r[2]) }, { h: 'Alcance', v: r => pc(r[2] ? r[1] / r[2] : null) + bar(r[2] ? r[1] / r[2] : 0) }, { h: '¿Cumplió?', v: r => ok(r[1] >= r[2]) }], rows);
+  /* ---------- vista del vendedor ---------- */
+  function vistaVendedor(){
+    const M = O.me || {}; let h = '<div class="octc-wrap">'; const res = [];
+    if (M.moto) res.push(`<div class="big">${cu(M.moto.t)}</div><div class="sub">Incentivo Moto de octubre: ${pc(M.moto.p, 1)} de probabilidad en el sorteo.</div>`);
+    if (M.kaf) res.push(`<div class="big">${cu(M.kaf.t)}</div><div class="sub">Concurso Peñaflor KAF de octubre: ${pc(M.kaf.p, 1)} de probabilidad en el sorteo.</div>`);
+    if (M.car) res.push(`<div class="big">${cu(M.car.t)}</div><div class="sub">Carrileros de octubre: ${pc(M.car.p, 1)} de probabilidad en el sorteo.</div>`);
+    if (!res.length) return h + `<div class="octc-sec"><h3>Cierre de octubre</h3><p class="note">No participaste en los concursos de octubre.</p></div></div>`;
+    h += `<div class="octc-me">${res.join('<div style="height:10px"></div>')}</div>`;
+    if (M.moto) { const m = M.moto;
+      h += `<div class="octc-sec"><h3>Incentivo Moto · tu cierre de octubre</h3><p class="note">${e(O.fuente || '')} Tope 15 cupones (más D).</p>` +
+        kp([[mk(m.f), 'Facturado'], [mk(m.o), 'Objetivo'], [pc(m.pf), 'Alcance del objetivo'], [m.m + ' de ' + m.mo, 'Marcas al 100%'], [n1(m.pts) + ' de 100', 'Puntos de marcas']]) +
+        `<h4>Cupones por objetivo</h4>` + tabla([{ h: 'Objetivo', l: 1, v: r => r[0] }, { h: 'Tu alcance', l: 1, v: r => r[1] }, { h: 'Cupones', v: r => cup(r[2]) }], [
+          ['A · Marcas al 100% (1 cupón cada 15 puntos, hasta 5)', n1(m.pts) + ' puntos', m.A],
+          ['B · Plus todas las marcas al 100% (5 cupones)', m.m + ' de ' + m.mo + ' marcas', m.B],
+          ['C · Cobertura Georgalos (1 por línea + 1 general)', (m.geoOk || 0) + ' coberturas cumplidas', m.C],
+          ['D · Planificación (3 cupones con el 70%)', m.D ? 'Cumplió' : 'No llegó', m.D]], `<tr><td class="l">Total</td><td></td><td>${cup(m.t)}</td></tr>`) +
+        (m.marcas ? `<h4>Alcance por marca</h4>` + tabla([{ h: 'Marca', l: 1, v: r => e(r[0]) }, { h: 'Alcance', v: r => pc(r[1]) + bar(r[1]) }, { h: '¿Al 100%?', v: r => ok(r[1] >= 1) }], m.marcas.slice().sort((a, b) => b[1] - a[1])) : '') +
+        (m.geo ? `<h4>Cobertura Georgalos</h4>` + cobT(m.geo, 'Línea') : '') + `</div>`; }
+    if (M.kaf) { const k = M.kaf;
+      h += `<div class="octc-sec"><h3>Concurso Peñaflor KAF · tu cierre de octubre</h3><p class="note">Puntaje máximo 130 = CCC 30 + marcas 70 + bonus 10 + P&amp;G 20. Escala: 70% = 1, 80% = 2, 90% = 3, 100% = 5, 115% = 7, 130% = 10 cupones.</p>` +
+        kp([[n1(k.tot) + ' de 130', 'Puntos'], [pc(k.pm), 'Del máximo'], [k.co ? k.cr + ' / ' + k.co : '—', 'CCC (clientes / objetivo)'], [e(k.m), 'Marcas al 100%']]) +
+        `<h4>Puntos por objetivo</h4>` + tabla([{ h: 'Objetivo', l: 1, v: r => r[0] }, { h: 'Alcance', l: 1, v: r => r[1] }, { h: 'Puntos', v: r => n1(r[2]) }, { h: 'Máximo', v: r => r[3] }], [
+          ['CCC (cobertura de clientes)', k.co ? k.cr + ' de ' + k.co + ' (' + pc(k.pc) + ')' : '—', k.pC, 30],
+          ['Marcas', e(k.m), k.pM, 70], ['Bonus', k.bo ? 'Sí' : 'No', k.bo, 10], ['P&amp;G', '', k.pP, 20]],
+          `<tr><td class="l">Total</td><td class="l">${pc(k.pm)} del máximo</td><td>${n1(k.tot)}</td><td>130</td></tr><tr><td class="l">Cupones</td><td></td><td>${cup(k.t)}</td><td></td></tr>`) +
+        (k.cob ? `<h4>Cobertura por marca (clientes en el trimestre)</h4>` + cobT(k.cob, 'Marca') : '') +
+        (k.geo ? `<h4>Georgalos (1 cupón por línea al 100%)</h4>` + cobT(k.geo, 'Línea') : '') + `</div>`; }
+    if (M.car) { const c = M.car;
+      h += `<div class="octc-sec"><h3>Carrileros · tu cierre de octubre</h3><p class="note">Cupones = puntos de líneas ÷ 20 + 5 si cumple todas las líneas + 2 para quien gana el duelo + 3 con el MPA de espumantes al 100%. Máximo 20.</p>` +
+        kp([[e(c.lin), 'Líneas en objetivo'], [n1(c.pts) + ' de 100', 'Puntos de líneas'], [n(c.copas), 'Copas en el duelo'], [e(c.mpa), 'MPA completo']]) +
+        `<h4>Cupones por objetivo</h4>` + tabla([{ h: 'Objetivo', l: 1, v: r => r[0] }, { h: 'Tu alcance', l: 1, v: r => r[1] }, { h: 'Cupones', v: r => cup(r[2]) }], [
+          ['Puntos de líneas', n1(c.pts) + ' puntos', c.cp], ['Plus todas las líneas', e(c.lin), c.plus], ['Duelo de merchand', n(c.copas) + ' copas', c.cd], ['MPA de espumantes', e(c.mpa), c.cm]],
+          `<tr><td class="l">Total</td><td></td><td>${cup(c.t)}</td></tr>`) +
+        (c.lineas ? `<h4>Cobertura por línea</h4>` + tabla([{ h: 'Línea', l: 1, v: r => e(r[0]) }, { h: 'Objetivo %', v: r => pc(r[1]) }, { h: 'Clientes', v: r => n(r[2]) }, { h: 'Objetivo', v: r => n(r[3]) }, { h: 'Alcance', v: r => pc(r[3] ? r[2] / r[3] : null) + bar(r[3] ? r[2] / r[3] : 0) }, { h: '¿Cumplió?', v: r => ok(r[2] >= r[3]) }], c.lineas) : '') + `</div>`; }
+    return h + '</div>';
+  }
+  /* ---------- vista general (equipo) ---------- */
+  function vistaEquipo(){
+    let h = `<div class="octc-wrap">`;
     const M = O.moto.slice().sort((a, b) => b.t - a.t || b.f / b.o - a.f / a.o);
     const tmV = M.reduce((a, r) => a + r.t, 0), tmS = O.motoSup.reduce((a, r) => a + r.t, 0);
     h += `<div class="octc-sec"><h3>Incentivo Moto · cupones de octubre</h3><p class="note">A = marcas al 100% · B = plus todas las marcas · C = cobertura Georgalos · D = planificación. Tope 15 (más D). ${e(O.fuente)}</p>` +
@@ -1308,6 +1348,7 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
         `<tr><td class="l">Total del sorteo</td><td></td><td></td><td></td><td></td><td></td><td>${tcar}</td><td></td></tr>`) + `</div>`;
     return h + '</div>';
   }
+  const view = () => O.me ? vistaVendedor() : (O.moto ? vistaEquipo() : '');
   let activo = false;
   function boton(){
     const t = document.getElementById('tabs'); if (!t || t.querySelector('[data-octc]')) return;
