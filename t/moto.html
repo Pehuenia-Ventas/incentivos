@@ -1327,7 +1327,7 @@ const PDIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 const PDIAS_L = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const PCAT = { tp:'Tienda Perfecta', aval:'Falta validar', revisar:'A revisar', portaf:'Falta portafolio', ejec:'Falta puntaje', bajo:'Lejos', sin:'Sin censo' };
 const PCAT_ORD = { aval:0, revisar:1, portaf:2, ejec:3, bajo:4, sin:5, tp:6 };
-const PSUBS = [['cnc','No compradores'], ['fd','Fully Digital'], ['tp','Tienda Perfecta'], ['marcas','Coberturas por marca']];
+const PSUBS = [['avance','Avance de venta'], ['visita','Próxima visita'], ['cnc','No compradores'], ['fd','Fully Digital'], ['tp','Tienda Perfecta'], ['marcas','Coberturas por marca'], ['atr','Incentivo ATR']];
 const pdias = m => PDIAS.filter((_, k) => m & (1 << k)).join(' · ') || 'Sin día';
 function pestado(e){ return e === 2 ? '<span class="chip good">CCC</span>' : e === 1 ? '<span class="chip warn">Pendiente</span>' : '<span class="chip bad">No compró</span>'; }
 function pbar(n, obj){ const p = obj ? Math.min(n / obj, 1) : 0; return `<div class="bar"><i style="width:${p * 100}%"></i></div>`; }
@@ -1362,11 +1362,14 @@ const PCOLS_BASE = [['Cliente', r => r.c], ['Razón social', r => r.n], ['Direcc
 
 function viewPepsico(){
   if (!PEP) return `<div class="empty"><div><h3>${PEP_LOADED ? 'Todavía no hay datos de Pepsico' : '<span class="spinner"></span> Cargando datos de Pepsico…'}</h3><p>${PEP_LOADED ? 'Los datos se cargan con cada actualización del tablero.' : ''}</p></div></div>`;
-  const P0 = PEP, K = P0.kpi, sub = st.pSub || 'cnc';
+  const P0 = PEP, K = P0.kpi, sub = st.pSub || 'avance';
   const cuando = new Date(P0.gen).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
   const hoyDow = (new Date().getDay() + 6) % 7;
   let h = `<div class="ficha-head"><div><span class="eyebrow">Pepsico · ${esc(P0.mesLabel || P0.mes)} · cartera ${fmtN(K.cart)} clientes</span><h2>Mis oportunidades</h2></div><span class="chip good" title="Tablero Seguimiento cobertura Pepsico">Datos al ${esc(cuando)}</span></div>`;
   h += howto('Cómo se usa esta pantalla', [
+    '<b>Avance de venta</b>: tus kilos del mes contra el objetivo (Platino + Gold y Silver + Bronze), la tendencia a fin de mes y lo que necesitás vender por día.',
+    '<b>Próxima visita</b>: los clientes del día que elijas (arranca en tu próximo día de visita) con lo que te cargaron en las dos últimas visitas de ese mismo día.',
+    '<b>Incentivo ATR</b>: tus kilos contra el objetivo del incentivo y la cobertura de ' + (PEP && PEP.atr ? esc(PEP.atr.nombre) : 'Tostitos') + ' en tus clientes A y B, con la lista de los que faltan.',
     '<b>No compradores</b>: clientes de tu cartera que todavía no tienen compra Pepsico que cuente en el mes (' + K.unidCCC + ' unidades netas o más). Si compró algo, te dice cuántas unidades le faltan.',
     '<b>Fully Digital</b>: clientes que compran pero todavía no hacen el ' + K.fdPct + '% por Mi Negocio. Te dice cuánto tienen que cargar por la app (con IVA) para pasar a FD.',
     '<b>Tienda Perfecta</b>: tiendas del censo más cerca de cumplir. "Falta validar" ya cumple y espera el OK del supervisor. Tocá "SKU faltantes" para ver los infaltables que todavía no cumple: desde noviembre un infaltable se cumple con <b>3 unidades netas del SKU en el mes</b>, así que también aparecen los que compró 1 o 2.',
@@ -1382,24 +1385,30 @@ function viewPepsico(){
   h += `<div class="daychips" role="group" aria-label="Sección" style="margin-bottom:12px">${PSUBS.map(([k, l]) => `<button type="button" class="daychip" data-psub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</div>`;
   const usados = [0,1,2,3,4,5,6].filter(k => P0.rows.some(r => r.dm & (1 << k)));
   const dSel = st.pDia || 'todos';
+  if (sub === 'avance' || sub === 'visita') { h += sub === 'visita' ? `<div class="filters" style="margin-bottom:12px"><label for="pQ">Buscar <input id="pQ" type="search" value="${esc(st.pQ || '')}" placeholder="nombre, código o calle" style="border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;width:220px;max-width:100%"></label></div>` : ''; h += `<div id="pBody">${pcuerpo()}</div>`; return h; }
   h += `<div class="filters" style="margin-bottom:12px"><div class="daychips" role="group" aria-label="Día de visita">${[['todos','Todos los días']].concat(usados.map(k => [String(k), PDIAS_L[k] + (k === hoyDow ? ' (hoy)' : '')]), P0.rows.some(r => !r.dm) ? [['sd','Sin día']] : []).map(([k, l]) => `<button type="button" class="daychip" data-pdia="${k}" aria-pressed="${dSel === k}">${l}</button>`).join('')}</div>
     <label for="pQ">Buscar <input id="pQ" type="search" value="${esc(st.pQ || '')}" placeholder="nombre, código o calle" style="border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;min-width:0;width:220px;max-width:100%"></label></div>`;
   h += `<div id="pBody">${pcuerpo()}</div>`;
   return h;
 }
 function pcuerpo(){
-  const P0 = PEP, K = P0.kpi, sub = st.pSub || 'cnc';
+  const P0 = PEP, K = P0.kpi, sub = st.pSub || 'avance';
   const rows = pfiltro(P0.rows);
   const ordDia = (a, b) => (a.dm ? Math.log2(a.dm & -a.dm) : 9) - (b.dm ? Math.log2(b.dm & -b.dm) : 9);
   const ordTax = (a, b) => String(a.t).localeCompare(String(b.t));
   let h = '';
+  if (sub === 'avance') return pAvance(P0);
+  if (sub === 'visita') return pVisita(P0);
+  if (sub === 'atr') return pAtr(P0, rows);
   if (sub === 'cnc') {
     const l = rows.filter(r => r.e === 0).sort((a, b) => (b.u > 0) - (a.u > 0) || ordDia(a, b) || ordTax(a, b) || a.n.localeCompare(b.n));
     const conAlgo = l.filter(r => r.u > 0).length;
     h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes sin compra que cuente${conAlgo ? ' · ' + conAlgo + ' ya compraron algo (arriba)' : ''}</span>${pexport(l, PCOLS_BASE.concat([['Unidades del mes', r => r.u], ['Faltan unidades', r => r.u > 0 ? Math.max(1, K.unidCCC - r.u) : K.unidCCC], ['Devolución $', r => r.dv]]), 'no_compradores')}</div>`;
     h += plista(l, r => r.u > 0 ? `Compró <b>${fmtN(r.u)}</b> u. · le faltan <b>${Math.max(1, K.unidCCC - r.u)}</b> para que cuente` : r.dv > 0 ? `Rechazó / devolvió ${fmtM(r.dv)}` : '', r => pestado(r.e), 'No quedan clientes sin compra con este filtro.');
   } else if (sub === 'fd') {
-    const l = rows.filter(r => r.e > 0 && !r.fd).sort((a, b) => a.f - b.f);
+    const tx = st.pTax || '';
+    if (P0.fdTax) h += `<p class="note" style="margin:0 0 6px">Avance de Fully Digital por taxonomía: clientes FD logrados sobre tu objetivo de cada taxonomía. Tocá una taxonomía para ver solo sus clientes.</p><div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">${P0.fdTax.map(([t, o, n, pc]) => `<button type="button" class="kpi" data-ptax="${t}" aria-pressed="${tx === t}" style="text-align:left;cursor:pointer;font:inherit;color:inherit;${tx === t ? 'outline:2px solid var(--accent);' : ''}"><span class="eyebrow">Taxonomía ${t} · obj ${String(pc).replace('.', ',')}%</span><span class="v" style="font-size:26px">${fmtN(n)} <span class="muted" style="font-size:16px">/ ${fmtN(o)}</span></span><span class="s">${o ? (n >= o ? '<b style="color:var(--good)">Cumplido</b>' : 'faltan <b>' + fmtN(o - n) + '</b>') : 'sin objetivo'} · ${o ? Math.round(100 * n / o) + '%' : '—'}</span>${pbar(n, o)}</button>`).join('')}</div>`;
+    const l = rows.filter(r => r.e > 0 && !r.fd && (!tx || r.t === tx)).sort((a, b) => a.f - b.f);
     const sinApp = l.filter(r => !r.mn).length;
     h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes que compran y no son FD${sinApp ? ' · ' + sinApp + ' nunca compraron por Mi Negocio este mes' : ''} · ordenados de más fácil a más difícil</span>${pexport(l, PCOLS_BASE.concat([['Compra Pepsico $', r => r.tot], ['Por Mi Negocio $', r => r.mn], ['% Mi Negocio', r => r.pm], ['Cargar por la app $', r => r.f]]), 'oportunidades_fd')}</div>`;
     h += plista(l, r => `Compró ${fmtM(r.tot)} · por Mi Negocio ${fmtM(r.mn)} (<b>${r.pm}%</b>)`, r => `<div class="pnum">${fmtM(r.f)}</div><div class="muted" style="font-size:12px">cargar por la app</div>`, 'Todos los clientes que compran ya son Fully Digital con este filtro.');
@@ -1426,15 +1435,103 @@ function pcuerpo(){
   }
   return h;
 }
+const pdm = f => { const p = f.split('-'); return p[2] + '/' + p[1]; };
+const pdow = f => (new Date(f + 'T12:00:00Z').getUTCDay() + 6) % 7;
+const pkg = n => fmtN(n) + ' kg';
+function pAvance(P0){
+  let h = '';
+  const A = P0.av;
+  if (!A || !A.g || !A.g.length) return '<div class="empty" style="justify-content:center"><p>Todavía no hay avance de kilos para este mes.</p></div>';
+  const d = A.dias || {};
+  const T = A.g.reduce((t, g) => { t[2] += g[2]; t[3] += g[3]; t[4] += g[4]; t[6] += g[6]; t[7] += g[7]; t[8] += g[8]; t[9] += g[9]; return t; }, ['TOT', 'Total Pepsico', 0, 0, 0, 0, 0, 0, 0, 0]);
+  const venta = P0.rows.reduce((a, r) => a + (r.tot || 0), 0);
+  const quedan = Math.max(0, (d.diasHabiles || 0) - (d.diasTrabajados || 0));
+  h += `<div class="kpis pk">
+    ${pkpi('Venta acumulada (kg)', T[3], T[2], 'faltan <b>' + fmtN(Math.max(T[2] - T[3], 0)) + ' kg</b> · ' + (T[2] ? Math.round(100 * T[3] / T[2]) : 0) + '% del objetivo')}
+    <div class="kpi"><span class="eyebrow">Tendencia a fin de mes</span><span class="v">${fmtN(T[4])} <span class="muted" style="font-size:20px">kg</span></span><span class="s">${T[2] ? (T[4] >= T[2] ? '<b style="color:var(--good)">' + Math.round(100 * T[4] / T[2]) + '% · llegás al objetivo</b>' : '<b>' + Math.round(100 * T[4] / T[2]) + '%</b> del objetivo a este ritmo') : ''}</span>${pbar(T[4], T[2])}</div>
+    <div class="kpi"><span class="eyebrow">Venta Pepsico del mes</span><span class="v" style="font-size:26px">${fmtMk(venta)}</span><span class="s">día ${fmtN(d.diasTrabajados || 0)} de ${fmtN(d.diasHabiles || 0)} hábiles · quedan ${quedan}</span></div>
+  </div>`;
+  h += `<div class="tw"><table><thead><tr><th class="l">Grupo</th><th>Objetivo</th><th>Venta acumulada</th><th>% acumulado</th><th>Tendencia</th><th>% avance tendencia</th><th>Promedio diario</th><th>Necesitás por día</th><th>Última visita</th><th>Penúltima visita</th></tr></thead><tbody>`;
+  for (const g of A.g.concat([T])) {
+    const tot = g[0] === 'TOT', pa = g[2] ? g[3] / g[2] : 0, pt = g[2] ? g[4] / g[2] : 0;
+    const nec = quedan ? Math.max(0, (g[2] - g[3]) / quedan) : 0;
+    h += `<tr${tot ? ' style="font-weight:700;background:var(--surface2)"' : ''}><td class="l">${esc(String(g[1]).replace(' Prop. 2026', ''))}</td><td>${pkg(g[2])}</td><td>${pkg(g[3])}</td><td>${Math.round(pa * 100)}%</td><td>${pkg(g[4])}</td><td><span class="chip ${pt >= 1 ? 'good' : pt >= .85 ? 'warn' : 'bad'}">${Math.round(pt * 100)}%</span></td><td>${pkg(g[6])}</td><td>${pkg(tot ? nec : (quedan ? nec : g[7]))}</td><td>${pkg(g[8])}</td><td>${pkg(g[9])}</td></tr>`;
+  }
+  h += '</tbody></table></div>';
+  h += `<p class="note">Kilos Pepsico cargados en el mes, como en el tablero de seguimiento Pepsico (Avance KG). Tendencia = acumulado ÷ días trabajados × días hábiles. Necesitás por día = lo que falta ÷ días hábiles que quedan. Última y penúltima visita = kilos cargados 7 y 14 días antes del ${d.corte ? pdm(d.corte) : 'corte'}.</p>`;
+  const K = P0.kgDia || {}, dm = Object.keys(K).filter(f => f.slice(0, 7) === A.mes && pdow(f) < 6).sort();
+  if (dm.length) {
+    const mx = Math.max(1, ...dm.map(f => K[f][0] + K[f][1]));
+    h += `<h3 style="margin:18px 0 8px;font-size:15px">Kilos cargados por día</h3><div class="tw"><table><thead><tr><th class="l">Día</th><th>Platino + Gold</th><th>Silver + Bronze</th><th>Total</th><th class="l" style="width:40%"></th></tr></thead><tbody>${dm.slice().reverse().map(f => { const t = K[f][0] + K[f][1]; return `<tr><td class="l">${PDIAS[pdow(f)]} ${pdm(f)}</td><td>${pkg(K[f][0])}</td><td>${pkg(K[f][1])}</td><td><b>${pkg(t)}</b></td><td class="l"><div class="bar"><i style="width:${100 * t / mx}%"></i></div></td></tr>`; }).join('')}</tbody></table></div>`;
+  }
+  return h;
+}
+function pHoy(){ const s = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }); return s; }
+function pAdd(f, n){ const d = new Date(f + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function pVisita(P0){
+  const hoy = pHoy(), hoyD = pdow(hoy);
+  let man = pAdd(hoy, 1); while (pdow(man) >= 5 && !P0.rows.some(r => r.dm & (1 << pdow(man)))) man = pAdd(man, 1);
+  const W = st.pVDia != null && st.pVDia !== '' && st.pVDiaF === hoy ? +st.pVDia : pdow(man);
+  let T = hoy; while (pdow(T) !== W) T = pAdd(T, 1);
+  const C = P0.carga || {}, KD = P0.kgDia || {};
+  const fechas = Object.keys(C).filter(f => f < T && pdow(f) === W && f <= hoy).sort().reverse();
+  const f1 = fechas[0] || pAdd(T, -7), f2 = fechas[1] || pAdd(f1, -7);
+  const usados = [0,1,2,3,4,5,6].filter(k => P0.rows.some(r => r.dm & (1 << k)));
+  let h = `<div class="daychips" role="group" aria-label="Día de la próxima visita" style="margin-bottom:12px">${usados.map(k => `<button type="button" class="daychip" data-pvdia="${k}" aria-pressed="${W === k}">${PDIAS_L[k]}${k === pdow(man) ? ' (próxima)' : ''}</button>`).join('')}</div>`;
+  const q = (st.pQ || '').trim().toLowerCase();
+  const l = P0.rows.filter(r => (r.dm & (1 << W)) && (!q || (r.c + ' ' + r.n + ' ' + r.d + ' ' + r.s).toLowerCase().includes(q)));
+  const g = (f, c) => (C[f] || {})[c] || null;
+  const s1 = l.reduce((a, r) => { const x = g(f1, r.c); if (x) { a.n++; a.u += x[0]; a.m += x[1]; } return a; }, { n: 0, u: 0, m: 0 });
+  const s2 = l.reduce((a, r) => { const x = g(f2, r.c); if (x) { a.n++; a.u += x[0]; a.m += x[1]; } return a; }, { n: 0, u: 0, m: 0 });
+  const kg = f => KD[f] ? KD[f][0] + KD[f][1] : null;
+  const kp = (lbl, f, s) => `<div class="kpi"><span class="eyebrow">${lbl} · ${PDIAS[pdow(f)]} ${pdm(f)}</span><span class="v" style="font-size:26px">${fmtMk(s.m)}</span><span class="s"><b>${s.n}</b> de ${l.length} clientes compraron · ${fmtN(s.u)} u.${kg(f) != null ? ' · ' + pkg(kg(f)) : ''}</span>${pbar(s.n, l.length)}</div>`;
+  h += `<div class="kpis pk">
+    <div class="kpi"><span class="eyebrow">Ruta del ${PDIAS_L[W].toLowerCase()} ${pdm(T)}</span><span class="v">${fmtN(l.length)} <span class="muted" style="font-size:18px">clientes</span></span><span class="s">${l.filter(r => r.e === 0).length} todavía sin compra que cuente este mes</span></div>
+    ${kp('Última visita', f1, s1)}
+    ${kp('Penúltima visita', f2, s2)}
+  </div>`;
+  const ord = st.pVOrd || 'ult';
+  const sorted = l.slice().sort((a, b) => {
+    const a1 = g(f1, a.c), b1 = g(f1, b.c), a2 = g(f2, a.c), b2 = g(f2, b.c);
+    if (ord === 'sin') return (!!a1 - !!b1) || ((b2 ? b2[1] : 0) - (a2 ? a2[1] : 0)) || a.n.localeCompare(b.n);
+    return ((b1 ? b1[1] : 0) - (a1 ? a1[1] : 0)) || ((b2 ? b2[1] : 0) - (a2 ? a2[1] : 0)) || a.n.localeCompare(b.n);
+  });
+  const cel = x => x ? `<b>${fmtM(x[1])}</b><div class="muted" style="font-size:12px">${fmtN(x[0])} u.${x[1] > 0 && x[2] / x[1] >= .7 ? ' · Mi Negocio' : ''}</div>` : '<span class="muted">—</span>';
+  h += `<div class="panel-h"><label for="pVOrd" class="muted" style="font-size:13px">Ordenar <select id="pVOrd"><option value="ult" ${ord === 'ult' ? 'selected' : ''}>Mayor compra en la última visita</option><option value="sin" ${ord === 'sin' ? 'selected' : ''}>Primero los que no compraron</option></select></label>${pexport(sorted, PCOLS_BASE.concat([['Última visita ' + pdm(f1) + ' $', r => (g(f1, r.c) || [0, 0])[1]], ['Última visita u.', r => (g(f1, r.c) || [0])[0]], ['Penúltima visita ' + pdm(f2) + ' $', r => (g(f2, r.c) || [0, 0])[1]], ['Penúltima visita u.', r => (g(f2, r.c) || [0])[0]], ['Unidades del mes', r => r.u], ['Estado del mes', r => r.e === 2 ? 'CCC' : r.e === 1 ? 'Pendiente' : 'No compró']]), 'proxima_visita')}</div>`;
+  if (!sorted.length) return h + '<div class="empty" style="justify-content:center"><p>No hay clientes con este día de visita.</p></div>';
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Cliente</th><th>Última visita<div class="muted" style="font-size:11px;font-weight:400">${PDIAS[pdow(f1)]} ${pdm(f1)}</div></th><th>Penúltima visita<div class="muted" style="font-size:11px;font-weight:400">${PDIAS[pdow(f2)]} ${pdm(f2)}</div></th><th>Unidades del mes</th><th class="l">Estado</th></tr></thead><tbody>`;
+  for (const r of sorted) h += `<tr><td class="l sticky1"><b>${esc(r.n)}</b><div class="muted" style="font-size:12px">${esc(r.c)} · ${esc(r.t)} · ${esc(r.d)}</div></td><td>${cel(g(f1, r.c))}</td><td>${cel(g(f2, r.c))}</td><td>${fmtN(r.u || 0)} u.</td><td class="l">${pestado(r.e)}${r.fd ? ' <span class="chip good">FD</span>' : ''}</td></tr>`;
+  h += '</tbody></table></div><p class="note">Venta Pepsico cargada (pedidos del día, importe neto sin IVA) de cada cliente en las dos últimas visitas de ese día de la semana. "Mi Negocio" = el pedido se cargó por la app.</p>';
+  return h;
+}
+function pAtr(P0, rows){
+  const A = P0.atr;
+  if (!A) return '<div class="empty" style="justify-content:center"><p>No tenés objetivo del Incentivo ATR este mes.</p></div>';
+  const tax = new Set(A.tax || ['A', 'B']);
+  let h = `<div class="kpis pk">
+    ${pkpi('Kilos ATR (Pehuamar + Global)', A.kg, A.objKg, 'tendencia <b>' + fmtN(A.tend) + ' kg</b> · ' + (A.objKg ? Math.round(100 * A.tend / A.objKg) : 0) + '% del objetivo' + (A.objKg ? ' · faltan <b>' + fmtN(Math.max(A.objKg - A.kg, 0)) + '</b>' : ''))}
+    ${pkpi('Cobertura ' + esc(A.nombre), A.cub, A.objCli, (A.objCli ? (A.cub >= A.objCli ? '<b style="color:var(--good)">Cumplido</b> · ' : 'faltan <b>' + (A.objCli - A.cub) + '</b> · ') : '') + 'objetivo ' + A.objT + '% de ' + fmtN(A.cartAB) + ' clientes ' + [...tax].join(' y '))}
+    <div class="kpi"><span class="eyebrow">Avance de cobertura</span><span class="v">${A.cartAB ? Math.round(100 * A.cub / A.cartAB) : 0}% <span class="muted" style="font-size:18px">/ ${A.objT}%</span></span><span class="s">clientes ${[...tax].join(' y ')} con ${A.minU} unidades o más de ${esc(A.nombre)}</span>${pbar(A.cub, A.objCli)}</div>
+  </div>`;
+  const U = A.u || {};
+  const l = rows.filter(r => tax.has(r.t) && (U[r.c] || 0) < A.minU).sort((a, b) => (U[b.c] || 0) - (U[a.c] || 0) || (a.dm ? Math.log2(a.dm & -a.dm) : 9) - (b.dm ? Math.log2(b.dm & -b.dm) : 9) || a.n.localeCompare(b.n));
+  h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes ${[...tax].join(' y ')} sin cubrir ${esc(A.nombre)} con este filtro${l.filter(r => U[r.c]).length ? ' · ' + l.filter(r => U[r.c]).length + ' ya compraron algo (arriba)' : ''}</span>${pexport(l, PCOLS_BASE.concat([['Unidades ' + A.nombre, r => U[r.c] || 0], ['Faltan unidades', r => A.minU - (U[r.c] || 0)]]), 'incentivo_atr')}</div>`;
+  h += plista(l, r => U[r.c] ? `Compró <b>${U[r.c]}</b> u. · le faltan <b>${A.minU - U[r.c]}</b> para cubrir` : `Le faltan <b>${A.minU}</b> unidades de ${esc(A.nombre)}`, r => pestado(r.e), 'Todos los clientes ' + [...tax].join(' y ') + ' de este filtro ya tienen ' + esc(A.nombre) + '.');
+  h += `<p class="note">Kilos = solo Pehuamar y marcas Global (sin Crackers ni Cereales), por fecha de entrega, como en el tablero de seguimiento Pepsico (Incentivo ATR, ${esc(A.mesLabel || A.mes)}). Un cliente queda cubierto con ${A.minU} unidades netas o más de ${esc(A.nombre)} en el mes.</p>`;
+  return h;
+}
 function pbits(m){ let n = 0; while (m) { n += m & 1; m >>= 1; } return n; }
 document.addEventListener('click', e => {
   const s = e.target.closest('[data-psub]'); if (s) { st.pSub = s.dataset.psub; saveUI(); render(); return; }
   const d = e.target.closest('[data-pdia]'); if (d) { st.pDia = d.dataset.pdia; saveUI(); render(); return; }
+  const vd = e.target.closest('[data-pvdia]'); if (vd) { st.pVDia = vd.dataset.pvdia; st.pVDiaF = pHoy(); saveUI(); render(); return; }
+  const tx = e.target.closest('[data-ptax]'); if (tx) { st.pTax = st.pTax === tx.dataset.ptax ? '' : tx.dataset.ptax; saveUI(); render(); return; }
   if (e.target.closest('[data-pexp]')) pexportar();
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'pLejos') { st.pLejos = e.target.checked; saveUI(); render(); }
   if (e.target.id === 'pMSolo') { st.pMSolo = e.target.value; saveUI(); render(); }
+  if (e.target.id === 'pVOrd') { st.pVOrd = e.target.value; saveUI(); render(); }
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'pQ') { st.pQ = e.target.value; const b = document.getElementById('pBody'); if (b && PEP) b.innerHTML = pcuerpo(); }
