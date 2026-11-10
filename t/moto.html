@@ -1351,7 +1351,7 @@ const PDIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 const PDIAS_L = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const PCAT = { tp:'Tienda Perfecta', aval:'Falta validar', revisar:'A revisar', portaf:'Falta portafolio', ejec:'Falta puntaje', bajo:'Lejos', sin:'Sin censo' };
 const PCAT_ORD = { aval:0, revisar:1, portaf:2, ejec:3, bajo:4, sin:5, tp:6 };
-const PSUBS = [['avance','Avance de venta'], ['visita','Próxima visita'], ['cnc','No compradores'], ['fd','Fully Digital'], ['tp','Tienda Perfecta'], ['marcas','Coberturas por marca'], ['atr','Incentivo ATR']];
+const PSUBS = [['avance','Avance de venta'], ['visita','Próxima visita'], ['cnc','No compradores'], ['fd','Fully Digital'], ['tp','Tienda Perfecta'], ['marcas','Coberturas por marca'], ['inv','Invendibles'], ['combos','Combos'], ['atr','Incentivo ATR']];
 const pdias = m => PDIAS.filter((_, k) => m & (1 << k)).join(' · ') || 'Sin día';
 function pestado(e){ return e === 2 ? '<span class="chip good">CCC</span>' : e === 1 ? '<span class="chip warn">Pendiente</span>' : '<span class="chip bad">No compró</span>'; }
 function pbar(n, obj){ const p = obj ? Math.min(n / obj, 1) : 0; return `<div class="bar"><i style="width:${p * 100}%"></i></div>`; }
@@ -1393,6 +1393,8 @@ function viewPepsico(){
   h += howto('Cómo se usa esta pantalla', [
     '<b>Avance de venta</b>: tus kilos del mes contra el objetivo (Platino + Gold y Silver + Bronze), la tendencia a fin de mes y lo que necesitás vender por día.',
     '<b>Próxima visita</b>: los clientes del día que elijas (arranca en tu próximo día de visita) con lo que te cargaron en las dos últimas visitas de ese mismo día.',
+    '<b>Invendibles</b>: lo que devolviste como invendible este mes, a precio de costo, contra tu presupuesto del mes (es un techo: cuanto menos, mejor), con los clientes que más consumieron.',
+    '<b>Combos</b>: lo que Pepsico reconoce por los combos que vendiste ("A Reconocer") contra tu objetivo, y el presupuesto del combo 60+15, con el detalle por cliente.',
     '<b>Incentivo ATR</b>: tus kilos contra el objetivo del incentivo y la cobertura de ' + (PEP && PEP.atr ? esc(PEP.atr.nombre) : 'Tostitos') + ' en tus clientes A y B, con la lista de los que faltan.',
     '<b>No compradores</b>: clientes de tu cartera que todavía no tienen compra Pepsico que cuente en el mes (' + K.unidCCC + ' unidades netas o más). Si compró algo, te dice cuántas unidades le faltan.',
     '<b>Fully Digital</b>: clientes que compran pero todavía no hacen el ' + K.fdPct + '% por Mi Negocio. Te dice cuánto tienen que cargar por la app (con IVA) para pasar a FD.',
@@ -1424,6 +1426,8 @@ function pcuerpo(){
   if (sub === 'avance') return pAvance(P0);
   if (sub === 'visita') return pVisita(P0);
   if (sub === 'atr') return pAtr(P0, rows);
+  if (sub === 'inv') return pInv(P0, rows);
+  if (sub === 'combos') return pCombos(P0, rows);
   if (sub === 'cnc') {
     const l = rows.filter(r => r.e === 0).sort((a, b) => (b.u > 0) - (a.u > 0) || ordDia(a, b) || ordTax(a, b) || a.n.localeCompare(b.n));
     const conAlgo = l.filter(r => r.u > 0).length;
@@ -1527,6 +1531,48 @@ function pVisita(P0){
   for (const r of sorted) h += `<tr><td class="l sticky1"><b>${esc(r.n)}</b><div class="muted" style="font-size:12px">${esc(r.c)} · ${esc(r.t)} · ${esc(r.d)}</div></td><td>${cel(g(f1, r.c))}</td><td>${cel(g(f2, r.c))}</td><td>${fmtN(r.u || 0)} u.</td><td class="l">${pestado(r.e)}${r.fd ? ' <span class="chip good">FD</span>' : ''}</td></tr>`;
   h += '</tbody></table></div><p class="note">Venta Pepsico cargada (pedidos del día, importe neto sin IVA) de cada cliente en las dos últimas visitas de ese día de la semana. "Mi Negocio" = el pedido se cargó por la app.</p>';
   return h;
+}
+function pPresuChip(p){ return `<span class="chip ${p <= .85 ? 'good' : p <= 1 ? 'warn' : 'bad'}">${Math.round(p * 100)}%</span>`; }
+function pCliMap(P0){ const m = {}; for (const r of P0.rows) m[r.c] = r; return m; }
+function pPasa(r, c, n){ const d = st.pDia || 'todos', q = (st.pQ || '').trim().toLowerCase();
+  if (d !== 'todos') { if (!r) return false; if (d === 'sd' ? r.dm : !(r.dm & (1 << +d))) return false; }
+  return !q || (c + ' ' + n + ' ' + (r ? r.d + ' ' + r.s : '')).toLowerCase().includes(q); }
+function pInv(P0){
+  const I = P0.inv; if (!I) return '<div class="empty" style="justify-content:center"><p>Todavía no hay datos de invendibles.</p></div>';
+  const M = pCliMap(P0), p = I.presu ? I.costo / I.presu : null;
+  let h = `<div class="kpis pk">
+    <div class="kpi"><span class="eyebrow">Presupuesto del mes (a costo)</span><span class="v" style="font-size:26px">${I.presu != null ? fmtM(I.presu) : '—'}</span><span class="s">${I.presu != null ? 'tu parte del presupuesto de invendibles de tu equipo' : 'sin presupuesto cargado'}</span></div>
+    <div class="kpi"><span class="eyebrow">Invendibles a costo</span><span class="v" style="font-size:26px">${fmtM(I.costo)}</span><span class="s">${p != null ? 'consumido ' + pPresuChip(p) + ' del presupuesto' : ''}</span>${p != null ? `<div class="bar"><i style="width:${Math.min(p, 1) * 100}%;${p > 1 ? 'background:var(--bad)' : p > .85 ? 'background:var(--warn)' : ''}"></i></div>` : ''}</div>
+    <div class="kpi"><span class="eyebrow">Saldo</span><span class="v" style="font-size:26px;${I.presu != null && I.presu - I.costo < 0 ? 'color:var(--bad)' : ''}">${I.presu != null ? fmtM(I.presu - I.costo) : '—'}</span><span class="s">${I.presu == null ? '' : I.presu - I.costo >= 0 ? 'disponible hasta fin de mes' : 'excedido sobre el presupuesto'} · ${fmtN(I.unid)} u. · venta ${fmtM(I.neto)} · ${fmtN(new Set(I.cli.map(x => x[0])).size)} clientes</span></div>
+  </div>`;
+  const ag = {}; for (const [c, n, ne, u, co] of I.cli) { const a = ag[c] || (ag[c] = { c, n, ne: 0, u: 0, co: 0 }); a.ne += ne; a.u += u; a.co += co; }
+  const l = Object.values(ag).filter(a => pPasa(M[a.c], a.c, a.n)).sort((a, b) => b.co - a.co);
+  h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes con invendibles con este filtro · ordenados por costo</span>${pexport(l, [['Cliente', a => a.c], ['Razón social', a => a.n], ['Día de visita', a => M[a.c] ? pdias(M[a.c].dm) : ''], ['Unidades', a => a.u], ['A costo $', a => a.co], ['Venta $', a => a.ne]], 'invendibles')}</div>`;
+  if (!l.length) return h + '<div class="empty" style="justify-content:center"><p>No hay invendibles con este filtro.</p></div>';
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Cliente</th><th class="l">Día</th><th>Unidades</th><th>A costo</th><th>% del presupuesto</th><th>Venta (neto)</th></tr></thead><tbody>${l.map(a => `<tr><td class="l sticky1"><b>${esc(a.n)}</b><div class="muted" style="font-size:12px">${esc(a.c)}${M[a.c] ? ' · ' + esc(M[a.c].t) + ' · ' + esc(M[a.c].d) : ''}</div></td><td class="l ink2">${M[a.c] ? pdias(M[a.c].dm) : '—'}</td><td>${fmtN(a.u)}</td><td><b>${fmtM(a.co)}</b></td><td>${I.presu ? Math.round(1000 * a.co / I.presu) / 10 + '%' : '—'}</td><td>${fmtM(a.ne)}</td></tr>`).join('')}</tbody></table></div>`;
+  h += '<p class="note">Invendibles = devoluciones de producto no vendible, del tablero de seguimiento Pepsico (mes por fecha de entrega). El presupuesto se mide con el costo del producto devuelto; es un techo: hasta 85% verde, hasta 100% ámbar, arriba rojo.</p>';
+  return h;
+}
+function pCombos(P0){
+  const M = pCliMap(P0);
+  const bloque = (C, tit, oLbl, nota, nombre) => {
+    if (!C) return '';
+    const p = C.obj ? C.rec / C.obj : null;
+    const ag = {}; for (const [c, n, cb, bu, rec, canal, f] of C.det) { const a = ag[c] || (ag[c] = { c, n, cb: new Set(), bu: 0, rec: 0, f: new Set() }); a.cb.add(cb); a.bu += bu; a.rec += rec; if (f) a.f.add(f); }
+    const l = Object.values(ag).filter(a => pPasa(M[a.c], a.c, a.n)).sort((a, b) => b.rec - a.rec || b.bu - a.bu);
+    let h = `<h3 style="margin:18px 0 8px;font-size:16px">${tit}</h3><div class="kpis pk">
+      ${C.obj != null ? pkpi(oLbl + ' ($ A Reconocer)', C.rec, C.obj, (C.rec >= C.obj ? '<b style="color:var(--good)">Cumplido</b>' : 'faltan <b>' + fmtM(C.obj - C.rec) + '</b>') + ' · ' + Math.round(p * 100) + '%') : `<div class="kpi"><span class="eyebrow">A Reconocer</span><span class="v" style="font-size:26px">${fmtM(C.rec)}</span><span class="s">sin objetivo cargado</span></div>`}
+      <div class="kpi"><span class="eyebrow">Bultos de combo</span><span class="v">${fmtN(C.bultos)}</span><span class="s">${fmtN(C.det.length)} líneas</span></div>
+      <div class="kpi"><span class="eyebrow">Clientes con combo</span><span class="v">${fmtN(Object.keys(ag).length)}</span><span class="s">en el mes</span></div>
+    </div>`;
+    h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes con este filtro</span>${pexport(l, [['Cliente', a => a.c], ['Razón social', a => a.n], ['Día de visita', a => M[a.c] ? pdias(M[a.c].dm) : ''], ['Combos', a => [...a.cb].join(' / ')], ['Bultos', a => a.bu], ['A Reconocer $', a => a.rec], ['Fechas', a => [...a.f].join(' ')]], nombre)}</div>`;
+    if (!l.length) return h + '<div class="empty" style="justify-content:center"><p>Sin combos con este filtro.</p></div>';
+    h += `<div class="tw"><table><thead><tr><th class="l sticky1">Cliente</th><th class="l">Combo</th><th>Bultos</th><th>A Reconocer</th><th class="l">Fechas</th></tr></thead><tbody>${l.map(a => `<tr><td class="l sticky1"><b>${esc(a.n)}</b><div class="muted" style="font-size:12px">${esc(a.c)}${M[a.c] ? ' · ' + pdias(M[a.c].dm) : ''}</div></td><td class="l ink2">${[...a.cb].map(esc).join('<br>')}</td><td>${fmtN(a.bu)}</td><td><b>${fmtM(a.rec)}</b></td><td class="l ink2">${[...a.f].join(' · ')}</td></tr>`).join('')}</tbody></table></div><p class="note">${nota}</p>`;
+    return h;
+  };
+  let h = bloque(P0.combos, 'Combos', 'Objetivo combos', '"A Reconocer" = lo que Pepsico reconoce por los combos vendidos, del tablero de seguimiento Pepsico. El objetivo del mes se reparte en partes iguales entre los vendedores de Juan y Flor.', 'combos');
+  if (P0.c6015 && (P0.c6015.det.length || P0.c6015.obj)) h += bloque(P0.c6015, 'Combo adicional 60+15', 'Presupuesto 60+15', 'Combo 60+15 de Lays Clásicas y Sabores y Doritos Queso: lo reconocido contra el presupuesto del mes, repartido en partes iguales entre los vendedores.', 'combo_60_15');
+  return h || '<div class="empty" style="justify-content:center"><p>Todavía no hay datos de combos.</p></div>';
 }
 function pAtr(P0, rows){
   const A = P0.atr;
