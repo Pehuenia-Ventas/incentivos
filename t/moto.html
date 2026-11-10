@@ -396,7 +396,7 @@ function compute(CFG, SNAP){
     const cobV = SNAP && SNAP.cob ? (SNAP.cob[norm(v.nom)] || {}) : {};
     const cobList = GBR.map(g => (cobV[g] || []).map(String).filter(c => cartSet.has(c)));
     const cobCnt = cobList.map(l => l.length);
-    const need = GBR.map(g => ceilX(cartera * CFG.cobObj[g]));
+    const need = GBR.map(g => g === 'Cobertura general' && CFG.cobFija && CFG.cobFija[v.cod] != null ? CFG.cobFija[v.cod] : ceilX(cartera * CFG.cobObj[g])); /* cobertura general: objetivo fijo del tablero Georgalos */
     const cobPct = cobCnt.map((c,i) => need[i] > 0 ? c / need[i] : null);
     const nCob = cobPct.filter(p => p != null && p >= 1 - 1e-12).length;
     const C = nCob * P.cupCob;
@@ -424,7 +424,7 @@ function compute(CFG, SNAP){
     const B = todas ? P.cupPlus : 0;
     const cartera = mine.reduce((a,v) => a + v.cartera, 0);
     const cobCnt = GBR.map((g,i) => mine.reduce((a,v) => a + v.cobCnt[i], 0));
-    const need = GBR.map(g => ceilX(cartera * CFG.cobObj[g]));
+    const need = GBR.map((g,i) => g === 'Cobertura general' && CFG.cobFija ? mine.reduce((a,v) => a + v.need[i], 0) : ceilX(cartera * CFG.cobObj[g]));
     const cobPct = cobCnt.map((c,i) => need[i] > 0 ? c / need[i] : null);
     const nCob = cobPct.filter(p => p != null && p >= 1 - 1e-12).length;
     const C = nCob * P.cupCob;
@@ -1061,6 +1061,27 @@ function marcasSolo(v, used){
 }
 
 /* ===================== Cobertura ===================== */
+/* Cobertura general Georgalos por taxonomía (A, B, C, D): clientes cubiertos sobre la cartera de cada taxonomía. Taxonomía del tablero de seguimiento Georgalos. */
+const TAXS = ['A','B','C','D'];
+function cobTaxCalc(vs){
+  const iG = GBR.indexOf('Cobertura general'), T = CFG.tax || {};
+  return vs.map(v => { const cub = new Set((v.cobList[iG] || []).map(String)); const r = TAXS.map(() => ({ cart: 0, cub: 0 })); let sin = 0;
+    for (const c of (CFG.cart[v.nom] || []).map(String)) { const k = TAXS.indexOf(T[c]); if (k < 0) { sin++; continue; } r[k].cart++; if (cub.has(c)) r[k].cub++; }
+    return { v, r, sin }; });
+}
+function cobTaxHtml(vs){
+  if (!CFG.tax || !vs.length) return '';
+  const X = cobTaxCalc(vs), tot = TAXS.map((t, k) => X.reduce((a, x) => ({ cart: a.cart + x.r[k].cart, cub: a.cub + x.r[k].cub }), { cart: 0, cub: 0 }));
+  const sin = X.reduce((a, x) => a + x.sin, 0), pc = o => o.cart ? o.cub / o.cart : 0;
+  let h = `<div class="section" style="margin:6px 0 18px"><h3 style="margin:0 0 8px;font-size:15px">Cobertura general por taxonomía</h3><div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:8px">${TAXS.map((t, k) => { const o = tot[k]; return `<div class="kpi"><span class="eyebrow">Taxonomía ${t}</span><span class="v" style="font-size:26px">${fmtP(pc(o))}</span><span class="s"><b>${fmtN(o.cub)}</b> de ${fmtN(o.cart)} clientes de la cartera · faltan ${fmtN(o.cart - o.cub)}</span><div class="bar"><i style="width:${pc(o) * 100}%"></i></div></div>`; }).join('')}</div>`;
+  if (vs.length > 1) {
+    h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th>${TAXS.map(t => `<th>Taxonomía ${t}</th>`).join('')}<th>Total</th></tr></thead><tbody>`;
+    for (const x of X) { const a = x.r.reduce((q, o) => ({ cart: q.cart + o.cart, cub: q.cub + o.cub }), { cart: 0, cub: 0 }); h += `<tr><td class="l name sticky1">${esc(titleCase(x.v.nom))}</td>${x.r.map(o => `<td>${o.cart ? `<b>${fmtP(pc(o))}</b><div class="muted" style="font-size:12px">${o.cub} / ${o.cart}</div>` : '—'}</td>`).join('')}<td><b>${fmtP(pc(a))}</b><div class="muted" style="font-size:12px">${a.cub} / ${a.cart}</div></td></tr>`; }
+    h += '</tbody></table></div>';
+  }
+  h += `<p class="note">Cliente cubierto = compró al menos 1 unidad Georgalos en el mes (cobertura general). Avance = cubiertos ÷ clientes de la cartera con esa taxonomía.${sin ? ' ' + fmtN(sin) + ' clientes de la cartera no tienen taxonomía en el tablero Georgalos y no entran en este cuadro.' : ''}</p></div>`;
+  return h;
+}
 function viewCobertura(){
   const vs = vendFiltered();
   let h = emptyBanner();
@@ -1068,6 +1089,7 @@ function viewCobertura(){
     '<b>Cliente cubierto</b>: cliente de la cartera del vendedor que en el mes le compró <b>al menos 1 unidad</b> (suelta o display) de la línea, sumando todos sus artículos. Los rechazos restan.',
     '<b>Cobertura general</b>: lo mismo, pero con todos los productos Georgalos juntos (alfajores, galletitas, Flow, Fiestas, etc.).',
     '<b>Clientes a alcanzar</b> = cartera × el % de cada línea (' + GBR.map(g => GSHORT[g] + ' ' + fmtP(CFG.cobObj[g])).join(' · ') + '), redondeado hacia arriba. Ej.: cartera de 260 clientes con 10% → 26 clientes.',
+    ...(CFG.cobFija ? ['<b>Cobertura general</b>: el objetivo de clientes es el mismo del tablero de seguimiento Georgalos (fijo por vendedor), no el % de la cartera.'] : []),
     SINM ? 'Cada línea en la que se llega a esa cantidad queda cumplida, y la cobertura general es una más (' + GBR.length + ' en total).' : 'Cada línea en la que se llega a esa cantidad suma 1 cupón (C), y la cobertura general suma 1 más: hasta ' + GBR.length + ' cupones por cobertura.',
     'Cada línea tiene su lista de artículos (está en "Cómo funciona"). Si sale un artículo nuevo, hay que agregarlo a la lista.',
     'En la <b>Ficha del vendedor</b> está la lista de clientes que compraron cada marca en ' + (CFG.sepLabel || 'septiembre') + ' y todavía no en ' + CFG.mes.label.split(' ')[0] + ': es la lista para salir a buscar.'
@@ -1075,7 +1097,8 @@ function viewCobertura(){
   /* etiquetas con el avance total de cada línea (vendedores filtrados) */
   const tot = GBR.map((g,i) => { let n = 0, need = 0, np = 0, ok = 0; for (const v of vs) { n += v.cobCnt[i]; np += Math.max(pvOf(v).cobCnt[i], v.cobCnt[i]); need += v.need[i]; if (v.need[i] && v.cobCnt[i] >= v.need[i]) ok++; } return { n, np, need, ok, p: need ? n / need : null, falta: Math.max(need - n, 0) }; });
   const cartT = vs.reduce((a, v) => a + v.cartera, 0), fN = x => x.toLocaleString('es-AR');
-  h += `<div class="cobtags">${GBR.map((g,i) => { const t = tot[i], pc = cartT ? t.n / cartT : 0, po = cartT ? t.need / cartT : 0; return `<div class="kpi cobtag ${cls(t.p)}"><span class="eyebrow">${esc(GSHORT[g])}</span><span class="v">${fmtP(pc)}</span><span class="s muted" style="margin-top:-4px">de la cartera</span><div class="bar" title="Marca negra: objetivo ${fmtP(po)} de la cartera"><i style="width:${Math.min(pc * 100, 100)}%"></i><b style="left:${Math.min(po * 100, 100)}%"></b></div><span class="s"><b>${fN(t.n)}</b> de ${fN(cartT)} clientes de la cartera</span><span class="s">Objetivo ${fmtP(po)} (${fN(t.need)} clientes) · ${t.falta ? '<b>faltan ' + fN(t.falta) + '</b>' : '✓ cumplido'}</span><span class="s muted">${t.p == null ? '' : fmtP(t.p) + ' del objetivo · '}${t.ok} de ${vs.length} vendedores cumplidos${t.np > t.n ? ' · +' + (t.np - t.n) + ' en preventa' : ''}</span></div>`; }).join('')}</div>`;
+  h += `<div class="cobtags">${GBR.map((g,i) => { const t = tot[i], pc = cartT ? t.n / cartT : 0, po = cartT ? t.need / cartT : 0; return `<div class="kpi cobtag ${cls(t.p)}"><span class="eyebrow">${esc(GSHORT[g])}</span><span class="v">${fmtP(pc)}</span><span class="s muted" style="margin-top:-4px">de la cartera</span><div class="bar" title="Marca negra: objetivo ${fmtP(po)} de la cartera"><i style="width:${Math.min(pc * 100, 100)}%"></i><b style="left:${Math.min(po * 100, 100)}%"></b></div><span class="s"><b>${fN(t.n)}</b> de ${fN(cartT)} clientes de la cartera</span><span class="s">Objetivo ${g === 'Cobertura general' && CFG.cobFija ? 'tablero Georgalos' : fmtP(po)} (${fN(t.need)} clientes) · ${t.falta ? '<b>faltan ' + fN(t.falta) + '</b>' : '✓ cumplido'}</span><span class="s muted">${t.p == null ? '' : fmtP(t.p) + ' del objetivo · '}${t.ok} de ${vs.length} vendedores cumplidos${t.np > t.n ? ' · +' + (t.np - t.n) + ' en preventa' : ''}</span></div>`; }).join('')}</div>`;
+  h += cobTaxHtml(vs);
   const MODES = [['cli','Clientes (cubiertos / a alcanzar)'], ['pct','% de avance'], ['falta','Clientes que faltan']];
   const md = MODES.some(m => m[0] === st.cobMode) ? st.cobMode : 'cli';
   h += `<div class="panel-h"><label class="muted" for="cobMode" style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600">Ver <select id="cobMode">${MODES.map(([k,l]) => `<option value="${k}" ${k===md?'selected':''}>${l}</option>`).join('')}</select></label>${exportBtn('tCob','cobertura_georgalos')}</div>`;
@@ -1201,6 +1224,7 @@ function viewBatalla(){
   const need = GBR.map((g,i) => pool.reduce((a,v) => a + v.need[i], 0));
   const have = GBR.map((g,i) => pool.reduce((a,v) => a + v.cobCnt[i], 0));
   h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${GBR.map((g,i) => `<div class="kpi"><span class="eyebrow">${GSHORT[g]}</span><span class="v" style="font-size:28px">${have[i]} <span class="muted" style="font-size:18px">/ ${need[i]}</span></span><span class="s">${have[i] >= need[i] ? '<b style="color:var(--good)">Cupón logrado</b>' : 'faltan <b>' + (need[i] - have[i]) + '</b> clientes'}${vSel === 'todos' ? ' (suma de vendedores)' : ''}</span></div>`).join('')}</div>`;
+  h += cobTaxHtml(pool);
   h += `<div class="panel-h"><span class="muted">${rows.length.toLocaleString('es-AR')} clientes${dSel !== 'todos' ? ' · ' + (DIAS[dSel] || 'Sin día') : ''} · en la lista: ${GBR.map((g,i) => GSHORT[g] + ' ' + tot[i]).join(' · ')}</span>${exportBtn('tBat','batalla_georgalos')}</div>`;
   const shown = rows.slice(0, 1500); const VV = visitasDe(dSel);
   h += `<div class="tw"><table id="tBat"><thead><tr><th class="l sticky1">Cliente</th><th class="l">Dirección</th>${vSel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Día</th>${visTh(VV)}${GBR.map(g => `<th style="text-align:center">${GSHORT[g]}</th>`).join('')}<th>Coberturas</th></tr></thead><tbody>`;
@@ -1223,7 +1247,7 @@ function viewObjetivos(){
   }
   const tb = i => CFG.vend.reduce((a,v) => a + v.obj[i], 0);
   h += `</tbody><tfoot><tr><td class="l sticky1">Total</td><td></td>${used.map(i => `<td>${fmtM(tb(i))}</td>`).join('')}<td>${fmtM(CFG.vend.reduce((a,v) => a + v.obj.reduce((x,y) => x + y, 0), 0))}</td><td></td></tr></tfoot></table></div>`;
-  h += `<p class="note">Cobertura Georgalos: objetivo ${GBR.map(g => g + ' ' + fmtP(CFG.cobObj[g])).join(' · ')} de la cartera.</p>`;
+  h += `<p class="note">Cobertura Georgalos: objetivo ${GBR.filter(g => !(CFG.cobFija && g === 'Cobertura general')).map(g => g + ' ' + fmtP(CFG.cobObj[g])).join(' · ')} de la cartera${CFG.cobFija ? '; cobertura general: objetivo fijo por vendedor del tablero de seguimiento Georgalos (' + CFG.vend.map(v => titleCase(v.nom).split(' ')[0] + ' ' + (CFG.cobFija[v.cod] ?? '—')).join(' · ') + ')' : ''}.</p>`;
   return h;
 }
 function parseObjetivos(sheets){
