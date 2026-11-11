@@ -1466,70 +1466,72 @@ function pcuerpo(){
 const pdm = f => { const p = f.split('-'); return p[2] + '/' + p[1]; };
 const pdow = f => (new Date(f + 'T12:00:00Z').getUTCDay() + 6) % 7;
 const pkg = n => fmtN(n) + ' kg';
+const PG = [['Platino + Gold', 'GP'], ['Silver + Bronze', 'SB']];
 function pAvance(P0){
   let h = '';
   const A = P0.av;
   if (!A || !A.g || !A.g.length) return '<div class="empty" style="justify-content:center"><p>Todavía no hay avance de kilos para este mes.</p></div>';
   const d = A.dias || {};
-  const T = A.g.reduce((t, g) => { t[2] += g[2]; t[3] += g[3]; t[4] += g[4]; t[6] += g[6]; t[7] += g[7]; t[8] += g[8]; t[9] += g[9]; return t; }, ['TOT', 'Total Pepsico', 0, 0, 0, 0, 0, 0, 0, 0]);
-  const venta = P0.rows.reduce((a, r) => a + (r.tot || 0), 0);
   const quedan = Math.max(0, (d.diasHabiles || 0) - (d.diasTrabajados || 0));
-  h += `<div class="kpis pk">
-    ${pkpi('Venta acumulada (kg)', T[3], T[2], 'faltan <b>' + fmtN(Math.max(T[2] - T[3], 0)) + ' kg</b> · ' + (T[2] ? Math.round(100 * T[3] / T[2]) : 0) + '% del objetivo')}
-    <div class="kpi"><span class="eyebrow">Tendencia a fin de mes</span><span class="v">${fmtN(T[4])} <span class="muted" style="font-size:20px">kg</span></span><span class="s">${T[2] ? (T[4] >= T[2] ? '<b style="color:var(--good)">' + Math.round(100 * T[4] / T[2]) + '% · llegás al objetivo</b>' : '<b>' + Math.round(100 * T[4] / T[2]) + '%</b> del objetivo a este ritmo') : ''}</span>${pbar(T[4], T[2])}</div>
-    <div class="kpi"><span class="eyebrow">Venta Pepsico del mes</span><span class="v" style="font-size:26px">${fmtMk(venta)}</span><span class="s">día ${fmtN(d.diasTrabajados || 0)} de ${fmtN(d.diasHabiles || 0)} hábiles · quedan ${quedan}</span></div>
-  </div>`;
-  h += `<div class="tw"><table><thead><tr><th class="l">Grupo</th><th>Objetivo</th><th>Venta acumulada</th><th>% acumulado</th><th>Tendencia</th><th>% avance tendencia</th><th>Promedio diario</th><th>Necesitás por día</th><th>Última visita</th><th>Penúltima visita</th></tr></thead><tbody>`;
-  for (const g of A.g.concat([T])) {
-    const tot = g[0] === 'TOT', pa = g[2] ? g[3] / g[2] : 0, pt = g[2] ? g[4] / g[2] : 0;
-    const nec = quedan ? Math.max(0, (g[2] - g[3]) / quedan) : 0;
-    h += `<tr${tot ? ' style="font-weight:700;background:var(--surface2)"' : ''}><td class="l">${esc(String(g[1]).replace(' Prop. 2026', ''))}</td><td>${pkg(g[2])}</td><td>${pkg(g[3])}</td><td>${Math.round(pa * 100)}%</td><td>${pkg(g[4])}</td><td><span class="chip ${pt >= 1 ? 'good' : pt >= .85 ? 'warn' : 'bad'}">${Math.round(pt * 100)}%</span></td><td>${pkg(g[6])}</td><td>${pkg(tot ? nec : (quedan ? nec : g[7]))}</td><td>${pkg(g[8])}</td><td>${pkg(g[9])}</td></tr>`;
+  const G = P0.grp || null, mesG = A.mes;
+  const pesos = [0, 0]; if (G) for (const c in G.cli) for (const f in G.cli[c]) if (f.slice(0, 7) === mesG) { pesos[0] += G.cli[c][f][2]; pesos[1] += G.cli[c][f][3]; }
+  for (const [gi, g] of A.g.map((g, i) => [g[0] === 'SB' ? 1 : 0, g]).sort((a, b) => a[0] - b[0])) {
+    const pa = g[2] ? g[3] / g[2] : 0, pt = g[2] ? g[4] / g[2] : 0, nec = quedan ? Math.max(0, (g[2] - g[3]) / quedan) : 0;
+    h += `<h3 style="margin:${gi ? 18 : 4}px 0 8px;font-size:16px">${PG[gi][0]}</h3><div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+      ${pkpi('Venta acumulada (kg)', g[3], g[2], 'faltan <b>' + fmtN(Math.max(g[2] - g[3], 0)) + ' kg</b> · ' + Math.round(pa * 100) + '% del objetivo')}
+      <div class="kpi"><span class="eyebrow">Tendencia a fin de mes</span><span class="v" style="font-size:28px">${fmtN(g[4])} <span class="muted" style="font-size:16px">kg</span></span><span class="s"><span class="chip ${pt >= 1 ? 'good' : pt >= .85 ? 'warn' : 'bad'}">${Math.round(pt * 100)}%</span> del objetivo</span>${pbar(g[4], g[2])}</div>
+      <div class="kpi"><span class="eyebrow">Por día</span><span class="v" style="font-size:28px">${fmtN(g[6])} <span class="muted" style="font-size:16px">kg</span></span><span class="s">promedio · necesitás <b>${fmtN(nec)} kg</b> por día en los ${quedan} días hábiles que quedan</span></div>
+      <div class="kpi"><span class="eyebrow">Última · penúltima visita</span><span class="v" style="font-size:28px">${fmtN(g[8])} <span class="muted" style="font-size:16px">· ${fmtN(g[9])} kg</span></span><span class="s">kilos cargados 7 y 14 días antes del ${d.corte ? pdm(d.corte) : 'corte'}</span></div>
+      ${G ? `<div class="kpi"><span class="eyebrow">Venta del mes ($ neto)</span><span class="v" style="font-size:26px">${fmtMk(pesos[gi])}</span><span class="s">pedidos cargados en el mes</span></div>` : ''}
+    </div>`;
   }
-  h += '</tbody></table></div>';
-  h += `<p class="note">Kilos Pepsico cargados en el mes, como en el tablero de seguimiento Pepsico (Avance KG). Tendencia = acumulado ÷ días trabajados × días hábiles. Necesitás por día = lo que falta ÷ días hábiles que quedan. Última y penúltima visita = kilos cargados 7 y 14 días antes del ${d.corte ? pdm(d.corte) : 'corte'}.</p>`;
+  h += `<p class="note">Kilos Pepsico del mes por grupo de artículos (Platino + Gold y Silver + Bronze), como en el tablero de seguimiento Pepsico (Avance KG): objetivo, acumulado y tendencia (acumulado ÷ días trabajados × días hábiles). Día ${fmtN(d.diasTrabajados || 0)} de ${fmtN(d.diasHabiles || 0)} hábiles.</p>`;
   const K = P0.kgDia || {}, dm = Object.keys(K).filter(f => f.slice(0, 7) === A.mes && pdow(f) < 6).sort();
   if (dm.length) {
-    const mx = Math.max(1, ...dm.map(f => K[f][0] + K[f][1]));
-    h += `<h3 style="margin:18px 0 8px;font-size:15px">Kilos cargados por día</h3><div class="tw"><table><thead><tr><th class="l">Día</th><th>Platino + Gold</th><th>Silver + Bronze</th><th>Total</th><th class="l" style="width:40%"></th></tr></thead><tbody>${dm.slice().reverse().map(f => { const t = K[f][0] + K[f][1]; return `<tr><td class="l">${PDIAS[pdow(f)]} ${pdm(f)}</td><td>${pkg(K[f][0])}</td><td>${pkg(K[f][1])}</td><td><b>${pkg(t)}</b></td><td class="l"><div class="bar"><i style="width:${100 * t / mx}%"></i></div></td></tr>`; }).join('')}</tbody></table></div>`;
+    const mx = Math.max(1, ...dm.map(f => Math.max(K[f][0], K[f][1])));
+    h += `<h3 style="margin:18px 0 8px;font-size:15px">Kilos cargados por día</h3><div class="tw"><table><thead><tr><th class="l">Día</th><th>Platino + Gold</th><th class="l" style="width:22%"></th><th>Silver + Bronze</th><th class="l" style="width:22%"></th></tr></thead><tbody>${dm.slice().reverse().map(f => `<tr><td class="l">${PDIAS[pdow(f)]} ${pdm(f)}</td><td><b>${pkg(K[f][0])}</b></td><td class="l"><div class="bar"><i style="width:${100 * K[f][0] / mx}%"></i></div></td><td><b>${pkg(K[f][1])}</b></td><td class="l"><div class="bar"><i style="width:${100 * K[f][1] / mx}%"></i></div></td></tr>`).join('')}</tbody></table></div>`;
   }
   return h;
 }
 function pHoy(){ const s = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }); return s; }
 function pAdd(f, n){ const d = new Date(f + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 function pVisita(P0){
-  const hoy = pHoy(), hoyD = pdow(hoy);
+  const hoy = pHoy();
   let man = pAdd(hoy, 1); while (pdow(man) >= 5 && !P0.rows.some(r => r.dm & (1 << pdow(man)))) man = pAdd(man, 1);
   const W = st.pVDia != null && st.pVDia !== '' && st.pVDiaF === hoy ? +st.pVDia : pdow(man);
   let T = hoy; while (pdow(T) !== W) T = pAdd(T, 1);
-  const C = P0.carga || {}, KD = P0.kgDia || {};
-  const fechas = Object.keys(C).filter(f => f < T && pdow(f) === W && f <= hoy).sort().reverse();
+  const G = (P0.grp && P0.grp.cli) || null, C = P0.carga || {};
+  /* venta por grupo de cada cliente y fecha de carga: [kg P+G, kg S+B, $ P+G, $ S+B]; sin apertura por grupo, el total del tablero Pepsico */
+  const g = (f, c) => G ? ((G[c] || {})[f] || null) : ((C[f] || {})[c] ? [null, null, C[f][c][1], null] : null);
+  const fset = new Set(); if (G) for (const c in G) for (const f in G[c]) fset.add(f); else Object.keys(C).forEach(f => fset.add(f));
+  const fechas = [...fset].filter(f => f < T && pdow(f) === W && f <= hoy).sort().reverse();
   const f1 = fechas[0] || pAdd(T, -7), f2 = fechas[1] || pAdd(f1, -7);
   const usados = [0,1,2,3,4,5,6].filter(k => P0.rows.some(r => r.dm & (1 << k)));
   let h = `<div class="daychips" role="group" aria-label="Día de la próxima visita" style="margin-bottom:12px">${usados.map(k => `<button type="button" class="daychip" data-pvdia="${k}" aria-pressed="${W === k}">${PDIAS_L[k]}${k === pdow(man) ? ' (próxima)' : ''}</button>`).join('')}</div>`;
   const q = (st.pQ || '').trim().toLowerCase();
   const l = P0.rows.filter(r => (r.dm & (1 << W)) && (!q || (r.c + ' ' + r.n + ' ' + r.d + ' ' + r.s).toLowerCase().includes(q)));
-  const g = (f, c) => (C[f] || {})[c] || null;
-  const s1 = l.reduce((a, r) => { const x = g(f1, r.c); if (x) { a.n++; a.u += x[0]; a.m += x[1]; } return a; }, { n: 0, u: 0, m: 0 });
-  const s2 = l.reduce((a, r) => { const x = g(f2, r.c); if (x) { a.n++; a.u += x[0]; a.m += x[1]; } return a; }, { n: 0, u: 0, m: 0 });
-  const kg = f => KD[f] ? KD[f][0] + KD[f][1] : null;
-  const kp = (lbl, f, s) => `<div class="kpi"><span class="eyebrow">${lbl} · ${PDIAS[pdow(f)]} ${pdm(f)}</span><span class="v" style="font-size:26px">${fmtMk(s.m)}</span><span class="s"><b>${s.n}</b> de ${l.length} clientes compraron · ${fmtN(s.u)} u.${kg(f) != null ? ' · ' + pkg(kg(f)) : ''}</span>${pbar(s.n, l.length)}</div>`;
-  h += `<div class="kpis pk">
-    <div class="kpi"><span class="eyebrow">Ruta del ${PDIAS_L[W].toLowerCase()} ${pdm(T)}</span><span class="v">${fmtN(l.length)} <span class="muted" style="font-size:18px">clientes</span></span><span class="s">${l.filter(r => r.e === 0).length} todavía sin compra que cuente este mes</span></div>
-    ${kp('Última visita', f1, s1)}
-    ${kp('Penúltima visita', f2, s2)}
+  const suma = f => l.reduce((a, r) => { const x = g(f, r.c); if (x) { a.n++; for (let k = 0; k < 4; k++) a.t[k] += x[k] || 0; for (let k = 0; k < 2; k++) if ((x[2 + k] || 0) > 0) a.ng[k]++; } return a; }, { n: 0, t: [0, 0, 0, 0], ng: [0, 0] });
+  const s1 = suma(f1), s2 = suma(f2);
+  h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))"><div class="kpi"><span class="eyebrow">Ruta del ${PDIAS_L[W].toLowerCase()} ${pdm(T)}</span><span class="v">${fmtN(l.length)} <span class="muted" style="font-size:18px">clientes</span></span><span class="s">${l.filter(r => r.e === 0).length} todavía sin compra que cuente este mes</span></div>
+    ${G ? PG.map(([nm], k) => `<div class="kpi"><span class="eyebrow">${nm}</span><span class="v" style="font-size:24px">${fmtMk(s1.t[2 + k])}</span><span class="s">última visita ${PDIAS[W]} ${pdm(f1)}: <b>${fmtN(s1.t[k])} kg</b> · ${s1.ng[k]} clientes<br>penúltima ${pdm(f2)}: <b>${fmtMk(s2.t[2 + k])}</b> · ${fmtN(s2.t[k])} kg · ${s2.ng[k]} clientes</span></div>`).join('') : `<div class="kpi"><span class="eyebrow">Última · penúltima visita</span><span class="v" style="font-size:24px">${fmtMk(s1.t[2])}</span><span class="s">penúltima ${fmtMk(s2.t[2])}</span></div>`}
   </div>`;
   const ord = st.pVOrd || 'ult';
+  const tot = x => x ? (x[2] || 0) + (x[3] || 0) : 0;
   const sorted = l.slice().sort((a, b) => {
     const a1 = g(f1, a.c), b1 = g(f1, b.c), a2 = g(f2, a.c), b2 = g(f2, b.c);
-    if (ord === 'sin') return (!!a1 - !!b1) || ((b2 ? b2[1] : 0) - (a2 ? a2[1] : 0)) || a.n.localeCompare(b.n);
-    return ((b1 ? b1[1] : 0) - (a1 ? a1[1] : 0)) || ((b2 ? b2[1] : 0) - (a2 ? a2[1] : 0)) || a.n.localeCompare(b.n);
+    if (ord === 'sin') return (!!a1 - !!b1) || (tot(b2) - tot(a2)) || a.n.localeCompare(b.n);
+    return (tot(b1) - tot(a1)) || (tot(b2) - tot(a2)) || a.n.localeCompare(b.n);
   });
-  const cel = x => x ? `<b>${fmtM(x[1])}</b><div class="muted" style="font-size:12px">${fmtN(x[0])} u.${x[1] > 0 && x[2] / x[1] >= .7 ? ' · Mi Negocio' : ''}</div>` : '<span class="muted">—</span>';
-  h += `<div class="panel-h"><label for="pVOrd" class="muted" style="font-size:13px">Ordenar <select id="pVOrd"><option value="ult" ${ord === 'ult' ? 'selected' : ''}>Mayor compra en la última visita</option><option value="sin" ${ord === 'sin' ? 'selected' : ''}>Primero los que no compraron</option></select></label>${pexport(sorted, PCOLS_BASE.concat([['Última visita ' + pdm(f1) + ' $', r => (g(f1, r.c) || [0, 0])[1]], ['Última visita u.', r => (g(f1, r.c) || [0])[0]], ['Penúltima visita ' + pdm(f2) + ' $', r => (g(f2, r.c) || [0, 0])[1]], ['Penúltima visita u.', r => (g(f2, r.c) || [0])[0]], ['Unidades del mes', r => r.u], ['Estado del mes', r => r.e === 2 ? 'CCC' : r.e === 1 ? 'Pendiente' : 'No compró']]), 'proxima_visita')}</div>`;
+  const cel = (x, k) => x && (x[2 + k] || x[k]) ? `<b>${fmtM(x[2 + k] || 0)}</b>${x[k] != null ? `<div class="muted" style="font-size:12px">${String(Math.round(x[k] * 10) / 10).replace('.', ',')} kg</div>` : ''}` : '<span class="muted">—</span>';
+  const ex = (f, k) => r => { const x = g(f, r.c); return x ? (x[k] || 0) : 0; };
+  h += `<div class="panel-h"><label for="pVOrd" class="muted" style="font-size:13px">Ordenar <select id="pVOrd"><option value="ult" ${ord === 'ult' ? 'selected' : ''}>Mayor compra en la última visita</option><option value="sin" ${ord === 'sin' ? 'selected' : ''}>Primero los que no compraron</option></select></label>${pexport(sorted, PCOLS_BASE.concat(G ? [['Última ' + pdm(f1) + ' P+G $', ex(f1, 2)], ['Última P+G kg', ex(f1, 0)], ['Última S+B $', ex(f1, 3)], ['Última S+B kg', ex(f1, 1)], ['Penúltima ' + pdm(f2) + ' P+G $', ex(f2, 2)], ['Penúltima P+G kg', ex(f2, 0)], ['Penúltima S+B $', ex(f2, 3)], ['Penúltima S+B kg', ex(f2, 1)]] : [['Última ' + pdm(f1) + ' $', ex(f1, 2)], ['Penúltima ' + pdm(f2) + ' $', ex(f2, 2)]], [['Unidades del mes', r => r.u], ['Estado del mes', r => r.e === 2 ? 'CCC' : r.e === 1 ? 'Pendiente' : 'No compró']]), 'proxima_visita')}</div>`;
   if (!sorted.length) return h + '<div class="empty" style="justify-content:center"><p>No hay clientes con este día de visita.</p></div>';
-  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Cliente</th><th>Última visita<div class="muted" style="font-size:11px;font-weight:400">${PDIAS[pdow(f1)]} ${pdm(f1)}</div></th><th>Penúltima visita<div class="muted" style="font-size:11px;font-weight:400">${PDIAS[pdow(f2)]} ${pdm(f2)}</div></th><th>Unidades del mes</th><th class="l">Estado</th></tr></thead><tbody>`;
-  for (const r of sorted) h += `<tr><td class="l sticky1"><b>${esc(r.n)}</b><div class="muted" style="font-size:12px">${esc(r.c)} · ${esc(r.t)} · ${esc(r.d)}</div></td><td>${cel(g(f1, r.c))}</td><td>${cel(g(f2, r.c))}</td><td>${fmtN(r.u || 0)} u.</td><td class="l">${pestado(r.e)}${r.fd ? ' <span class="chip good">FD</span>' : ''}</td></tr>`;
-  h += '</tbody></table></div><p class="note">Venta Pepsico cargada (pedidos del día, importe neto sin IVA) de cada cliente en las dos últimas visitas de ese día de la semana. "Mi Negocio" = el pedido se cargó por la app.</p>';
+  const sub = f => `<div class="muted" style="font-size:11px;font-weight:400">${PDIAS[pdow(f)]} ${pdm(f)}</div>`;
+  if (G) h += `<div class="tw"><table><thead><tr><th class="l sticky1" rowspan="2">Cliente</th><th colspan="2" style="text-align:center">Última visita${sub(f1)}</th><th colspan="2" style="text-align:center">Penúltima visita${sub(f2)}</th><th rowspan="2">Unidades del mes</th><th class="l" rowspan="2">Estado</th></tr><tr><th>Platino + Gold</th><th>Silver + Bronze</th><th>Platino + Gold</th><th>Silver + Bronze</th></tr></thead><tbody>`;
+  else h += `<div class="tw"><table><thead><tr><th class="l sticky1">Cliente</th><th>Última visita${sub(f1)}</th><th>Penúltima visita${sub(f2)}</th><th>Unidades del mes</th><th class="l">Estado</th></tr></thead><tbody>`;
+  for (const r of sorted) { const x1 = g(f1, r.c), x2 = g(f2, r.c);
+    h += `<tr><td class="l sticky1"><b>${esc(r.n)}</b><div class="muted" style="font-size:12px">${esc(r.c)} · ${esc(r.t)} · ${esc(r.d)}</div></td>${G ? `<td>${cel(x1, 0)}</td><td>${cel(x1, 1)}</td><td>${cel(x2, 0)}</td><td>${cel(x2, 1)}</td>` : `<td>${cel(x1, 0)}</td><td>${cel(x2, 0)}</td>`}<td>${fmtN(r.u || 0)} u.</td><td class="l">${pestado(r.e)}${r.fd ? ' <span class="chip good">FD</span>' : ''}</td></tr>`; }
+  h += `</tbody></table></div><p class="note">Venta Pepsico cargada (pedidos del día, importe neto sin IVA y kilos) de cada cliente en las dos últimas visitas de ese día de la semana, separada por grupo de artículos: Platino + Gold y Silver + Bronze. Sale del detalle de ventas de Gescom de la última actualización.</p>`;
   return h;
 }
 function pPresuChip(p){ return `<span class="chip ${p <= .85 ? 'good' : p <= 1 ? 'warn' : 'bad'}">${Math.round(p * 100)}%</span>`; }
