@@ -571,4 +571,16 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
   init();
 })();
 </script>
+<script>
+/* Venta en directo (pedidos de Axum del día): en el chip de actualización se muestra hasta qué hora están los pedidos. Datos: CFG.vivo (publicador). */
+(function(){
+  const V = (typeof CFG !== 'undefined' && CFG && CFG.vivo) || null; if (!V || !V.hasta) return;
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const dd = s => s.slice(8, 10) + '/' + s.slice(5, 7);
+  const txt = (V.dia === hoy ? 'Venta en directo · pedidos hasta las ' : 'Pedidos del ' + dd(V.dia) + ' hasta las ') + V.hasta.slice(11, 16);
+  function pon(){ const el = document.getElementById('stData'); if (!el || el.textContent === txt) return; el.textContent = txt; el.className = 'chip good'; el.title = 'Ventas de Gescom más los pedidos cargados hoy en Axum (' + (V.pedidos || 0) + ' pedidos). Los pedidos todavía no facturados pueden cambiar.'; }
+  function init(){ const el = document.getElementById('stData'); if (!el) return setTimeout(init, 200); pon(); new MutationObserver(pon).observe(el, { childList: true, characterData: true, subtree: true }); }
+  init();
+})();
+</script>
 </body></html>

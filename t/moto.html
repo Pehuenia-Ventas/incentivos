@@ -1478,7 +1478,10 @@ function pAvance(P0){
   const pesos = [0, 0]; if (G) for (const c in G.cli) for (const f in G.cli[c]) if (f.slice(0, 7) === mesG) { pesos[0] += G.cli[c][f][2]; pesos[1] += G.cli[c][f][3]; }
   for (const [gi, g] of A.g.map((g, i) => [g[0] === 'SB' ? 1 : 0, g]).sort((a, b) => a[0] - b[0])) {
     const pa = g[2] ? g[3] / g[2] : 0, pt = g[2] ? g[4] / g[2] : 0, nec = quedan ? Math.max(0, (g[2] - g[3]) / quedan) : 0;
+    const hoyP = pHoy(); let kgHoy = 0; if (G) for (const c in G.cli) { const x = G.cli[c][hoyP]; if (x) kgHoy += x[gi]; }
+    const plan = g[10] || 0, vivo = CFG.vivo && CFG.vivo.dia === hoyP;
     h += `<h3 style="margin:${gi ? 18 : 4}px 0 8px;font-size:16px">${PG[gi][0]}</h3><div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+      ${plan || vivo ? pkpi('Hoy · cargado vs planificado (kg)', Math.round(kgHoy), plan || null, (plan ? (kgHoy >= plan ? '<b style="color:var(--good)">Planificado cumplido</b>' : 'faltan <b>' + fmtN(plan - kgHoy) + ' kg</b>') + ' · ' : 'sin planificado cargado · ') + (vivo ? 'pedidos hasta las ' + CFG.vivo.hasta.slice(11, 16) : 'sin pedidos de hoy todavía')) : ''}
       ${pkpi('Venta acumulada (kg)', g[3], g[2], 'faltan <b>' + fmtN(Math.max(g[2] - g[3], 0)) + ' kg</b> · ' + Math.round(pa * 100) + '% del objetivo')}
       <div class="kpi"><span class="eyebrow">Tendencia a fin de mes</span><span class="v" style="font-size:28px">${fmtN(g[4])} <span class="muted" style="font-size:16px">kg</span></span><span class="s"><span class="chip ${pt >= 1 ? 'good' : pt >= .85 ? 'warn' : 'bad'}">${Math.round(pt * 100)}%</span> del objetivo</span>${pbar(g[4], g[2])}</div>
       <div class="kpi"><span class="eyebrow">Por día</span><span class="v" style="font-size:28px">${fmtN(g[6])} <span class="muted" style="font-size:16px">kg</span></span><span class="s">promedio · necesitás <b>${fmtN(nec)} kg</b> por día en los ${quedan} días hábiles que quedan</span></div>
@@ -2197,6 +2200,18 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
   }, true);
   const obs = new MutationObserver(() => boton());
   function init(){ const t = document.getElementById('tabs'); if (!t) return setTimeout(init, 200); boton(); obs.observe(t, { childList: true }); }
+  init();
+})();
+</script>
+<script>
+/* Venta en directo (pedidos de Axum del día): en el chip de actualización se muestra hasta qué hora están los pedidos. Datos: CFG.vivo (publicador). */
+(function(){
+  const V = (typeof CFG !== 'undefined' && CFG && CFG.vivo) || null; if (!V || !V.hasta) return;
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const dd = s => s.slice(8, 10) + '/' + s.slice(5, 7);
+  const txt = (V.dia === hoy ? 'Venta en directo · pedidos hasta las ' : 'Pedidos del ' + dd(V.dia) + ' hasta las ') + V.hasta.slice(11, 16);
+  function pon(){ const el = document.getElementById('stData'); if (!el || el.textContent === txt) return; el.textContent = txt; el.className = 'chip good'; el.title = 'Ventas de Gescom más los pedidos cargados hoy en Axum (' + (V.pedidos || 0) + ' pedidos). Los pedidos todavía no facturados pueden cambiar.'; }
+  function init(){ const el = document.getElementById('stData'); if (!el) return setTimeout(init, 200); pon(); new MutationObserver(pon).observe(el, { childList: true, characterData: true, subtree: true }); }
   init();
 })();
 </script>
