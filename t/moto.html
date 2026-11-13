@@ -2063,6 +2063,15 @@ function geoPromos(c){
       d: mio.length ? 'Lo que ya lleva: ' + lst(mio.map(([k, p]) => nm(k) + ' (' + p + '%)'), 4) + (it.length > mio.length ? '. Hay ' + (it.length - mio.length) + ' ofertas más esta semana.' : '') : 'Ej.: ' + lst(it.map(([k, p]) => nm(k) + ' (' + p + '%)'), 2) }); }
   for (const r of (D.volumen || [])) { const del = Object.keys(N).filter(k => N[k][1] === r.g), mio = del.filter(k => ya.has(k));
     rows.push({ ya: mio.length, t: r.n, tag: (r.t || []).map(([n, p]) => p + '% desde ' + n).join(' · ') + (r.u ? ' ' + r.u : ''), d: (mio.length ? 'Lo que ya lleva: ' + lst(mio.map(nm), 3) : del.length ? 'Ej.: ' + lst(del.map(nm), 2) : '') + (r.x ? (mio.length || del.length ? '. ' : '') + esc(r.x) : '') }); }
+  /* Descuentos Peñaflor por canal y combos P&G (catálogo: solo vendedores 1 a 10). Canal: autoservicio o almacén/kiosco */
+  const CN = P.canal;
+  if (CN && (CN.pd || CN.combos)) {
+    const sub = CFG.p10 && CFG.p10.sub ? CFG.p10.sub[c] : null, rr = geoPep(c), esA = sub ? sub === 'A' : !!(rr && /AUTOSERV/i.test(rr.s || '')), cnl = esA ? 'as' : 'ka', cnN = esA ? 'autoservicio' : 'almacén o kiosco';
+    for (const [k, r] of Object.entries(CN.pd || {})) { const del = Object.keys(N).filter(x => N[x][2] === k); if (!del.length) continue; const mio = del.filter(x => ya.has(x)), m = r[cnl];
+      rows.push({ ya: mio.length, t: 'Peñaflor · ' + r.n, tag: r.pc + '% OFF ' + (r.mix ? 'llevando ' + m + ' spirits' : m === 1 ? 'desde 1 unidad' : 'llevando ' + m + ' iguales'), d: (mio.length ? 'Lo que ya lleva: ' + lst(mio.map(nm), 3) : 'Ej.: ' + lst(del.map(nm), 2)) + (r.mix ? '. Se pueden combinar distintos spirits' : '') + ' · cantidad para ' + cnN }); }
+    for (const [k, cb] of Object.entries(CN.combos || {})) { const r = cb[cnl]; if (!r || !r.parts) continue; const gs = Object.keys(r.parts), del = Object.keys(N).filter(x => gs.includes(N[x][3])), mio = del.filter(x => ya.has(x));
+      rows.push({ ya: mio.length, t: 'P&G · ' + cb.n, tag: cb.pc + '% OFF', d: Object.entries(r.parts).map(([g, n]) => n + ' ' + ((CN.pgn || {})[g] || g)).join(' + ') + (r.dos ? ' (mín. 2 fragancias)' : '') + (r.tope ? ' · hasta ' + r.tope + ' combos' : '') + (mio.length ? '. Lo que ya lleva: ' + lst(mio.map(nm), 2) : '') }); }
+  }
   if (!rows.length) return null;
   rows.sort((a, b) => (b.ya > 0) - (a.ya > 0));
   const con = rows.filter(r => r.ya), html = `<div class="gcard"><div class="geb"><span>Promos para este cliente</span><span>${rows.length}</span></div><div class="gprom">${rows.map(r => `<div class="gpr${r.ya ? ' ya' : ''}"><span class="gpc">%</span><div><b>${esc(r.t)}</b> <span class="gpt">${esc(r.tag)}</span><p>${r.d}</p></div></div>`).join('')}</div><p class="gmu">Promos del Catálogo PPP${PROMOV ? ' (al día)' : ''}. Primero las de lo que el cliente ya compra (últimas 6 semanas).</p></div>`;
@@ -2133,7 +2142,7 @@ function geoFicha(c){
     + (penOk != null ? tile('CCC Peñaflor', sn(penOk), penOk ? 'ok' : 'no') : '')
     + tile('CCC Georgalos', sn(ggOk), ggOk ? 'ok' : 'no')
     + (r && r.t ? tile('Segmento', esc(r.t)) : '')
-    + (r ? `<div class="gt${esTP ? ' ok' : supOk && faltPort ? ' tp' : ''}"><span>Tienda Perfecta</span><b>${tpTxt}</b>${tpSub ? `<small>${tpSub}</small>` : ''}</div>` : '')
+    + (r ? `<div class="gt${esTP ? ' ok' : supOk && faltPort ? ' tp' : ''}"><span>Tienda Perfecta</span><b>${tpTxt}</b>${tpSub ? `<small${supOk ? '' : ' style="color:var(--muted,#738196)"'}>${tpSub}</small>` : ''}</div>` : '')
     + (r ? tile('Fully Digital', r.fd ? 'Sí ✓' : 'No', r.fd ? 'ok' : '') : '')
     + `</div><p class="gmu" style="margin-top:8px">Compra por mes: últimos 30 días, todas las marcas por fecha de carga.</p></div>`;
   return h;
