@@ -1441,12 +1441,21 @@ function pcuerpo(){
     const sinApp = l.filter(r => !r.mn).length;
     h += `<div class="panel-h"><span class="muted"><b>${fmtN(l.length)}</b> clientes que compran y no son FD${sinApp ? ' · ' + sinApp + ' nunca compraron por Mi Negocio este mes' : ''} · ordenados de más fácil a más difícil</span>${pexport(l, PCOLS_BASE.concat([['Compra Pepsico $', r => r.tot], ['Por Mi Negocio $', r => r.mn], ['% Mi Negocio', r => r.pm], ['Cargar por la app $', r => r.f]]), 'oportunidades_fd')}</div>`;
     h += plista(l, r => `Compró ${fmtM(r.tot)} · por Mi Negocio ${fmtM(r.mn)} (<b>${r.pm}%</b>)`, r => `<div class="pnum">${fmtM(r.f)}</div><div class="muted" style="font-size:12px">cargar por la app</div>`, 'Todos los clientes que compran ya son Fully Digital con este filtro.');
+  } else if (sub === 'tp' && (st.pTPv || 'val') === 'val') {
+    /* Validadas por el supervisor (Sup Ok) que solo necesitan portafolio, taxonomías A, B y C (pedido 13/11) */
+    const TX = ['A', 'B', 'C'], l = rows.filter(r => r.tp && r.tp[2] === 1 && r.k !== 'tp' && r.tp[1] < 80 && r.tp[0] >= 80 && TX.includes(r.t)).sort((a, b) => TX.indexOf(a.t) - TX.indexOf(b.t) || b.tp[1] - a.tp[1]);
+    const ya = rows.filter(r => r.k === 'tp').length;
+    h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">${TX.map(t => `<div class="kpi"><span class="eyebrow">Taxonomía ${t}</span><span class="v" style="font-size:28px">${l.filter(r => r.t === t).length}</span><span class="s">validadas, falta portafolio</span></div>`).join('')}<div class="kpi"><span class="eyebrow">Ya son TP</span><span class="v" style="font-size:28px;color:var(--good)">${ya}</span></div></div>`;
+    h += `<div class="panel-h"><label for="pTPv" class="muted" style="font-size:13px">Ver <select id="pTPv"><option value="val" selected>Validadas por el supervisor: solo falta portafolio (A, B, C)</option><option value="todas">Todas las que están cerca</option></select></label>${pexport(l, PCOLS_BASE.concat([['Taxonomía', r => r.t], ['% Portafolio', r => r.tp[1]], ['Puntaje', r => r.tp[0]], ['SKU faltantes', r => (r.fl || []).map(i => P0.infal[i]).join(', ')]]), 'tp_validadas_falta_portafolio')}</div>`;
+    h += `<p class="muted" style="margin:0 0 10px;font-size:13px">El supervisor ya las validó (Sup Ok) y tienen el puntaje: pasan a Tienda Perfecta apenas lleguen al <b>80% de portafolio</b>. Vendé los infaltables que les faltan.</p>`;
+    h += plista(l, r => `Taxonomía <b>${esc(r.t)}</b> · portafolio <b>${r.tp[1]}%</b> (faltan ${Math.max(0, Math.ceil((80 - r.tp[1]) * 10) / 10)} puntos)${(r.fl || []).length ? ` <details class="cli" style="border:0;padding:4px 0 0"><summary><span>Infaltables que no compró</span><span class="muted">${r.fl.length}</span></summary><div class="pskus">${r.fl.map(i => `<span class="chip">${esc(P0.infal[i] || '')}</span>`).join('')}</div></details>` : ''}`, r => `<span class="chip good">✓ validada</span><div class="pnum" style="margin-top:4px">${r.tp[1]}%</div>`, 'No hay tiendas A, B o C validadas por el supervisor a las que solo les falte portafolio.');
   } else if (sub === 'tp') {
     const lejos = st.pLejos;
     const l = rows.filter(r => r.k !== 'tp' && r.k !== 'sin' && (lejos || r.k !== 'bajo')).sort((a, b) => PCAT_ORD[a.k] - PCAT_ORD[b.k] || (b.tp ? b.tp[0] + b.tp[1] : 0) - (a.tp ? a.tp[0] + a.tp[1] : 0));
     const ya = rows.filter(r => r.k === 'tp').length, nl = rows.filter(r => r.k === 'bajo').length;
     const cnt = k => rows.filter(r => r.k === k).length;
     h += `<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">${['aval','revisar','portaf','ejec'].map(k => `<div class="kpi"><span class="eyebrow">${PCAT[k]}</span><span class="v" style="font-size:28px">${cnt(k)}</span></div>`).join('')}<div class="kpi"><span class="eyebrow">Ya son TP</span><span class="v" style="font-size:28px;color:var(--good)">${ya}</span></div></div>`;
+    h += `<div class="panel-h" style="justify-content:flex-start;gap:16px;flex-wrap:wrap"><label for="pTPv" class="muted" style="font-size:13px">Ver <select id="pTPv"><option value="val">Validadas por el supervisor: solo falta portafolio (A, B, C)</option><option value="todas" selected>Todas las que están cerca</option></select></label></div>`;
     h += `<div class="panel-h"><label class="muted" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="pLejos" ${lejos ? 'checked' : ''}> Mostrar también las ${nl} lejanas</label>${pexport(l, PCOLS_BASE.concat([['Estado TP', r => PCAT[r.k]], ['Puntaje', r => r.tp ? r.tp[0] : ''], ['% Portafolio', r => r.tp ? r.tp[1] : ''], ['SKU faltantes', r => (r.fl || []).map(i => P0.infal[i]).join(', ')]]), 'tienda_perfecta')}</div>`;
     h += plista(l, r => `Puntaje <b>${r.tp ? r.tp[0] : '—'}</b> · portafolio <b>${r.tp ? r.tp[1] : '—'}%</b>${(r.fl || []).length ? ` <details class="cli" style="border:0;padding:4px 0 0"><summary><span>SKU faltantes</span><span class="muted">${r.fl.length}</span></summary><div class="pskus">${r.fl.map(i => `<span class="chip">${esc(P0.infal[i] || '')}</span>`).join('')}</div></details>` : ''}`, r => `<span class="chip ${r.k === 'aval' ? 'good' : r.k === 'bajo' ? '' : 'warn'}">${PCAT[r.k]}</span>`, 'No hay tiendas cerca de cumplir con este filtro.');
   } else {
@@ -1606,6 +1615,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'pLejos') { st.pLejos = e.target.checked; saveUI(); render(); }
+  if (e.target.id === 'pTPv') { st.pTPv = e.target.value; saveUI(); render(); }
   if (e.target.id === 'pMSolo') { st.pMSolo = e.target.value; saveUI(); render(); }
   if (e.target.id === 'pVOrd') { st.pVOrd = e.target.value; saveUI(); render(); }
 });
@@ -2029,22 +2039,73 @@ const newer = (a, b) => !b || !a || !b.cuando || (a.cuando && a.cuando >= b.cuan
 </script>
 <script>
 function geoNombre(c){ return nameOf(c); }
+/* Ficha del cliente para "📍 Estoy en un cliente" (estilo guía de visita, pedido 13/11): encabezado, "Qué hacer en esta visita" (pasos numerados en orden de prioridad) y "El cliente" (datos en tarjetas).
+   Tienda Perfecta: se destaca cuando el supervisor ya la validó (Sup Ok) y solo le falta portafolio. */
+function geoPep(c){ const P = (typeof PEP !== 'undefined' && PEP) || CFG.pep; return P && P.rows ? P.rows.find(r => String(r.c) === String(c)) || null : null; }
+function geoCompras(c, vcod){
+  const m = {}, add = (f, x) => { if (x > 0) m[f] = (m[f] || 0) + x; };
+  const cd = (((SNAP && SNAP.cd) || {})[vcod] || {})[c] || {}; for (const f in cd) add(f, cd[f]);
+  const P = (typeof PEP !== 'undefined' && PEP) || CFG.pep, G = P && P.grp && P.grp.cli ? P.grp.cli[c] : null;
+  if (G) for (const f in G) add(f, (G[f][2] || 0) + (G[f][3] || 0)); else if (P && P.carga) for (const f in P.carga) { const z = P.carga[f][c]; if (z) add(f, z[1] || 0); }
+  const hoy = HOYAR, ms = d => Date.parse(d + 'T12:00:00Z'), desde = new Date(ms(hoy) - 29 * 864e5).toISOString().slice(0, 10);
+  const fs = Object.keys(m).filter(f => f <= hoy).sort(), ult = fs[fs.length - 1] || null, rec = fs.filter(f => f >= new Date(ms(hoy) - 41 * 864e5).toISOString().slice(0, 10));
+  const cada = rec.length >= 2 ? Math.round((ms(rec[rec.length - 1]) - ms(rec[0])) / 864e5 / (rec.length - 1)) : null;
+  return { ult, hace: ult ? Math.round((ms(hoy) - ms(ult)) / 864e5) : null, cada, mes: fs.filter(f => f >= desde).reduce((a, f) => a + m[f], 0), hoy: m[hoy] || 0 };
+}
+function geoHead(c, d){
+  const r = geoPep(c), dir = dirOf(c) || (r && r.d) || '', can = r && r.s ? titleCase(r.s) : '';
+  const v = R.vs.find(x => (CFG.cart[x.nom] || []).map(String).includes(String(c)));
+  const k = v ? geoCompras(String(c), v.cod) : null, dia = (DIAS[CFG.dia[c]] || '').toLowerCase();
+  const ult = !k || !k.ult ? 'Sin compras en las últimas semanas' : k.hace === 0 ? 'Hoy ya cargó pedido' : 'Última compra hace ' + k.hace + (k.hace === 1 ? ' día' : ' días');
+  return `<div class="ghd"><span class="gtag">Cliente ${esc(c)}${dia ? ' · visita ' + esc(dia) : ''}${d != null && isFinite(d) ? ' · a ' + (d < 1000 ? Math.round(d) + ' m' : (d / 1000).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' km') : ''}</span><h3>${esc(titleCase(nameOf(c) || (r && r.n) || 'Cliente ' + c))}</h3><p class="gmu">${esc([titleCase(dir), can].filter(Boolean).join(' · '))}</p><p class="gmu" style="font-weight:600">${ult}</p></div>`;
+}
 function geoFicha(c){
-  const chip = (t, ok, pr) => `<span class="gc${ok ? ' ok' : ''}${pr ? ' pr' : ''}">${ok ? '✓ ' : ''}${esc(t)}</span>`;
-  const ord = a => a.sort((x, y) => (x.ok - y.ok) || (y.pr - x.pr));
+  c = String(c);
   const v = R.vs.find(x => (CFG.cart[x.nom] || []).map(String).includes(c)); if (!v) return '';
-  let h = `<p class="gmu">${esc(titleCase(v.nom))} · visita ${(DIAS[CFG.dia[c]] || 'sin día').toLowerCase()}</p>`;
-  const G = ord(GBR.map((g, i) => ({ t: GSHORT[g], ok: v.cobList[i].includes(c), pr: v.cobCnt[i] < v.need[i] })));
-  const fG = G.filter(x => !x.ok).length;
-  h += `<div class="gsec"><h4>Georgalos · ${fG ? fG + ' para sumar' : 'todo cubierto'}</h4><p class="gmu">Cubre con 1 unidad de la línea (suelta o display). Con borde: líneas en las que todavía no llegás al cupón.</p><div class="gch">${G.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
-  const PC = CFG.p10;
-  if (PC && PC.sub && PC.sub[c] && SNAP && SNAP.p10) {
-    const e = (SNAP.p10[v.cod] || {})[c] || [0, 0, []], set = new Set(e[2] || []), sub = PC.sub[c];
-    const st = p10Stats(v.cod);
-    const B = ord(PC.brands.map((b, i) => ({ t: b, ok: set.has(i), pr: st.obj[i + 2] > st.real[i + 2] })));
-    const fB = B.filter(x => !x.ok).length;
-    h += `<div class="gsec"><h4>Peñaflor · ${sub === 'A' ? 'autoservicio' : 'almacén'} · ${fB} marcas para sumar</h4><div class="gch">${chip('CCC del mes', !!e[0], !e[0])}</div><p class="gmu">${esc(PC.reglas[sub])}. Con borde: marcas en las que todavía no llegás al objetivo.</p><div class="gch">${B.map(x => chip(x.t, x.ok, !x.ok && x.pr)).join('')}</div></div>`;
-  }
+  const r = geoPep(c), P = (typeof PEP !== 'undefined' && PEP) || CFG.pep, INF = (P && P.infal) || [], MAR = (P && P.marcas) || [];
+  const pasos = [], paso = (tono, t, d) => pasos.push({ tono, t, d });
+  const lst = a => a.slice(0, 6).map(x => esc(titleCase(x))).join(' · ') + (a.length > 6 ? ' y ' + (a.length - 6) + ' más' : '');
+  /* 1. Tienda Perfecta validada por el supervisor que solo necesita portafolio */
+  const tp = r && r.tp, supOk = tp && tp[2] === 1, esTP = r && r.k === 'tp', faltPort = tp && tp[1] < 80 && tp[0] >= 80; /* solo falta portafolio: validada y con puntaje >= 80 */
+  const fl = r ? (r.fl || []).map(i => INF[i]).filter(Boolean) : [];
+  if (r && !esTP && supOk && faltPort) paso('tp', 'Tienda Perfecta: solo le falta portafolio', `El supervisor ya la validó. Tiene <b>${tp[1]}%</b> de portafolio y necesita 80%.${fl.length ? ' Vendé los infaltables que no compró: ' + lst(fl) + '.' : ''}`);
+  else if (r && r.k === 'aval') paso('tp', 'Tienda Perfecta: falta que la valide el supervisor', 'Ya tiene portafolio y puntaje. Avisale a tu supervisor para que la valide.');
+  /* 2. Pepsico: CCC del mes */
+  if (r && r.e < 2) paso('bad', r.e === 1 ? 'Pepsico: le falta poco para el CCC' : 'No compró Pepsico este mes', r.e === 1 ? `Lleva ${fmtN(r.u)} u. este mes: con una compra más suma al CCC.` : 'Con una compra suma al CCC de Pepsico.');
+  /* 3. Infaltables (si no salió ya en Tienda Perfecta) */
+  if (r && fl.length && !(supOk && faltPort && !esTP)) paso('warn', 'Infaltables que no compró este mes', lst(fl));
+  /* 4. Marcas Pepsico que todavía no compró */
+  if (r && MAR.length) { const fm = MAR.filter((_, b) => !(r.mb & (1 << b))).map(x => x[0]); if (fm.length && fm.length < MAR.length) paso('warn', 'Marcas Pepsico que no compró este mes', lst(fm)); }
+  /* 5. Fully Digital */
+  if (r && !r.fd && r.e > 0 && r.f > 0) paso('info', 'Fully Digital: que cargue por la app', `Por Mi Negocio lleva ${r.pm}% de lo que compra. Faltan ${fmtM(r.f)} cargados por la app para que sea FD.`);
+  /* 6. Georgalos */
+  const iG = GBR.indexOf('Cobertura general'), gNo = GBR.map((g, i) => ({ g, ok: v.cobList[i].includes(c), pr: v.cobCnt[i] < v.need[i] })).filter(x => !x.ok && x.g !== 'Cobertura general');
+  const ggOk = iG >= 0 ? v.cobList[iG].includes(c) : false;
+  if (!ggOk) paso('warn', 'No compró Georgalos este mes', 'Con 1 unidad de cualquier producto suma al CCC de Georgalos.');
+  else if (gNo.length) paso('info', 'Georgalos: líneas para sumar', lst(gNo.map(x => GSHORT[x.g] + (x.pr ? ' (te falta para el cupón)' : ''))));
+  /* 7. Peñaflor (vendedores con objetivos de Peñaflor) */
+  const PC = CFG.p10; let penOk = null;
+  if (PC && PC.sub && PC.sub[c] && SNAP && SNAP.p10) { const e = (SNAP.p10[v.cod] || {})[c] || [0, 0, []]; penOk = !!e[0]; const set = new Set(e[2] || []);
+    if (!penOk) paso('warn', 'No compró Peñaflor este mes', esc(PC.reglas[PC.sub[c]]) + '.');
+    else { const fb = PC.brands.filter((b, i) => !set.has(i)); if (fb.length) paso('info', 'Peñaflor: marcas para sumar en el trimestre', lst(fb)); } }
+  let h = '';
+  if (pasos.length) h += `<div class="gcard"><div class="geb"><span>Qué hacer en esta visita</span><span>${pasos.length} ${pasos.length === 1 ? 'paso' : 'pasos'}</span></div><ol class="gsteps">${pasos.map((p, i) => `<li class="t-${p.tono}"><span class="gn">${i + 1}</span><div><b>${p.t}</b><p>${p.d}</p></div></li>`).join('')}</ol></div>`;
+  else h += `<div class="gcard"><div class="geb"><span>Qué hacer en esta visita</span></div><p>Este cliente tiene todo al día. Ofrecé el combo y las promos vigentes.</p></div>`;
+  /* El cliente */
+  const k = geoCompras(c, v.cod), tile = (l, val, cls) => `<div class="gt${cls ? ' ' + cls : ''}"><span>${l}</span><b>${val}</b></div>`, sn = b => b ? 'Sí ✓' : 'Todavía no';
+  const tpTxt = !r || !tp ? 'Sin censo' : esTP ? 'Es TP ✓' : supOk && faltPort ? tp[1] + '% portafolio' : r.k === 'aval' ? 'Falta validar' : tp[1] + '% portafolio';
+  const tpSub = r && tp && !esTP ? (supOk ? 'validada por el supervisor' : tp[2] === 0 ? 'el supervisor no la validó' : 'sin validar') : '';
+  h += `<div class="gcard"><div class="geb"><span>El cliente</span></div><div class="gtiles">`
+    + tile('Compra cada', k.cada ? k.cada + (k.cada === 1 ? ' día' : ' días') : '—')
+    + tile('Última compra', k.ult ? (k.hace === 0 ? 'hoy' : 'hace ' + k.hace + (k.hace === 1 ? ' día' : ' días')) : '—')
+    + tile('Compra por mes', k.mes ? fmtM(k.mes) : '—')
+    + (r ? tile('CCC Pepsico', sn(r.e === 2), r.e === 2 ? 'ok' : 'no') : '')
+    + (penOk != null ? tile('CCC Peñaflor', sn(penOk), penOk ? 'ok' : 'no') : '')
+    + tile('CCC Georgalos', sn(ggOk), ggOk ? 'ok' : 'no')
+    + (r && r.t ? tile('Segmento', esc(r.t)) : '')
+    + (r ? `<div class="gt${esTP ? ' ok' : supOk && faltPort ? ' tp' : ''}"><span>Tienda Perfecta</span><b>${tpTxt}</b>${tpSub ? `<small>${tpSub}</small>` : ''}</div>` : '')
+    + (r ? tile('Fully Digital', r.fd ? 'Sí ✓' : 'No', r.fd ? 'ok' : '') : '')
+    + `</div><p class="gmu" style="margin-top:8px">Compra por mes: últimos 30 días, todas las marcas por fecha de carga.</p></div>`;
   return h;
 }
 /* ===== 📍 Estoy en un cliente: ubica al vendedor con el GPS del celular y muestra las oportunidades del cliente más cercano de su cartera ===== */
@@ -2063,7 +2124,16 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
     + '#geoOv .gmu{color:var(--muted,#738196);font-size:13px} #geoOv .gch{display:flex;flex-wrap:wrap;gap:6px}'
     + '#geoOv .gc{display:inline-block;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--bad-bg,#F9DEDB);color:var(--bad,#B4322A)} #geoOv .gc.ok{background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45)} #geoOv .gc.pr{outline:2px solid var(--bad,#B4322A)}'
     + '#geoOv .gb{border:1px solid var(--line,#D5DCE6);background:var(--surface,#fff);color:inherit;border-radius:10px;padding:10px 12px;text-align:left;font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:10px;width:100%} #geoOv .gx{border:0;background:var(--surface2,#EAEEF4);color:inherit;border-radius:8px;padding:10px 14px;font:600 14px var(--f-body,system-ui);cursor:pointer}'
-    + '#geoOv .gsec{border-top:1px solid var(--line,#D5DCE6);padding-top:10px;display:grid;gap:6px}';
+    + '#geoOv .gsec{border-top:1px solid var(--line,#D5DCE6);padding-top:10px;display:grid;gap:6px}'
+    + '#geoOv .gm{background:var(--bg,#F3F5F8)} #geoOv .ghd{display:grid;gap:4px;background:var(--surface,#fff);margin:-18px -18px 0;padding:18px;border-bottom:1px solid var(--line,#D5DCE6)} #geoOv .ghd h3{font-size:26px;line-height:1.15}'
+    + '#geoOv .gtag{justify-self:start;background:var(--ink,#15202C);color:#F2B53A;font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;padding:5px 10px;border-radius:7px}'
+    + '#geoOv .gcard{background:var(--surface,#fff);border:1px solid var(--line,#D5DCE6);border-radius:16px;padding:14px 16px;display:grid;gap:10px}'
+    + '#geoOv .geb{display:flex;justify-content:space-between;gap:10px;font:600 12px ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--accent,#2448C7);border-bottom:1px solid var(--line,#D5DCE6);padding-bottom:8px}'
+    + '#geoOv .gsteps{list-style:none;margin:0;padding:0;display:grid;gap:12px} #geoOv .gsteps li{display:flex;gap:12px;align-items:flex-start} #geoOv .gsteps li p{margin:2px 0 0;color:var(--ink2,#4A5869);font-size:14px} #geoOv .gsteps b{font-size:16px}'
+    + '#geoOv .gn{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:#E3F1F5;color:#1B6F86}'
+    + '#geoOv .t-tp .gn{background:#1D7F45;color:#fff} #geoOv .t-tp{background:var(--good-bg,#DDF2E4);border-radius:12px;padding:10px;margin:-4px -6px} #geoOv .t-bad .gn{background:var(--bad-bg,#F9DEDB);color:var(--bad,#B4322A)} #geoOv .t-warn .gn{background:#FCEFD2;color:#8A5A00}'
+    + '#geoOv .gtiles{display:grid;grid-template-columns:1fr 1fr;gap:10px} #geoOv .gt{background:var(--surface2,#EAEEF4);border-radius:12px;padding:10px 12px;display:grid;gap:2px;min-width:0;align-content:start} #geoOv .gt span{font-size:13px;color:var(--ink2,#4A5869)} #geoOv .gt b{font-size:20px;line-height:1.2} #geoOv .gt small{font-size:12px;color:var(--good,#1D7F45);font-weight:600}'
+    + '#geoOv .gt.ok b{color:var(--good,#1D7F45)} #geoOv .gt.no b{color:var(--ink,#15202C)} #geoOv .gt.tp{background:var(--good-bg,#DDF2E4);outline:2px solid var(--good,#1D7F45)}';
   document.head.appendChild(st);
   const b = document.createElement('button'); b.id = 'geoBtn'; b.type = 'button'; b.textContent = '📍 Estoy en un cliente'; document.body.appendChild(b);
   let ov = null;
@@ -2073,7 +2143,8 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
   function ficha(c, d){
     let body = '';
     try { body = window.geoFicha ? geoFicha(String(c)) : ''; } catch (e) { body = '<p class="gmu">No se pudo armar el detalle de este cliente.</p>'; }
-    show(`<div><h3>${E(nombre(c))}</h3><p class="gmu">Cliente ${E(c)}${d != null && isFinite(d) ? ' · a ' + fmtD(d) : ''}</p></div>${body || '<p class="gmu">Sin oportunidades cargadas para este cliente.</p>'}${cerrar}`);
+    let head = ''; try { head = window.geoHead ? geoHead(String(c), d) : ''; } catch (e) { head = ''; }
+    show(`${head || `<div><h3>${E(nombre(c))}</h3><p class="gmu">Cliente ${E(c)}${d != null && isFinite(d) ? ' · a ' + fmtD(d) : ''}</p></div>`}${body || '<p class="gmu">Sin oportunidades cargadas para este cliente.</p>'}${cerrar}`);
   }
   b.onclick = () => {
     show('<div><h3>Buscando tu ubicación…</h3><p class="gmu">Si el celular lo pide, permití el acceso a la ubicación.</p></div>' + cerrar);
