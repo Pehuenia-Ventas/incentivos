@@ -2041,6 +2041,33 @@ const newer = (a, b) => !b || !a || !b.cuando || (a.cuando && a.cuando >= b.cuan
 function geoNombre(c){ return nameOf(c); }
 /* Ficha del cliente para "📍 Estoy en un cliente" (estilo guía de visita, pedido 13/11): encabezado, "Qué hacer en esta visita" (pasos numerados en orden de prioridad) y "El cliente" (datos en tarjetas).
    Tienda Perfecta: se destaca cuando el supervisor ya la validó (Sup Ok) y solo le falta portafolio. */
+/* Promos del Catálogo PPP: se leen en vivo de promos.enc al abrir el link (si no se puede, queda la foto del publicador) */
+let PROMOV = null;
+(async function(){
+  const P = CFG.promos; if (!P || !P.k || !window.crypto || !crypto.subtle) return;
+  const b = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  for (const u of ['https://pehuenia-ventas.github.io/Catalogo-PPP/promos.enc', 'https://raw.githubusercontent.com/Pehuenia-Ventas/Catalogo-PPP/main/promos.enc']) {
+    try { const t = (await (await fetch(u + '?t=' + Date.now(), { cache: 'no-store' })).text()).trim(); const [iv, ct] = t.split('.');
+      const key = await crypto.subtle.importKey('raw', b(P.k), 'AES-GCM', false, ['decrypt']);
+      PROMOV = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b(iv) }, key, b(ct)))); return; } catch (e) {}
+  }
+})();
+function geoPromos(c){
+  const P = CFG.promos; if (!P) return null;
+  const D = PROMOV || P.snap || {}, N = P.names || {}, ya = new Set(P.cli && P.cli[c] || []), hoy = HOYAR;
+  const L = (D.semanas && D.semanas.length) ? D.semanas : [D.semana], sem = L.find(s => s && (!s.desde || s.desde <= hoy) && (!s.hasta || s.hasta >= hoy)) || null;
+  const nm = k => (N[k] && N[k][0]) || 'Artículo ' + k, fD = f => f ? f.slice(8, 10) + '/' + f.slice(5, 7) : '', lst = (a, n) => a.slice(0, n).map(esc).join(' · ') + (a.length > n ? ' y ' + (a.length - n) + ' más' : '');
+  const rows = [];
+  if (sem && sem.items) { const it = Object.entries(sem.items), mio = it.filter(([k]) => ya.has(k)), pcs = [...new Set(it.map(x => x[1]))].sort((a, b) => b - a);
+    rows.push({ ya: mio.length, t: 'Ofertas de la semana', tag: pcs.map(p => p + '% off').join(' · ') + (sem.hasta ? ' · hasta el ' + fD(sem.hasta) : ''),
+      d: mio.length ? 'Lo que ya lleva: ' + lst(mio.map(([k, p]) => nm(k) + ' (' + p + '%)'), 4) + (it.length > mio.length ? '. Hay ' + (it.length - mio.length) + ' ofertas más esta semana.' : '') : 'Ej.: ' + lst(it.map(([k, p]) => nm(k) + ' (' + p + '%)'), 2) }); }
+  for (const r of (D.volumen || [])) { const del = Object.keys(N).filter(k => N[k][1] === r.g), mio = del.filter(k => ya.has(k));
+    rows.push({ ya: mio.length, t: r.n, tag: (r.t || []).map(([n, p]) => p + '% desde ' + n).join(' · ') + (r.u ? ' ' + r.u : ''), d: (mio.length ? 'Lo que ya lleva: ' + lst(mio.map(nm), 3) : del.length ? 'Ej.: ' + lst(del.map(nm), 2) : '') + (r.x ? (mio.length || del.length ? '. ' : '') + esc(r.x) : '') }); }
+  if (!rows.length) return null;
+  rows.sort((a, b) => (b.ya > 0) - (a.ya > 0));
+  const con = rows.filter(r => r.ya), html = `<div class="gcard"><div class="geb"><span>Promos para este cliente</span><span>${rows.length}</span></div><div class="gprom">${rows.map(r => `<div class="gpr${r.ya ? ' ya' : ''}"><span class="gpc">%</span><div><b>${esc(r.t)}</b> <span class="gpt">${esc(r.tag)}</span><p>${r.d}</p></div></div>`).join('')}</div><p class="gmu">Promos del Catálogo PPP${PROMOV ? ' (al día)' : ''}. Primero las de lo que el cliente ya compra (últimas 6 semanas).</p></div>`;
+  return { html, paso: con.length ? { t: 'Tiene promo en lo que ya lleva', d: esc(con[0].t) + ': ' + esc(con[0].tag) + (con.length > 1 ? ' (y ' + (con.length - 1) + ' más)' : '') } : null };
+}
 function geoPep(c){ const P = (typeof PEP !== 'undefined' && PEP) || CFG.pep; return P && P.rows ? P.rows.find(r => String(r.c) === String(c)) || null : null; }
 function geoCompras(c, vcod){
   const m = {}, add = (f, x) => { if (x > 0) m[f] = (m[f] || 0) + x; };
@@ -2088,9 +2115,12 @@ function geoFicha(c){
   if (PC && PC.sub && PC.sub[c] && SNAP && SNAP.p10) { const e = (SNAP.p10[v.cod] || {})[c] || [0, 0, []]; penOk = !!e[0]; const set = new Set(e[2] || []);
     if (!penOk) paso('warn', 'No compró Peñaflor este mes', esc(PC.reglas[PC.sub[c]]) + '.');
     else { const fb = PC.brands.filter((b, i) => !set.has(i)); if (fb.length) paso('info', 'Peñaflor: marcas para sumar en el trimestre', lst(fb)); } }
+  let PRM = null; try { PRM = geoPromos(c); } catch (e) { PRM = null; }
+  if (PRM && PRM.paso) paso('ok', PRM.paso.t, PRM.paso.d);
   let h = '';
   if (pasos.length) h += `<div class="gcard"><div class="geb"><span>Qué hacer en esta visita</span><span>${pasos.length} ${pasos.length === 1 ? 'paso' : 'pasos'}</span></div><ol class="gsteps">${pasos.map((p, i) => `<li class="t-${p.tono}"><span class="gn">${i + 1}</span><div><b>${p.t}</b><p>${p.d}</p></div></li>`).join('')}</ol></div>`;
   else h += `<div class="gcard"><div class="geb"><span>Qué hacer en esta visita</span></div><p>Este cliente tiene todo al día. Ofrecé el combo y las promos vigentes.</p></div>`;
+  if (PRM) h += PRM.html;
   /* El cliente */
   const k = geoCompras(c, v.cod), tile = (l, val, cls) => `<div class="gt${cls ? ' ' + cls : ''}"><span>${l}</span><b>${val}</b></div>`, sn = b => b ? 'Sí ✓' : 'Todavía no';
   const tpTxt = !r || !tp ? 'Sin censo' : esTP ? 'Es TP ✓' : supOk && faltPort ? tp[1] + '% portafolio' : r.k === 'aval' ? 'Falta validar' : tp[1] + '% portafolio';
@@ -2133,6 +2163,7 @@ const GEO = /*GEO_START*/null/*GEO_END*/;
     + '#geoOv .gn{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;background:#E3F1F5;color:#1B6F86}'
     + '#geoOv .t-tp .gn{background:#1D7F45;color:#fff} #geoOv .t-tp{background:var(--good-bg,#DDF2E4);border-radius:12px;padding:10px;margin:-4px -6px} #geoOv .t-bad .gn{background:var(--bad-bg,#F9DEDB);color:var(--bad,#B4322A)} #geoOv .t-warn .gn{background:#FCEFD2;color:#8A5A00}'
     + '#geoOv .gtiles{display:grid;grid-template-columns:1fr 1fr;gap:10px} #geoOv .gt{background:var(--surface2,#EAEEF4);border-radius:12px;padding:10px 12px;display:grid;gap:2px;min-width:0;align-content:start} #geoOv .gt span{font-size:13px;color:var(--ink2,#4A5869)} #geoOv .gt b{font-size:20px;line-height:1.2} #geoOv .gt small{font-size:12px;color:var(--good,#1D7F45);font-weight:600}'
+    + '#geoOv .gprom{display:grid;gap:12px} #geoOv .gpr{display:flex;gap:12px;align-items:flex-start} #geoOv .gpr p{margin:2px 0 0;color:var(--ink2,#4A5869);font-size:14px} #geoOv .gpc{flex:0 0 44px;height:30px;border-radius:10px;display:grid;place-items:center;font-weight:700;background:#FCEFD2;color:#8A5A00} #geoOv .gpr.ya .gpc{background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45)} #geoOv .gpt{display:inline-block;background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45);border-radius:999px;padding:2px 9px;font-size:13px;font-weight:600} #geoOv .t-ok .gn{background:var(--good-bg,#DDF2E4);color:var(--good,#1D7F45)}'
     + '#geoOv .gt.ok b{color:var(--good,#1D7F45)} #geoOv .gt.no b{color:var(--ink,#15202C)} #geoOv .gt.tp{background:var(--good-bg,#DDF2E4);outline:2px solid var(--good,#1D7F45)}';
   document.head.appendChild(st);
   const b = document.createElement('button'); b.id = 'geoBtn'; b.type = 'button'; b.textContent = '📍 Estoy en un cliente'; document.body.appendChild(b);
