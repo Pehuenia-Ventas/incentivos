@@ -2063,6 +2063,9 @@ function geoPromos(c){
       d: mio.length ? 'Lo que ya lleva: ' + lst(mio.map(([k, p]) => nm(k) + ' (' + p + '%)'), 4) + (it.length > mio.length ? '. Hay ' + (it.length - mio.length) + ' ofertas más esta semana.' : '') : 'Ej.: ' + lst(it.map(([k, p]) => nm(k) + ' (' + p + '%)'), 2) }); }
   for (const r of (D.volumen || [])) { const del = Object.keys(N).filter(k => N[k][1] === r.g), mio = del.filter(k => ya.has(k));
     rows.push({ ya: mio.length, t: r.n, tag: (r.t || []).map(([n, p]) => p + '% desde ' + n).join(' · ') + (r.u ? ' ' + r.u : ''), d: (mio.length ? 'Lo que ya lleva: ' + lst(mio.map(nm), 3) : del.length ? 'Ej.: ' + lst(del.map(nm), 2) : '') + (r.x ? (mio.length || del.length ? '. ' : '') + esc(r.x) : '') }); }
+  /* Gaona surtido: escala por unidades totales de cualquier producto Gaona */
+  if (P.gaona && P.gaona.t && P.gaona.t.length) { const del = Object.keys(N).filter(x => /^gaona/i.test(N[x][4] || '') || /Gaona/i.test(N[x][0])), mio = del.filter(x => ya.has(x));
+    rows.push({ ya: mio.length, t: 'Gaona surtido', tag: P.gaona.t.map(([m, pc]) => pc + '% desde ' + m + ' u.').join(' · '), d: 'Suma unidades de cualquier producto Gaona.' + (mio.length ? ' Lo que ya lleva: ' + lst(mio.map(nm), 3) : del.length ? ' Ej.: ' + lst(del.map(nm), 2) : '') }); }
   /* Descuentos Peñaflor por canal y combos P&G (catálogo: solo vendedores 1 a 10). Canal: autoservicio o almacén/kiosco */
   const CN = P.canal;
   if (CN && (CN.pd || CN.combos)) {
