@@ -1656,6 +1656,33 @@ function viewGaona(){
   }
   return h;
 }
+/* ===== Concurso cobertura Gaona (pedido 16/11): vendedores 1 a 10, kioscos y almacenes, del 1/11 al 30/11.
+   Cliente CCC = 3 SKU Gaona o más con 3 unidades netas o más cada uno, sumando todas las compras del período. Premio $25.000 al llegar a 25 clientes. ===== */
+function gcobStat(cod){
+  const G = CFG.gcob, cl = (G && G.v[String(cod)]) || {};
+  const rows = Object.entries(cl).map(([c, [s, l]]) => { const ok = l.filter(x => x[1] >= G.minU); return { c, s, l, ok: ok.length, ccc: ok.length >= G.min, u: l.reduce((a, x) => a + x[1], 0) }; });
+  return { rows, n: rows.filter(r => r.ccc).length };
+}
+function gcobView(){
+  const G = CFG.gcob; if (!G) return '';
+  const fN = n => Math.round(n || 0).toLocaleString('es-AR'), fD = f => f.slice(8, 10) + '/' + f.slice(5, 7), money = n => '$' + fN(n);
+  const hoy = HOYAR, quedan = (() => { let n = 0; for (let t = Date.parse((hoy > G.desde ? hoy : G.desde) + 'T12:00:00Z'); t <= Date.parse(G.hasta + 'T12:00:00Z'); t += 864e5) { const w = new Date(t).getUTCDay(); if (w > 0 && w < 6) n++; } return n; })();
+  const sku = (a, q) => `<span class="chip ${q >= G.minU ? 'good' : ''}" style="margin:2px 4px 2px 0">${q >= G.minU ? '✓ ' : ''}${esc(titleCase(a))} · ${fN(q)} u.</span>`;
+  let h = `<div class="empty" style="border-color:var(--accent);margin-bottom:14px"><div><h3>Concurso cobertura Gaona · ${fD(G.desde)} al ${fD(G.hasta)}</h3><p>Kioscos y almacenes. Un cliente cuenta cuando compra <b>${G.min} SKU de Gaona o más, con ${G.minU} unidades o más de cada uno</b>. Se suman todas las compras del mes (venta menos rechazos). <b>Premio ${money(G.premio)}</b> al llegar a <b>${G.obj} clientes</b>.</p></div></div>`;
+  if (SOLO) {
+    const S = gcobStat(SOLO), falta = Math.max(0, G.obj - S.n), cerca = S.rows.filter(r => !r.ccc).sort((a, b) => b.ok - a.ok || b.u - a.u), ya = S.rows.filter(r => r.ccc).sort((a, b) => b.ok - a.ok);
+    h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Clientes que cuentan</span><span class="v">${S.n} <span class="muted" style="font-size:20px">/ ${G.obj}</span></span><span class="s">${S.n >= G.obj ? '✓ objetivo cumplido' : 'faltan <b>' + falta + '</b>'}</span><div class="bar"><i style="width:${Math.min(1, S.n / G.obj) * 100}%"></i></div></div><div class="kpi"><span class="eyebrow">Por día</span><span class="v" style="font-size:26px">${S.n >= G.obj ? '✓' : quedan ? (falta / quedan).toLocaleString('es-AR', { maximumFractionDigits: 1 }) : '—'}</span><span class="s">${quedan} días hábiles hasta el ${fD(G.hasta)}</span></div><div class="kpi"><span class="eyebrow">Premio</span><span class="v" style="font-size:26px;${S.n >= G.obj ? 'color:var(--good)' : ''}">${S.n >= G.obj ? '✓ ' : ''}${money(G.premio)}</span><span class="s">${S.n >= G.obj ? 'ganado' : 'al llegar a ' + G.obj + ' clientes'}</span></div></div>`;
+    h += `<div class="section"><div class="panel-h"><h3>Para sumar: ya compraron Gaona (${cerca.length})</h3></div><p class="muted" style="margin:0 0 8px;font-size:13px">Primero los que están más cerca. En verde, los SKU que ya tienen ${G.minU} unidades o más.</p>${cerca.length ? `<div class="tw"><table><thead><tr><th class="l">Cliente</th><th class="l">Le falta</th><th class="l">Lo que compró</th></tr></thead><tbody>${cerca.map(r => `<tr><td class="l name">${esc(r.c)} · ${esc(titleCase(nameOf(r.c) || ''))}<div class="muted" style="font-size:12px">${r.s === 'K' ? 'Kiosco' : 'Almacén'}</div></td><td class="l"><b>${G.min - r.ok} SKU</b> con ${G.minU} u.</td><td class="l">${r.l.map(([a, q]) => sku(a, q)).join('')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Todavía no hay clientes con compras de Gaona este mes.</p>'}</div>`;
+    if (ya.length) h += `<div class="section"><details class="cli"><summary><span>✓ Clientes que ya cuentan</span><span class="muted">${ya.length}</span></summary><div class="tw"><table><tbody>${ya.map(r => `<tr><td class="l name">${esc(r.c)} · ${esc(titleCase(nameOf(r.c) || ''))}</td><td class="l">${r.l.filter(x => x[1] >= G.minU).map(([a, q]) => sku(a, q)).join('')}</td></tr>`).join('')}</tbody></table></div></details></div>`;
+    return h;
+  }
+  const cods = Object.keys(G.v).sort((a, b) => a - b), nm = c => titleCase(((CFG.vend || []).find(v => String(v.cod) === String(c)) || {}).nom || 'Vendedor ' + c);
+  const R = cods.map(c => { const S = gcobStat(c); return { c, n: S.n, dos: S.rows.filter(r => !r.ccc && r.ok === 2).length, comp: S.rows.length }; }).sort((a, b) => b.n - a.n), gan = R.filter(r => r.n >= G.obj).length;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Clientes que cuentan (equipo)</span><span class="v">${R.reduce((a, r) => a + r.n, 0)} <span class="muted" style="font-size:20px">/ ${G.obj * R.length}</span></span><span class="s">${R.length} vendedores × ${G.obj}</span></div><div class="kpi"><span class="eyebrow">Vendedores en el objetivo</span><span class="v">${gan} <span class="muted" style="font-size:20px">/ ${R.length}</span></span><span class="s">${money(gan * G.premio)} en premios</span></div><div class="kpi"><span class="eyebrow">Quedan</span><span class="v" style="font-size:26px">${quedan}</span><span class="s">días hábiles hasta el ${fD(G.hasta)}</span></div></div>`;
+  h += `<div class="tw"><table><thead><tr><th class="l">Vendedor</th><th>Clientes que cuentan</th><th>Faltan</th><th>A 1 SKU de contar</th><th>Compraron Gaona</th><th class="l">Premio</th></tr></thead><tbody>${R.map(r => `<tr><td class="l name">${r.c} · ${esc(nm(r.c))}</td><td class="tot">${r.n} <span class="muted">/ ${G.obj}</span></td><td>${Math.max(0, G.obj - r.n) || '<span class="cell good">✓</span>'}</td><td>${r.dos}</td><td>${r.comp}</td><td class="l">${r.n >= G.obj ? `<span class="cell good">✓ ${money(G.premio)}</span>` : '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+  return h;
+}
+if (typeof viewGaona === 'function') { const __vg = viewGaona; viewGaona = function(){ return gcobView() + __vg(); }; }
 /* ===== Litros (solo informativo) ===== */
 function viewLitros(){
   const LC = CFG.lit, LV = (SNAP && SNAP.lit && SNAP.lit.v) || {}; if (!LC) return '';
@@ -2122,6 +2149,10 @@ function geoFicha(c){
   const ggOk = iG >= 0 ? v.cobList[iG].includes(c) : false;
   if (!ggOk) paso('warn', 'No compró Georgalos este mes', 'Con 1 unidad de cualquier producto suma al CCC de Georgalos.');
   else if (gNo.length) paso('info', 'Georgalos: líneas para sumar', lst(gNo.map(x => GSHORT[x.g] + (x.pr ? ' (te falta para el cupón)' : ''))));
+  /* Concurso cobertura Gaona (vendedores 1 a 10, kioscos y almacenes) */
+  if (CFG.gcob && CFG.gcob.v[String(v.cod)]) { const G = CFG.gcob, e = (G.v[String(v.cod)] || {})[c], esKA = e ? true : !!(r && /KIOSCO|ALMACEN/i.test((r.s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+    if (esKA) { const ok = e ? e[1].filter(x => x[1] >= G.minU) : [], pr = e ? e[1].filter(x => x[1] < G.minU) : [];
+      if (ok.length < G.min) paso('warn', 'Gaona: cobertura del concurso', e ? `Le faltan <b>${G.min - ok.length} SKU</b> con ${G.minU} u. cada uno.${ok.length ? ' Ya tiene: ' + lst(ok.map(x => x[0])) + '.' : ''}${pr.length ? ' Completá: ' + lst(pr.map(x => x[0] + ' (' + x[1] + ' u.)')) + '.' : ''}` : `No compró Gaona este mes: ${G.min} SKU con ${G.minU} u. cada uno suman al concurso (se pueden juntar en varias visitas).`); } }
   /* 7. Peñaflor (vendedores con objetivos de Peñaflor) */
   const PC = CFG.p10; let penOk = null;
   if (PC && PC.sub && PC.sub[c] && SNAP && SNAP.p10) { const e = (SNAP.p10[v.cod] || {})[c] || [0, 0, []]; penOk = !!e[0]; const set = new Set(e[2] || []);
