@@ -167,6 +167,7 @@ details.cli ol{margin:6px 0 0;padding-left:22px;font-size:13px;columns:2;column-
 .dl .grp>span:only-child{white-space:normal;text-align:left;font-weight:700}
 .dl .neg{color:var(--bad)}
 .dl .tot{background:var(--accent-soft);font-weight:800;font-size:17px}
+.msel{font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
 .fsel{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:16px}
 .fsel label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
 .fsel select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-height:36px;min-width:240px}
@@ -192,9 +193,12 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;
 const fM = n => (n < 0 ? '−$' : '$') + Math.abs(Math.round(n || 0)).toLocaleString('es-AR');
 const tc = s => String(s || '').toLowerCase().replace(/(^|\s|,)\S/g, c => c.toUpperCase());
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const mesL = (m => MESES[+m.slice(5,7) - 1] + ' ' + m.slice(0,4))(CFG.mes);
+const mesF = m => MESES[+m.slice(5,7) - 1] + ' ' + m.slice(0,4);
+let mesL = mesF(CFG.mes);
+const HIST = (D.hist || []).filter(h => h && h.vend && h.mes);
 const SOLO = !!CFG.solo;
-document.getElementById('stMes').textContent = 'Período: ' + mesL;
+if (HIST.length > 1) { document.getElementById('stMes').innerHTML = `<label for="fMes" style="display:inline-flex;align-items:center;gap:6px">Período <select id="fMes" class="msel">${HIST.map(h => `<option value="${h.mes}" ${h.mes === CFG.mes ? 'selected' : ''}>${mesF(h.mes)}</option>`).join('')}</select></label>`; } else document.getElementById('stMes').textContent = 'Período: ' + mesL;
+function setMes(m){ const h = HIST.find(x => x.mes === m); if (!h) return; D.vend = h.vend; D.sup = h.sup; mesL = mesF(m); st.v = 'todos'; }
 document.getElementById('eyebrow').textContent = 'Primeros Productos Pehuenia · ' + (SOLO ? 'liquidación personal' : 'equipo de ' + CFG.supNom);
 document.getElementById('h1').textContent = SOLO ? D.vend[0].nombre : 'Sueldos y premios · ' + CFG.supNom;
 const TABS = SOLO ? [['premios','Premios'], ['sueldo','Sueldo']] : [['premios','Premios'], ['sueldo','Sueldos'], ['sup','Supervisor']];
@@ -214,8 +218,8 @@ function premioBox(p, titulo){
 function sueldoBox(s, titulo){
   if (!s) return `<div class="empty"><div><h3>Sin datos de sueldo</h3><p>Esta persona no figura en el maestro de nómina del mes.</p></div></div>`;
   let h = `<div class="dl"><div class="r grp"><span>${esc(titulo)} · legajo ${s.leg} · ingreso ${esc(s.ingreso)}</span></div>`;
-  for (const [k, v] of s.campos) { if (v == null || v === '' || (typeof v === 'number' && Math.abs(v) < 0.5 && !['Días','Sueldo del mes','Pago en efectivo'].includes(k))) continue; const neg = DESC.has(k); h += `<div class="r"><span>${esc(k)}${neg ? ' <span class="muted">(descuento)</span>' : ''}</span><span class="${neg ? 'neg' : ''}">${NOM.has(k) ? esc(v) : (neg ? '−' : '') + fM(v)}</span></div>`; }
-  return h + `<div class="r tot"><span>Total a cobrar</span><span>${fM(s.total)}</span></div></div><p class="note">Total a cobrar = pago en efectivo + premio + horas extras − anticipo − presentismo − pedidos (mismo cálculo que la planilla de sueldos).</p>`;
+  for (const [k, v] of s.campos) { if (v == null || v === '' || (typeof v === 'number' && Math.abs(v) < 0.5 && !['Días','Sueldo del mes','Pago en efectivo','Pago en efectivo (BONO)'].includes(k))) continue; const neg = DESC.has(k); h += `<div class="r"><span>${esc(k)}${neg ? ' <span class="muted">(descuento)</span>' : ''}</span><span class="${neg ? 'neg' : ''}">${NOM.has(k) ? esc(v) : (neg ? '−' : '') + fM(v)}</span></div>`; }
+  return h + `<div class="r tot"><span>Total a cobrar</span><span>${fM(s.total)}</span></div></div><p class="note">Total a cobrar = pago en efectivo (bono) + premio + horas extras − anticipo − presentismo − pedidos (mismo cálculo que la planilla de sueldos).</p>`;
 }
 function filtro(){
   if (SOLO) return '';
@@ -235,9 +239,9 @@ function viewPremios(){
 function viewSueldo(){
   let h = filtro();
   if (SOLO || st.v !== 'todos') { const v = D.vend[SOLO ? 0 : +st.v]; if (!v) { st.v = 'todos'; return viewSueldo(); } return h + `<div class="grid2"><div>${sueldoBox(v.sueldo, 'Sueldo de ' + mesL)}</div></div>`; }
-  const g = (s, k) => { const x = s && s.campos.find(c => c[0] === k); return x ? x[1] : 0; };
+  const g = (s, k) => { const x = s && s.campos.find(c => c[0] === k || (k === 'Pago en efectivo (BONO)' && c[0] === 'Pago en efectivo')); return x ? x[1] : 0; };
   const T = D.vend.reduce((a, v) => a + (v.sueldo ? v.sueldo.total : 0), 0);
-  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th><th>Legajo</th><th>Sueldo del mes</th><th>Recibo (banco)</th><th>Efectivo</th><th>Premio</th><th>Hs. extras</th><th>Anticipo</th><th>Presentismo</th><th>Pedidos</th><th>Total a cobrar</th></tr></thead><tbody>${D.vend.map((v, i) => { const s = v.sueldo; if (!s) return `<tr><td class="l sticky1 name">${esc(vlab(v))}</td><td colspan="10" class="l muted">sin datos en el maestro de nómina</td></tr>`; return `<tr class="click" data-v="${i}"><td class="l sticky1 name">${esc(vlab(v))}</td><td>${s.leg}</td><td>${fM(g(s,'Sueldo del mes'))}</td><td>${fM(g(s,'Sueldo en recibo (banco)'))}</td><td>${fM(g(s,'Pago en efectivo'))}</td><td>${fM(g(s,'Premio'))}</td><td>${fM(g(s,'Hs. extras'))}</td><td>${fM(g(s,'Anticipo'))}</td><td>${fM(g(s,'Presentismo'))}</td><td>${fM(g(s,'Pedidos'))}</td><td class="tot">${fM(s.total)}</td></tr>`; }).join('')}</tbody><tfoot><tr><td class="l sticky1">Total equipo</td><td></td><td colspan="8"></td><td>${fM(T)}</td></tr></tfoot></table></div><p class="note">Tocá un vendedor para ver el detalle de su sueldo.</p>`;
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th><th>Legajo</th><th>Sueldo del mes</th><th>Recibo (banco)</th><th>Efectivo (bono)</th><th>Premio</th><th>Hs. extras</th><th>Anticipo</th><th>Presentismo</th><th>Pedidos</th><th>Total a cobrar</th></tr></thead><tbody>${D.vend.map((v, i) => { const s = v.sueldo; if (!s) return `<tr><td class="l sticky1 name">${esc(vlab(v))}</td><td colspan="10" class="l muted">sin datos en el maestro de nómina</td></tr>`; return `<tr class="click" data-v="${i}"><td class="l sticky1 name">${esc(vlab(v))}</td><td>${s.leg}</td><td>${fM(g(s,'Sueldo del mes'))}</td><td>${fM(g(s,'Sueldo en recibo (banco)'))}</td><td>${fM(g(s,'Pago en efectivo (BONO)'))}</td><td>${fM(g(s,'Premio'))}</td><td>${fM(g(s,'Hs. extras'))}</td><td>${fM(g(s,'Anticipo'))}</td><td>${fM(g(s,'Presentismo'))}</td><td>${fM(g(s,'Pedidos'))}</td><td class="tot">${fM(s.total)}</td></tr>`; }).join('')}</tbody><tfoot><tr><td class="l sticky1">Total equipo</td><td></td><td colspan="8"></td><td>${fM(T)}</td></tr></tfoot></table></div><p class="note">Tocá un vendedor para ver el detalle de su sueldo.</p>`;
   return h;
 }
 function viewSup(){
@@ -248,7 +252,7 @@ function render(){
   document.getElementById('view').innerHTML = ({ premios: viewPremios, sueldo: viewSueldo, sup: viewSup })[st.tab]();
 }
 document.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) { st.tab = t.dataset.tab; save(); render(); return; } const r = e.target.closest('tr[data-v]'); if (r) { st.v = r.dataset.v; save(); render(); window.scrollTo(0, 0); } });
-document.addEventListener('change', e => { if (e.target.id === 'fV') { st.v = e.target.value; save(); render(); } });
+document.addEventListener('change', e => { if (e.target.id === 'fV') { st.v = e.target.value; save(); render(); } if (e.target.id === 'fMes') { setMes(e.target.value); render(); } });
 render();
 </script>
 </body></html>
