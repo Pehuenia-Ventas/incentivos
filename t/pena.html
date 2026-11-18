@@ -850,7 +850,7 @@ function viewMillas(){
   if (SOLO) {
     const c = String(SOLO), V = M.v[c] || {};
     h += `<div class="tw"><table><thead><tr><th class="l">Línea</th><th class="l">Canal</th><th>Objetivo</th><th>Peñaflor</th><th>Nuestro</th><th>Avance</th><th>Faltan</th><th>Millas</th></tr></thead><tbody>` +
-      L.map(l => { const x = V[l.k] || {}, r = nos(c, l.k), o = x.obj || 0, f = Math.max(0, Math.ceil(o) - r); return `<tr><td class="l name">${esc(l.n)}</td><td class="l">${l.canal === 'AS' ? 'Autoservicios' : 'Kioscos y almacenes'}</td><td>${f1(o)}</td><td>${fN(x.pf)}</td><td class="tot">${fN(r)}</td><td>${cel(o, r)}</td><td>${f ? fN(f) + ' clientes' : '<span class="cell good">✓</span>'}</td><td>${fN(x.millas)}</td></tr>`; }).join('') + `</tbody></table></div>`;
+      L.filter(l => ((V[l.k] || {}).obj || 0) > 0 || nos(c, l.k) > 0).map(l => { const x = V[l.k] || {}, r = nos(c, l.k), o = x.obj || 0, f = Math.max(0, Math.ceil(o) - r); return `<tr><td class="l name">${esc(l.n)}</td><td class="l">${l.canal === 'AS' ? 'Autoservicios' : 'Kioscos y almacenes'}</td><td>${f1(o)}</td><td>${fN(x.pf)}</td><td class="tot">${fN(r)}</td><td>${cel(o, r)}</td><td>${f ? fN(f) + ' clientes' : '<span class="cell good">✓</span>'}</td><td>${fN(x.millas)}</td></tr>`; }).join('') + `</tbody></table></div>`;
     return h;
   }
   h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th>${L.map(l => `<th>${esc(l.n)}<div class="muted" style="font-size:11px;font-weight:500">${l.canal} · obj / Peñaflor / nuestro</div></th>`).join('')}</tr></thead><tbody>` +
