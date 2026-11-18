@@ -650,6 +650,7 @@ const TABS = SOLO ? [['ficha', SINM ? 'Mi mes' : 'Mis cupones'], ['marcas','Avan
   ['analisis','Análisis por vendedor'], ['supervisores','Supervisores'], ['ficha','Ficha del vendedor'], ['objetivos','Objetivos'], ['reglas','Cómo funciona']
 ]);
 if (CFG.cierre) TABS.splice(1, 0, ['cierre', '¿Cómo cerré mi día?']);
+if (CFG.millas) { const it = TABS.findIndex(t => t[0] === 'tost'); TABS.splice(it >= 0 ? it : TABS.length, 0, ['millas', 'Millas Peñaflor']); }
 if (SOLO && CFG.pep) TABS.unshift(['pepsico', 'Pepsico · Oportunidades']);
 if (SINM) { const ri = TABS.findIndex(x => x[0] === 'reglas'); if (ri >= 0) TABS.splice(ri, 1); if (st.tab === 'reglas') st.tab = SOLO ? 'ficha' : 'resumen'; }
 if (SOLO) { try { if (CFG.pep && !localStorage.getItem('im_pep1')) { st.tab = 'pepsico'; localStorage.setItem('im_pep1', '1'); } } catch (e) {} if (!TABS.some(x => x[0] === st.tab)) st.tab = CFG.pep ? 'pepsico' : 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
@@ -1694,10 +1695,10 @@ function viewLitros(){
   const obj = LC.cats.map(k => pool.reduce((a,c) => a + (LC.obj[c][k] || 0), 0)), real = LC.cats.map(k => pool.reduce((a,c) => a + ((LV[c] || {})[k] || 0), 0)), sep = LC.cats.map(k => pool.reduce((a,c) => a + (((LC.sep || {})[c] || {})[k] || 0), 0));
   const tO = obj.reduce((a,b) => a + b, 0), tR = real.reduce((a,b) => a + b, 0), tS = sep.reduce((a,b) => a + b, 0);
   const porDia = f => !DQ ? '<span class="need bad">mes cerrado</span>' : f <= 0 ? '<span class="need ok">✓ cumplido</span>' : `<span class="need">${fL(f / DQ)} L por día</span>`;
-  let h = howto('Cómo se lee el avance en litros', ['Litros netos de Peñaflor del mes (venta menos rechazos, con preventa), por categoría.', 'El objetivo de cada vendedor sale del objetivo de octubre de la empresa por categoría multiplicado por su participación en los litros de septiembre. En mayoristas regionales solo cuenta Distribuidora Santa María.', 'Es informativo.']);
+  let h = howto('Cómo se lee el avance en litros', ['Litros netos de Peñaflor del mes (venta menos rechazos, con preventa), por categoría.', (LC.baseLabel ? 'El objetivo de ' + LC.mes + ' de la empresa por categoría se reparte así: primero se separa lo de los mayoristas regionales según su peso en los litros de ' + LC.baseLabel.toLowerCase() + '; el resto va a los vendedores 1 a 10 y 24 a 27 según su participación en los litros de ' + LC.baseLabel.toLowerCase() + '. Distribuidora Santa María cuenta para su vendedor.' : 'El objetivo de cada vendedor sale del objetivo de octubre de la empresa por categoría multiplicado por su participación en los litros de septiembre. En mayoristas regionales solo cuenta Distribuidora Santa María.'), 'Es informativo.']);
   if (!SOLO) h += `<div class="filters"><label for="litV">Vendedor <select id="litV"><option value="todos">Todos</option>${cods.map(c => `<option value="${c}" ${sel === String(c) ? 'selected' : ''}>${c} · ${esc(nomOf(c))}</option>`).join('')}</select></label></div>`;
-  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Litros del mes</span><span class="v">${fL(tR)} <span class="muted" style="font-size:20px">/ ${fL(tO)}</span></span><span class="s">${fmtP(tO ? tR / tO : null)} del objetivo</span><span>${porDia(tO - tR)}</span><div class="bar"><i style="width:${Math.min(tO ? tR / tO : 0, 1) * 100}%"></i><b style="left:${R.esperado * 100}%"></b></div></div><div class="kpi"><span class="eyebrow">Septiembre</span><span class="v">${fL(tS)}</span><span class="s">litros · objetivo ${fmtP(tS ? tO / tS - 1 : null)} vs septiembre</span></div><div class="kpi"><span class="eyebrow">Faltan</span><span class="v">${fL(Math.max(0, tO - tR))}</span><span class="s">litros · quedan ${DQ} días hábiles</span></div></div>`;
-  h += `<div class="tw"><table id="tLit"><thead><tr><th class="l">Categoría</th><th>Sept.</th><th>Objetivo</th><th>Litros</th><th>Avance</th><th>Faltan</th><th class="l">Por día</th></tr></thead><tbody>${LC.cats.map((k,i) => obj[i] || real[i] ? `<tr><td class="l name">${esc(k)}</td><td class="muted">${fL(sep[i])}</td><td>${fL(obj[i])}</td><td class="tot">${fL(real[i])}</td><td>${cellP(obj[i] ? real[i] / obj[i] : null, 0.7)}</td><td>${obj[i] - real[i] > 0 ? fL(obj[i] - real[i]) : '—'}</td><td class="l">${porDia(obj[i] - real[i])}</td></tr>` : '').join('')}</tbody><tfoot><tr><td class="l">Total</td><td>${fL(tS)}</td><td>${fL(tO)}</td><td>${fL(tR)}</td><td>${fmtP(tO ? tR / tO : null)}</td><td>${fL(Math.max(0, tO - tR))}</td><td></td></tr></tfoot></table></div>`;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Litros del mes</span><span class="v">${fL(tR)} <span class="muted" style="font-size:20px">/ ${fL(tO)}</span></span><span class="s">${fmtP(tO ? tR / tO : null)} del objetivo</span><span>${porDia(tO - tR)}</span><div class="bar"><i style="width:${Math.min(tO ? tR / tO : 0, 1) * 100}%"></i><b style="left:${R.esperado * 100}%"></b></div></div><div class="kpi"><span class="eyebrow">${LC.baseLabel || 'Septiembre'}</span><span class="v">${fL(tS)}</span><span class="s">litros · objetivo ${fmtP(tS ? tO / tS - 1 : null)} vs ${(LC.baseLabel || 'septiembre').toLowerCase()}</span></div><div class="kpi"><span class="eyebrow">Faltan</span><span class="v">${fL(Math.max(0, tO - tR))}</span><span class="s">litros · quedan ${DQ} días hábiles</span></div></div>`;
+  h += `<div class="tw"><table id="tLit"><thead><tr><th class="l">Categoría</th><th>${LC.baseLabel ? LC.baseLabel.slice(0,3) + '.' : 'Sept.'}</th><th>Objetivo</th><th>Litros</th><th>Avance</th><th>Faltan</th><th class="l">Por día</th></tr></thead><tbody>${LC.cats.map((k,i) => obj[i] || real[i] ? `<tr><td class="l name">${esc(k)}</td><td class="muted">${fL(sep[i])}</td><td>${fL(obj[i])}</td><td class="tot">${fL(real[i])}</td><td>${cellP(obj[i] ? real[i] / obj[i] : null, 0.7)}</td><td>${obj[i] - real[i] > 0 ? fL(obj[i] - real[i]) : '—'}</td><td class="l">${porDia(obj[i] - real[i])}</td></tr>` : '').join('')}</tbody><tfoot><tr><td class="l">Total</td><td>${fL(tS)}</td><td>${fL(tO)}</td><td>${fL(tR)}</td><td>${fmtP(tO ? tR / tO : null)}</td><td>${fL(Math.max(0, tO - tR))}</td><td></td></tr></tfoot></table></div>`;
   if (!SOLO && sel === 'todos') h += `<div class="section"><h3>Por vendedor</h3><div class="tw"><table><thead><tr><th class="l">Vendedor</th><th>Objetivo</th><th>Litros</th><th>Avance</th><th>Faltan</th></tr></thead><tbody>${cods.map(c => { const o = LC.cats.reduce((a,k) => a + (LC.obj[c][k] || 0), 0), r = LC.cats.reduce((a,k) => a + ((LV[c] || {})[k] || 0), 0); return `<tr><td class="l name">${c} · ${esc(nomOf(c))}</td><td>${fL(o)}</td><td class="tot">${fL(r)}</td><td>${cellP(o ? r / o : null, 0.7)}</td><td>${o - r > 0 ? fL(o - r) : '—'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
   return h;
 }
@@ -1761,6 +1762,30 @@ function p10Marcas(cods, sel){
 /* ===================== Tostadas de arroz Molinos Ala =====================
    Unidades (venta menos rechazos, por fecha de carga) de los artículos de la lista, del T.desde al T.hasta, por vendedor, contra el objetivo por vendedor.
    Premio: entre los que llegan al objetivo, los T.premios que más venden (copa con el puesto). */
+/* ===================== Millas Peñaflor (pedido 18/11) =====================
+   Objetivo y avance que informa Peñaflor (Excel "Millas Nov-Dic 26") + nuestro avance con la venta del mes.
+   K+T = kioscos y almacenes con un six de Smirnoff Ice; AS = autoservicios con la regla de CCC (6 unidades del mismo artículo en una compra). */
+function viewMillas(){
+  const M = CFG.millas; if (!M) return '';
+  const fN = n => Math.round(n || 0).toLocaleString('es-AR'), f1 = n => (Math.round((n || 0) * 10) / 10).toLocaleString('es-AR');
+  const L = M.lineas, cods = Object.keys(M.v).sort((a, b) => a - b).filter(c => !SOLO || String(c) === String(SOLO));
+  const nom = c => { const v = (CFG.vend || []).find(x => String(x.cod) === String(c)); return v ? titleCase(v.nom) : ((M.nom || {})[c] || 'Vendedor ' + c); };
+  const nos = (c, k) => (((M.nos || {})[c] || {})[k] || []).length;
+  const cel = (o, r) => { if (!(o > 0)) return '<span class="muted">—</span>'; const p = r / o; return `<span class="cell ${p >= 1 ? 'good' : p >= 0.6 ? 'warn' : 'bad'}">${p >= 1 ? '✓ ' : ''}${fmtP(p)}</span>`; };
+  let h = howto('Cómo se lee', ['<b>Millas Peñaflor</b>, ' + esc(M.label || 'bimestral noviembre + diciembre') + ': clientes con compra de cada línea en todo el bimestre, contra el objetivo de Peñaflor. Las millas son para vendedores y supervisores.']
+    .concat(L.map(l => '<b>' + esc(l.n) + ' (' + esc(l.canal) + ')</b>: ' + esc(l.d)),
+      ['<b>Peñaflor</b> = el avance que informa Peñaflor en su archivo (puede venir atrasado). <b>Nuestro</b> = lo que sale de la venta cargada en el mes, venta menos rechazos.']));
+  if (SOLO) {
+    const c = String(SOLO), V = M.v[c] || {};
+    h += `<div class="tw"><table><thead><tr><th class="l">Línea</th><th class="l">Canal</th><th>Objetivo</th><th>Peñaflor</th><th>Nuestro</th><th>Avance</th><th>Faltan</th><th>Millas</th></tr></thead><tbody>` +
+      L.map(l => { const x = V[l.k] || {}, r = nos(c, l.k), o = x.obj || 0, f = Math.max(0, Math.ceil(o) - r); return `<tr><td class="l name">${esc(l.n)}</td><td class="l">${l.canal === 'AS' ? 'Autoservicios' : 'Kioscos y almacenes'}</td><td>${f1(o)}</td><td>${fN(x.pf)}</td><td class="tot">${fN(r)}</td><td>${cel(o, r)}</td><td>${f ? fN(f) + ' clientes' : '<span class="cell good">✓</span>'}</td><td>${fN(x.millas)}</td></tr>`; }).join('') + `</tbody></table></div>`;
+    return h;
+  }
+  h += `<div class="tw"><table><thead><tr><th class="l sticky1">Vendedor</th>${L.map(l => `<th>${esc(l.n)}<div class="muted" style="font-size:11px;font-weight:500">${l.canal} · obj / Peñaflor / nuestro</div></th>`).join('')}</tr></thead><tbody>` +
+    cods.map(c => `<tr><td class="l sticky1 name">${c} · ${esc(nom(c))}</td>${L.map(l => { const x = (M.v[c] || {})[l.k] || {}, r = nos(c, l.k); return `<td>${f1(x.obj)} / ${fN(x.pf)} / <b>${fN(r)}</b> ${cel(x.obj, r)}</td>`; }).join('')}</tr>`).join('') +
+    `</tbody><tfoot><tr><td class="l sticky1">Total</td>${L.map(l => { const o = cods.reduce((a, c) => a + (((M.v[c] || {})[l.k] || {}).obj || 0), 0), pf = cods.reduce((a, c) => a + (((M.v[c] || {})[l.k] || {}).pf || 0), 0), r = cods.reduce((a, c) => a + nos(c, l.k), 0); return `<td>${f1(o)} / ${fN(pf)} / <b>${fN(r)}</b> ${cel(o, r)}</td>`; }).join('')}</tr></tfoot></table></div>`;
+  return h;
+}
 function viewTost(){
   const T = CFG.tost; if (!T) return '';
   const Q = (SNAP && SNAP.tost) || {}, A = T.arts, O = T.obj, fN = n => Math.round(n || 0).toLocaleString('es-AR'), POS = T.pos || {}, NP = T.premios || 5, TOP = T.top || [], SP = !!T.sinPodio, PM = T.premioMonto || 0;
@@ -1947,7 +1972,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { pepsico: viewPepsico, cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { pepsico: viewPepsico, cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, millas: viewMillas, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
