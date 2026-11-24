@@ -350,6 +350,7 @@ function computeP(CFG, SNAP){
 const cuse = n => (window.claude && typeof window.claude.use === 'function') ? window.claude.use(n) : Promise.resolve(null);
 const EMBED = /*EMBED_START*/null/*EMBED_END*/;
 const EMBED_OBJ = /*EMBEDOBJ_START*/null/*EMBEDOBJ_END*/;
+const PLANAS = /*PLANAS_START*/null/*PLANAS_END*/;
 let SNAP = EMBED, R = null, OBJ = EMBED_OBJ;
 const P = CFG.params;
 const COLS = ['CCC'].concat(CFG.brands);
@@ -542,6 +543,8 @@ const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].
 if (CFG.cierre) TABS.splice(1, 0, ['cierre', '¿Cómo cerré mi día?']);
 if (CFG.millas) { const it = TABS.findIndex(t => t[0] === 'tost'); TABS.splice(it >= 0 ? it : TABS.length, 0, ['millas', 'Millas Peñaflor']); }
 if (SINP) for (let i = TABS.length - 1; i >= 0; i--) if (['puntos','reglas','supervisor','ficha'].includes(TABS[i][0])) TABS.splice(i, 1);
+/* Plan AS: al lado de ¿Cómo cerré mi día? (o segunda si no está) */
+if (PLANAS && PLANAS.v && Object.keys(PLANAS.v).some(c => !SOLO || String(c) === String(SOLO))) { const ic = TABS.findIndex(t => t[0] === 'cierre'); TABS.splice(ic >= 0 ? ic + 1 : Math.min(1, TABS.length), 0, ['planas', 'Plan AS ' + String(PLANAS.mes || '').split(' ')[0]]); }
 if (!TABS.some(x => x[0] === st.tab)) st.tab = SINP ? TABS[0][0] : SOLO ? 'ficha' : 'resumen';
 if (SOLO) { st.ven = SOLO; st.bVen = String(SOLO); st.gVen = String(SOLO); }
 function renderTabs(){ $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join(''); }
@@ -567,6 +570,52 @@ function banners(){
   if (!SNAP || !SNAP.nMes) h += `<div class="empty"><div><h3>Todavía no hay ventas de ${CFG.mes.label}</h3><p>El CCC y las marcas arrancan en 0 hasta que entren las ventas facturadas de ${CFG.mes.label}.</p></div><button class="btn primary edit-only" type="button" data-action="load">Cargar ventas</button></div>`;
   return h;
 }
+
+/* ===================== Plan AS (reconocimiento de Peñaflor por cliente) =====================
+   Datos de d/planas.json: cajas a bonificar, Plan Frío y punteras a confirmar, por cliente de la cartera. */
+function viewPlanAS(){
+  const PA = PLANAS; if (!PA || !PA.v) return '';
+  const cods = Object.keys(PA.v).filter(c => !SOLO || String(c) === String(SOLO));
+  if (!cods.length) return `<div class="empty"><div><h3>No tenés clientes en el Plan AS de ${esc(PA.mes)}</h3><p>Si creés que falta alguno, avisale a tu supervisor.</p></div></div>`;
+  const sel = SOLO ? cods[0] : (cods.includes(String(st.paV)) ? String(st.paV) : 'todos');
+  const fil = ['todos', 'entregar', 'nada'].includes(st.paF) ? st.paF : 'todos';
+  const n0 = n => Math.round(n || 0).toLocaleString('es-AR');
+  const algo = r => r.tot > 0 || (r.frio && r.frio.ok) || !!r.pun;
+  const all = (sel === 'todos' ? cods : [sel]).flatMap(c => PA.v[c].cli.map(r => ({ ...r, ven: c, vnom: PA.v[c].nom })));
+  const rows = all.filter(r => fil === 'todos' || (fil === 'entregar' ? algo(r) : !algo(r)));
+  const sum = (L, f) => L.reduce((a, r) => a + f(r), 0);
+  const prodIdx = PA.prod.map((p, i) => i).filter(i => sum(all, r => r.q[i]) > 0);
+  const tCaj = sum(all, r => r.tot), tFrio = sum(all, r => r.frio && r.frio.ok ? 1 : 0), nRel = sum(all, r => r.frio ? 1 : 0);
+  const nPun = sum(all, r => r.pun ? 1 : 0), cPun = sum(all, r => r.pun ? r.pun.cj : 0);
+  const hayPun = nPun > 0;
+  let h = howto('Cómo se lee', [
+    'Es lo que Peñaflor reconoce por cada cliente tuyo del Plan AS de <b>' + esc(PA.mes) + '</b>. Son datos cerrados: no cambian con las ventas del día.',
+    '<b>Cajas a bonificar</b>: lo que le corresponde al cliente por lo que compró en el mes, según su plan. Tope por cliente: Gold ' + PA.topes.Gold + ', Silver ' + PA.topes.Silver + ', Inicial ' + PA.topes.Inicial + ' cajas.',
+    '<b>Plan Frío</b>: en el relevamiento de la heladera (no Peñaflor) tiene que haber ' + PA.frio.rtd + ' o más frentes de RTD y ' + PA.frio.art + ' o más de cerveza artesanal. Si cumple, lleva ' + esc(PA.frio.premio) + '. "No relevado" quiere decir que no hubo foto de la heladera.',
+    hayPun ? '<b>Puntera</b>: ' + PA.pun.v + ' o más frentes de vinos y ' + PA.pun.s + ' o más de spirits en la puntera dan ' + PA.pun.cj + ' cajas de ' + esc(PA.pun.prod) + '. Todavía están <b>' + esc(PA.pun.estado) + '</b>: no las prometas hasta que se confirmen.' : null,
+    'Si un dato no coincide con lo que ves en el local, avisale a tu supervisor antes de entregar.'
+  ].filter(Boolean));
+  h += `<div class="filters" style="margin-bottom:10px">${SOLO ? '' : `<label for="paV">Vendedor <select id="paV"><option value="todos" ${sel === 'todos' ? 'selected' : ''}>Todos</option>${cods.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c} · ${esc(titleCase(PA.v[c].nom))}</option>`).join('')}</select></label>`}
+    <div class="daychips" role="group" aria-label="Clientes">${[['todos', 'Todos'], ['entregar', 'Con algo para entregar'], ['nada', 'Sin nada']].map(([k, l]) => `<button type="button" class="daychip" data-paf="${k}" aria-pressed="${k === fil}">${l}</button>`).join('')}</div></div>`;
+  const desg = prodIdx.map(i => n0(sum(all, r => r.q[i])) + ' ' + esc(PA.prod[i])).join(', ');
+  h += `<div class="kpis">
+    <div class="kpi"><span class="eyebrow">Cajas a bonificar</span><span class="v">${n0(tCaj)}</span><span class="s">${desg || 'sin cajas este mes'}</span></div>
+    <div class="kpi"><span class="eyebrow">Plan Frío</span><span class="v">${n0(tFrio)} <span class="muted" style="font-size:20px">/ ${n0(nRel)}</span></span><span class="s">clientes que cumplen, de los relevados · ${n0(tFrio)} six pack${tFrio === 1 ? '' : 's'} de Smirnoff Ice</span></div>
+    ${hayPun ? `<div class="kpi"><span class="eyebrow">Punteras a confirmar</span><span class="v">${n0(nPun)}</span><span class="s">${n0(cPun)} cajas de ${esc(PA.pun.prod)} si Peñaflor las confirma</span></div>` : `<div class="kpi"><span class="eyebrow">Clientes en el plan</span><span class="v">${n0(all.length)}</span><span class="s">${n0(sum(all, r => algo(r) ? 1 : 0))} con algo para entregar</span></div>`}
+  </div>`;
+  const frioCell = f => !f ? '<span class="cell na">No relevado</span>' : `<span class="cell ${f.ok ? 'good' : 'bad'}">${f.ok ? '✓ 1 six pack' : 'No cumple'}</span><div class="muted" style="font-size:12px;margin-top:2px">RTD ${f.rtd} · artesanal ${f.art}</div>`;
+  const punCell = p => !p ? '<span class="muted">—</span>' : `<span class="cell warn">${p.cj} cajas · a confirmar</span><div class="muted" style="font-size:12px;margin-top:2px">vinos ${p.v} · spirits ${p.s}</div>`;
+  h += `<div class="panel-h"><span class="muted">${n0(rows.length)} clientes</span><span style="flex:1"></span>${exportBtn('tPlanAS', 'plan_as_' + PA.mes)}</div>`;
+  h += `<div class="tw"><table id="tPlanAS"><thead><tr><th class="l sticky1">Cliente</th>${sel === 'todos' ? '<th class="l">Vendedor</th>' : ''}<th class="l">Plan</th>${prodIdx.map(i => `<th>${esc(PA.prod[i])}</th>`).join('')}<th>Total cajas</th><th style="text-align:center">Plan Frío</th>${hayPun ? '<th style="text-align:center">Puntera</th>' : ''}<th class="l">Observaciones</th></tr></thead><tbody>`;
+  for (const r of rows) h += `<tr><td class="l sticky1 name">${r.c} · ${esc(titleCase(r.n))}<div class="muted" style="font-size:12px;font-weight:400">${esc(titleCase(r.d))}</div></td>${sel === 'todos' ? `<td class="l ink2">${esc(titleCase(r.vnom))}</td>` : ''}<td class="l ink2">${esc(r.plan)} <span class="muted" style="font-size:12px">(tope ${r.tope})</span></td>${prodIdx.map(i => `<td>${r.q[i] ? '<b>' + r.q[i] + '</b>' : '<span class="muted">—</span>'}</td>`).join('')}<td class="tot">${r.tot ? r.tot : '<span class="muted">0</span>'}</td><td style="text-align:center">${frioCell(r.frio)}</td>${hayPun ? `<td style="text-align:center">${punCell(r.pun)}</td>` : ''}<td class="l ink2" style="font-size:13px;min-width:180px">${r.obs.map(esc).join('<br>')}</td></tr>`;
+  if (rows.length) h += `<tr style="font-weight:700"><td class="l sticky1">Total</td>${sel === 'todos' ? '<td></td>' : ''}<td></td>${prodIdx.map(i => `<td>${n0(sum(rows, r => r.q[i]))}</td>`).join('')}<td class="tot">${n0(sum(rows, r => r.tot))}</td><td style="text-align:center">${n0(sum(rows, r => r.frio && r.frio.ok ? 1 : 0))} six packs</td>${hayPun ? `<td style="text-align:center">${n0(sum(rows, r => r.pun ? r.pun.cj : 0))} cajas a confirmar</td>` : ''}<td></td></tr>`;
+  else h += `<tr><td class="l" colspan="20"><span class="muted">No hay clientes con este filtro.</span></td></tr>`;
+  h += '</tbody></table></div>';
+  h += `<p class="note">Fuente: ${esc(PA.fuente)}. Cajas por cliente con el tope del plan ya aplicado.</p>`;
+  return h;
+}
+document.addEventListener('change', e => { if (e.target.id === 'paV') { st.paV = e.target.value; saveUI(); render(); } });
+document.addEventListener('click', e => { const f = e.target.closest('[data-paf]'); if (f) { st.paF = f.dataset.paf; saveUI(); render(); } });
 
 /* ===== Resumen ===== */
 /* ===================== ¿Cómo cerré mi día? =====================
@@ -1199,7 +1248,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? computeP(CFG, { ...SNAP, v: SNAP.pv.v || {}, pg: SNAP.pv.pg || SNAP.pg }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = (R.sumV + R.sumS) ? v.cup / (R.sumV + R.sumS) : null; }); }
   renderHeader(); renderTabs();
-  const v = { cierre: viewCierre, resumen: viewResumen, puntos: viewPuntos, tost: viewTost, millas: viewMillas, geof: viewGeoF, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, pgq: viewPGQ, pgqb: viewPGQB, inn: viewInn, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { planas: viewPlanAS, cierre: viewCierre, resumen: viewResumen, puntos: viewPuntos, tost: viewTost, millas: viewMillas, geof: viewGeoF, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, pgq: viewPGQ, pgqb: viewPGQB, inn: viewInn, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
 }
 async function exportTable(id, name){
