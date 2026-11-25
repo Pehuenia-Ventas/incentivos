@@ -380,6 +380,46 @@ function clsP(p, min){ if (p == null) return 'na'; if (p >= 1 - 1e-12) return 'g
 function cellP(p, min){ return p == null ? '<span class="cell na">—</span>' : `<span class="cell ${clsP(p, min)}">${p >= 1 - 1e-12 ? '✓ ' : ''}${fmtP(p)}</span>`; }
 function tickets(n){ let h = '<span class="tickets" aria-label="' + n + ' cupones">'; for (let i = 0; i < 10; i++) h += '<i class="' + (i < n ? 'a' : '') + '"></i>'; return h + '</span>'; }
 function howto(title, items, open){ return `<details class="howto" ${open ? 'open' : ''}><summary>${esc(title)}</summary><ul>${items.map(i => '<li>' + i + '</li>').join('')}</ul></details>`; }
+/* ===================== Objetivo de ventas (tablero "Objetivo de Ventas 2026" de Miguel) =====================
+   Datos de CFG.om (proc/om/om_extract.py): objetivo de venta c/IVA del mes, venta cargada, margen de preventa, tendencia y premio. */
+function viewOM(){
+  const M = CFG.om; if (!M || !M.v) return '';
+  const fM = n => '$' + Math.round(n || 0).toLocaleString('es-AR');
+  const cods = Object.keys(M.v).filter(c => !SOLO || String(c) === String(SOLO)).sort((a, b) => a - b);
+  if (!cods.length) return '<div class="empty"><div><h3>Sin objetivo de ventas cargado</h3></div></div>';
+  const ritmo = M.ht ? M.htr / M.ht : null, quedan = M.ht && M.htr ? M.ht - M.htr + 1 : 0;
+  const kaf = c => +c >= 24 && +c <= 28;
+  const prem = (c, x) => { const tp = x.o ? (x.tend || 0) / x.o : 0, mgOk = kaf(c) || (x.mg != null && x.mg > M.mgMin); let p = 0; for (const [t, m] of M.premios) if (tp >= t - 1e-9) p = m; return { tp, mgOk, p: mgOk ? p : 0, vol: p }; };
+  const est = x => { const a = x.o ? x.venta / x.o : 0; return !ritmo ? '' : a >= ritmo - 0.02 ? '<span class="cell good">En ritmo</span>' : a >= ritmo - 0.12 ? '<span class="cell warn">Atrás</span>' : '<span class="cell bad">Lejos</span>'; };
+  const mgCell = (c, x) => x.mg == null ? '—' : `<span class="cell ${kaf(c) ? 'na' : x.mg > M.mgMin ? 'good' : x.mg > M.mgMin - 0.01 ? 'warn' : 'bad'}">${fmtP(Math.floor(x.mg * 1000) / 1000, 1)}</span>`;
+  const premTxt = (c, x) => { const r = prem(c, x); if (r.p) return `<b>🏆 ${fM(r.p)}</b>`; if (r.vol && !r.mgOk) return `<span class="need bad">Llega al volumen pero el margen (${fmtP(Math.floor(x.mg * 1000) / 1000, 1)}) no supera ${fmtP(M.mgMin, 1)}</span>`; return `<span class="muted">tendencia ${fmtP(r.tp, 1)} · al 100% → ${fM(M.premios[0][1])}</span>`; };
+  let h = howto('Cómo se lee', [
+    'Es el <b>objetivo de venta con IVA</b> de ' + esc(M.mes.toLowerCase()) + ' del tablero "Objetivo de Ventas 2026": todos los proveedores juntos (Pepsico incluido), venta cargada del mes.',
+    '<b>Avance</b> = venta ÷ objetivo. La línea marca el <b>ritmo esperado a hoy</b> (día hábil ' + M.htr + ' de ' + M.ht + '). <b>Tendencia de cierre</b> = si seguís a este ritmo, a cuánto llegás el último día.',
+    '<b>Premio</b>: llegar al 100% del objetivo da ' + fM(M.premios[0][1]) + ' y al 110% ' + fM(M.premios[1][1]) + ', con el <b>margen de preventa</b> sí o sí por encima de ' + fmtP(M.mgMin, 1) + ' (en los KAF solo cuenta el volumen). Sin llegar al 100% no se cobra nada.',
+    'El 🏆 y el monto salen de la tendencia de cierre y del margen de hoy. El día en curso está incompleto hasta que termina de cargar la preventa. Datos al ' + esc(M.hasta) + '.']);
+  if (SOLO) {
+    const c = cods[0], x = M.v[c], a = x.o ? x.venta / x.o : 0, r = prem(c, x), falta = Math.max(0, x.o - x.venta), f110 = Math.max(0, x.o * 1.1 - x.venta);
+    h += `<div class="kpis">
+      <div class="kpi"><span class="eyebrow">Objetivo de ${esc(M.mes.split(' ')[0].toLowerCase())}</span><span class="v">${fM(x.o)}</span><span class="s">venta con IVA, todos los proveedores</span></div>
+      <div class="kpi"><span class="eyebrow">Venta acumulada</span><span class="v">${fM(x.venta)}</span><span class="s">${fmtP(a, 1)} del objetivo · esperado a hoy ${fmtP(ritmo, 1)}</span><div class="bar"><i style="width:${Math.min(a, 1) * 100}%"></i><b style="left:${(ritmo || 0) * 100}%"></b></div></div>
+      <div class="kpi"><span class="eyebrow">Tendencia de cierre</span><span class="v">${fM(x.tend)}</span><span class="s">${fmtP(r.tp, 1)} del objetivo ${est(x)}</span></div>
+      <div class="kpi"><span class="eyebrow">Margen de preventa</span><span class="v">${x.mg == null ? '—' : fmtP(Math.floor(x.mg * 1000) / 1000, 1)}</span><span class="s">${kaf(c) ? 'en KAF el premio es solo por volumen' : 'para el premio tiene que superar ' + fmtP(M.mgMin, 1)}</span></div>
+      <div class="kpi"><span class="eyebrow">Premio</span><span class="v">${r.p ? '🏆 ' + fM(r.p) : '—'}</span><span class="s">${r.p ? (r.p < M.premios[1][1] ? 'si mantenés el ritmo · al 110% → ' + fM(M.premios[1][1]) : 'si mantenés el ritmo') : premTxt(c, x)}</span></div>
+      <div class="kpi"><span class="eyebrow">Para el premio</span><span class="v">${falta ? fM(falta) : '✓'}</span><span class="s">${falta ? 'te faltan para el 100% · ' + (quedan ? fM(falta / quedan) + ' por día (' + quedan + ' días hábiles con hoy)' : '') : 'llegaste al 100%'}${f110 && !falta ? ' · para el 110% faltan ' + fM(f110) : ''}</span></div></div>`;
+    return h;
+  }
+  const T = cods.reduce((a, c) => { const x = M.v[c]; a.o += x.o; a.venta += x.venta; a.tend += x.tend || 0; return a; }, { o: 0, venta: 0, tend: 0 });
+  const nP = cods.filter(c => prem(c, M.v[c]).p).length;
+  h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Objetivo del equipo</span><span class="v">${fM(T.o)}</span><span class="s">${cods.length} vendedores</span></div>
+    <div class="kpi"><span class="eyebrow">Venta acumulada</span><span class="v">${fM(T.venta)}</span><span class="s">${fmtP(T.o ? T.venta / T.o : null, 1)} · esperado a hoy ${fmtP(ritmo, 1)}</span><div class="bar"><i style="width:${Math.min(T.o ? T.venta / T.o : 0, 1) * 100}%"></i><b style="left:${(ritmo || 0) * 100}%"></b></div></div>
+    <div class="kpi"><span class="eyebrow">Tendencia de cierre</span><span class="v">${fM(T.tend)}</span><span class="s">${fmtP(T.o ? T.tend / T.o : null, 1)} del objetivo</span></div>
+    <div class="kpi"><span class="eyebrow">Con premio hoy</span><span class="v">${nP} <span class="muted" style="font-size:20px">/ ${cods.length}</span></span><span class="s">según tendencia y margen</span></div></div>`;
+  const rows = cods.map(c => ({ c, x: M.v[c] })).sort((a, b) => (b.x.o ? b.x.venta / b.x.o : 0) - (a.x.o ? a.x.venta / a.x.o : 0));
+  h += `<div class="section"><div class="panel-h"><h3>Por vendedor</h3><span style="flex:1"></span>${exportBtn('tOM', 'objetivo_ventas')}</div><div class="tw"><table id="tOM"><thead><tr><th class="l sticky1">Vendedor</th><th>Objetivo</th><th>Venta</th><th>Avance</th><th>Margen</th><th>Tend. cierre</th><th class="l">Estado</th><th class="l">Premio</th></tr></thead><tbody>${rows.map(({ c, x }) => `<tr><td class="l sticky1 name">${c} · ${esc(titleCase(String(x.n).replace(/^kaf\s+/i, '')))}</td><td>${fM(x.o)}</td><td class="tot">${fM(x.venta)}</td><td>${fmtP(x.o ? x.venta / x.o : null, 1)}</td><td>${mgCell(c, x)}</td><td>${fM(x.tend)} <span class="muted" style="font-size:12px">${fmtP(x.o ? x.tend / x.o : null, 1)}</span></td><td class="l">${est(x)}</td><td class="l">${premTxt(c, x)}</td></tr>`).join('')}</tbody></table></div><p class="note">Fuente: ${esc(M.fuente)}, datos al ${esc(M.hasta)}.</p></div>`;
+  return h;
+}
+
 function exportBtn(id, name){ return `<button class="btn small" type="button" data-export="${id}" data-name="${esc(name)}">Exportar a Excel (CSV)</button>`; }
 const legendP = () => SINP ? `<div class="legend"><span><span class="cell good">✓ 100%</span> objetivo cumplido</span><span><span class="cell warn">85%</span> cerca (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> lejos del objetivo</span></div>` : `<div class="legend"><span><span class="cell good">✓ 100%</span> puntaje completo</span><span><span class="cell warn">85%</span> suma parte de los puntos (marcas desde ${fmtP(P.minMarca)}, CCC desde ${fmtP(P.minCCC)})</span><span><span class="cell bad">50%</span> debajo del mínimo: 0 puntos</span></div>`;
 
@@ -543,6 +583,7 @@ const TABS = SOLOPG ? [['ficha','Mis puntos'], ['batallapg','Batalla P&amp;G']].
 if (CFG.cierre) TABS.splice(1, 0, ['cierre', '¿Cómo cerré mi día?']);
 if (CFG.millas) { const it = TABS.findIndex(t => t[0] === 'tost'); TABS.splice(it >= 0 ? it : TABS.length, 0, ['millas', 'Millas Peñaflor']); }
 if (SINP) for (let i = TABS.length - 1; i >= 0; i--) if (['puntos','reglas','supervisor','ficha'].includes(TABS[i][0])) TABS.splice(i, 1);
+if (CFG.om && CFG.om.v && Object.keys(CFG.om.v).some(c => !SOLO || String(c) === String(SOLO))) TABS.splice(SOLO ? 1 : 0, 0, ['om', 'Objetivo de ventas']); /* tablero Objetivo de Ventas 2026 (25/11) */
 /* Plan AS: al lado de ¿Cómo cerré mi día? (o segunda si no está) */
 if (PLANAS && PLANAS.v && Object.keys(PLANAS.v).some(c => !SOLO || String(c) === String(SOLO))) { const ic = TABS.findIndex(t => t[0] === 'cierre'); TABS.splice(ic >= 0 ? ic + 1 : Math.min(1, TABS.length), 0, ['planas', 'Plan AS ' + String(PLANAS.mes || '').split(' ')[0]]); }
 if (!TABS.some(x => x[0] === st.tab)) st.tab = SINP ? TABS[0][0] : SOLO ? 'ficha' : 'resumen';
@@ -1252,7 +1293,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? computeP(CFG, { ...SNAP, v: SNAP.pv.v || {}, pg: SNAP.pv.pg || SNAP.pg }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = (R.sumV + R.sumS) ? v.cup / (R.sumV + R.sumS) : null; }); }
   renderHeader(); renderTabs();
-  const v = { planas: viewPlanAS, cierre: viewCierre, resumen: viewResumen, puntos: viewPuntos, tost: viewTost, millas: viewMillas, geof: viewGeoF, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, pgq: viewPGQ, pgqb: viewPGQB, inn: viewInn, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { om: viewOM, planas: viewPlanAS, cierre: viewCierre, resumen: viewResumen, puntos: viewPuntos, tost: viewTost, millas: viewMillas, geof: viewGeoF, marcas: viewMarcas, batalla: viewBatalla, batallapg: viewBatallaPG, pgq: viewPGQ, pgqb: viewPGQB, inn: viewInn, gaona: viewGaona, litros: viewLitros, esp: viewEsp, georgalos: viewGeorgalos, equipo: viewEquipo, supervisor: viewSupervisor, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
 }
 async function exportTable(id, name){
