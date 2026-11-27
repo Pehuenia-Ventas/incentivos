@@ -1718,7 +1718,7 @@ function gcobView(){
     if (ya.length) h += `<div class="section"><details class="cli"><summary><span>✓ Clientes que ya cuentan</span><span class="muted">${ya.length}</span></summary><div class="tw"><table><tbody>${ya.map(r => `<tr><td class="l name">${esc(r.c)} · ${esc(titleCase(nameOf(r.c) || ''))}</td><td class="l">${r.l.filter(x => x[1] >= G.minU).map(([a, q]) => sku(a, q)).join('')}</td></tr>`).join('')}</tbody></table></div></details></div>`;
     return h;
   }
-  const cods = Object.keys(G.v).sort((a, b) => a - b), nm = c => titleCase(((CFG.vend || []).find(v => String(v.cod) === String(c)) || {}).nom || 'Vendedor ' + c);
+  const cods = Object.keys(G.v).sort((a, b) => a - b), nm = c => (CFG.gcob.nom && CFG.gcob.nom[c]) ? titleCase(CFG.gcob.nom[c]) : titleCase(((CFG.vend || []).find(v => String(v.cod) === String(c)) || {}).nom || 'Vendedor ' + c);
   const R = cods.map(c => { const S = gcobStat(c); return { c, n: S.n, dos: S.rows.filter(r => !r.ccc && r.ok === 2).length, comp: S.rows.length }; }).sort((a, b) => b.n - a.n), gan = R.filter(r => r.n >= G.obj).length;
   h += `<div class="kpis"><div class="kpi"><span class="eyebrow">Clientes que cuentan (equipo)</span><span class="v">${R.reduce((a, r) => a + r.n, 0)} <span class="muted" style="font-size:20px">/ ${G.obj * R.length}</span></span><span class="s">${R.length} vendedores × ${G.obj}</span></div><div class="kpi"><span class="eyebrow">Vendedores en el objetivo</span><span class="v">${gan} <span class="muted" style="font-size:20px">/ ${R.length}</span></span><span class="s">${money(gan * G.premio)} en premios</span></div><div class="kpi"><span class="eyebrow">Quedan</span><span class="v" style="font-size:26px">${quedan}</span><span class="s">días hábiles hasta el ${fD(G.hasta)}</span></div></div>`;
   h += `<div class="tw"><table><thead><tr><th class="l">Vendedor</th><th>Clientes que cuentan</th><th>Faltan</th><th>A 1 SKU de contar</th><th>Compraron Gaona</th><th class="l">Premio</th></tr></thead><tbody>${R.map(r => `<tr><td class="l name">${r.c} · ${esc(nm(r.c))}</td><td class="tot">${r.n} <span class="muted">/ ${G.obj}</span></td><td>${Math.max(0, G.obj - r.n) || '<span class="cell good">✓</span>'}</td><td>${r.dos}</td><td>${r.comp}</td><td class="l">${r.n >= G.obj ? `<span class="cell good">✓ ${money(G.premio)}</span>` : '<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table></div>`;
@@ -1743,6 +1743,33 @@ function viewLitros(){
   if (!SOLO && sel === 'todos') h += `<div class="section"><h3>Por vendedor</h3><div class="tw"><table><thead><tr><th class="l">Vendedor</th><th>Objetivo</th><th>Litros</th><th>Avance</th><th>Faltan</th></tr></thead><tbody>${cods.map(c => { const o = LC.cats.reduce((a,k) => a + (LC.obj[c][k] || 0), 0), r = LC.cats.reduce((a,k) => a + ((LV[c] || {})[k] || 0), 0); return `<tr><td class="l name">${c} · ${esc(nomOf(c))}</td><td>${fL(o)}</td><td class="tot">${fL(r)}</td><td>${cellP(o ? r / o : null, 0.7)}</td><td>${o - r > 0 ? fL(o - r) : '—'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
   return h;
 }
+/* ===== Drop y surtido Peñaflor por categoría (pedido 27/11): CFG.litd (proc/litd/lit_drop.py) ===== */
+function litdView(){
+  const D = CFG.litd; if (!D || !D.v) return '';
+  const fL = n => (Math.round((n || 0) * 10) / 10).toLocaleString('es-AR', { maximumFractionDigits: 1 }), fN = n => Math.round(n || 0).toLocaleString('es-AR');
+  const sel = (typeof st !== 'undefined' && st.litV && st.litV !== 'todos') ? String(st.litV) : null;
+  const cods = Object.keys(D.v).filter(c => SOLO ? String(c) === String(SOLO) : (sel ? String(c) === sel : true)).sort((a, b) => a - b);
+  if (!cods.length) return '';
+  const CAN = [['A', 'Autoservicios'], ['T', 'Tradicionales']];
+  const agg = can => { const e = { comp: 0, l: {}, n: {} }; for (const c of cods) { const x = (D.v[c] || {})[can]; if (!x) continue; e.comp += x.comp; for (const k of D.cats) { e.l[k] = (e.l[k] || 0) + (x.l[k] || 0); e.n[k] = (e.n[k] || 0) + (x.n[k] || 0); } } return e; };
+  let h = `<div class="section"><div class="panel-h"><h3>Drop y surtido por categoría</h3></div><p class="note" style="margin:0 0 8px">Solo clientes con compra de Peñaflor en el mes${SOLO || sel ? '' : ' (vendedores ' + cods.join(', ') + ')'}. <b>Drop</b> = litros promedio por cliente que compró la categoría. <b>Surtido</b> = qué parte de los clientes con compra de Peñaflor llevó la categoría. Autoservicios y tradicionales por separado; sin mayoristas.</p>`;
+  for (const [can, lbl] of CAN) {
+    const e = agg(can); if (!e.comp) continue;
+    const tl = D.cats.reduce((a, k) => a + (e.l[k] || 0), 0);
+    h += `<div class="tw" style="margin-bottom:12px"><table><thead><tr><th class="l sticky1">${lbl} · ${fN(e.comp)} clientes con compra</th><th>Litros</th><th>Compradores</th><th>Drop (L por cliente)</th><th>Surtido</th></tr></thead><tbody>${D.cats.filter(k => e.l[k] || e.n[k]).map(k => `<tr><td class="l sticky1 name">${esc(k)}</td><td>${fL(e.l[k])}</td><td>${fN(e.n[k])}</td><td class="tot">${e.n[k] ? fL(e.l[k] / e.n[k]) : '—'}</td><td>${fmtP(e.comp ? e.n[k] / e.comp : null)}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total Peñaflor</td><td>${fL(tl)}</td><td>${fN(e.comp)}</td><td>${e.comp ? fL(tl / e.comp) : '—'}</td><td></td></tr></tfoot></table></div>`;
+  }
+  if (!SOLO && !sel && cods.length > 1) {
+    const surt = (c, can) => { const x = (D.v[c] || {})[can]; return x && x.comp ? D.cats.reduce((a, k) => a + (x.n[k] || 0), 0) / x.comp : null; };
+    const drop = (c, can) => { const x = (D.v[c] || {})[can]; return x && x.comp ? D.cats.reduce((a, k) => a + (x.l[k] || 0), 0) / x.comp : null; };
+    h += `<div class="tw" style="margin-bottom:12px"><table><thead><tr><th class="l sticky1">Vendedor</th><th>Autoserv. con compra</th><th>Drop AS (L)</th><th>Categorías por cliente AS</th><th>Tradic. con compra</th><th>Drop trad. (L)</th><th>Categorías por cliente trad.</th></tr></thead><tbody>${cods.map(c => { const a = (D.v[c] || {}).A || {}, t = (D.v[c] || {}).T || {}, nm = (CFG.lit && CFG.lit.nom && CFG.lit.nom[c]) || ''; return `<tr><td class="l sticky1 name">${c}${nm ? ' · ' + esc(nm) : ''}</td><td>${fN(a.comp)}</td><td>${drop(c, 'A') == null ? '—' : fL(drop(c, 'A'))}</td><td>${surt(c, 'A') == null ? '—' : fL(surt(c, 'A'))}</td><td>${fN(t.comp)}</td><td>${drop(c, 'T') == null ? '—' : fL(drop(c, 'T'))}</td><td>${surt(c, 'T') == null ? '—' : fL(surt(c, 'T'))}</td></tr>`; }).join('')}</tbody></table></div>`;
+  }
+  if (!SOLO && !sel && D.sub) {
+    const S = Object.entries(D.sub).map(([k, d]) => [k, D.cats.reduce((a, c) => a + (d[c] || 0), 0), d]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]), T = S.reduce((a, x) => a + x[1], 0);
+    h += `<div class="panel-h"><h3>Peso de cada subcanal en litros</h3></div><p class="note" style="margin:0 0 8px">Todos los litros de Peñaflor del mes (todos los vendedores), por subcanal del cliente. Los mayoristas regionales van aparte.</p><div class="tw"><table><thead><tr><th class="l sticky1">Subcanal</th><th>Litros</th><th>% del total</th>${D.cats.map(k => `<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${S.map(([k, l, d]) => `<tr><td class="l sticky1 name">${esc(k)}</td><td class="tot">${fN(l)}</td><td>${fmtP(T ? l / T : null, 1)}</td>${D.cats.map(c => `<td>${d[c] ? fN(d[c]) : '<span class="muted">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody><tfoot><tr><td class="l sticky1">Total</td><td>${fN(T)}</td><td>100%</td>${D.cats.map(c => `<td>${fN(S.reduce((a, x) => a + (x[2][c] || 0), 0))}</td>`).join('')}</tr></tfoot></table></div>`;
+  }
+  return h + '</div>';
+}
+if (typeof viewLitros === 'function') { const __vl = viewLitros; viewLitros = function(){ const h = __vl(); return h ? h + litdView() : h; }; }
 /* ===== Peñaflor vendedores 1 a 10: CCC y batalla de marcas (informativo) ===== */
 function p10Stats(c){
   const PC = CFG.p10, PV = (SNAP && SNAP.p10) || {}, B = PC.brands;
