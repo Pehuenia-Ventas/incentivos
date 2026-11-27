@@ -693,8 +693,9 @@ if (CFG.cierre) TABS.splice(1, 0, ['cierre', '¿Cómo cerré mi día?']);
 if (CFG.om && CFG.om.v && Object.keys(CFG.om.v).some(c => !SOLO || String(c) === String(SOLO))) TABS.splice(SOLO ? 1 : 0, 0, ['om', 'Objetivo de ventas']); /* tablero Objetivo de Ventas 2026 (25/11) */
 if (CFG.millas) { const it = TABS.findIndex(t => t[0] === 'tost'); TABS.splice(it >= 0 ? it : TABS.length, 0, ['millas', 'Millas Peñaflor']); }
 if (SOLO && CFG.pep) TABS.unshift(['pepsico', 'Pepsico · Oportunidades']);
+if (CFG.fresc && frescActivos(CFG.fresc).length && (!SOLO || CFG.fresc.vend.includes(String(SOLO)))) TABS.unshift(['fresc', 'Frescura ⏳']); /* frescura primero (pedido 27/11) */
 if (SINM) { const ri = TABS.findIndex(x => x[0] === 'reglas'); if (ri >= 0) TABS.splice(ri, 1); if (st.tab === 'reglas') st.tab = SOLO ? 'ficha' : 'resumen'; }
-if (SOLO) { try { if (CFG.pep && !localStorage.getItem('im_pep1')) { st.tab = 'pepsico'; localStorage.setItem('im_pep1', '1'); } } catch (e) {} if (!TABS.some(x => x[0] === st.tab)) st.tab = CFG.pep ? 'pepsico' : 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; }
+if (SOLO) { try { if (CFG.pep && !localStorage.getItem('im_pep1')) { st.tab = 'pepsico'; localStorage.setItem('im_pep1', '1'); } } catch (e) {} if (!TABS.some(x => x[0] === st.tab)) st.tab = CFG.pep ? 'pepsico' : 'ficha'; st.ven = SOLO; st.bVen = String(SOLO); st.sup = 'todos'; if (TABS.some(x => x[0] === 'fresc')) st.tab = 'fresc'; }
 function renderTabs(){
   $('#tabs').innerHTML = TABS.map(([k,l]) => `<button class="tab" role="tab" type="button" id="tab-${k}" aria-selected="${st.tab===k}" data-tab="${k}">${l}</button>`).join('');
 }
@@ -713,7 +714,7 @@ function renderHeader(){
       const ok = H.filter(d => F[d]).length, p = H.length ? ok / H.length : 0; let el = document.getElementById('stOD'); if (!el) { el = document.createElement('span'); el.id = 'stOD'; $('#stDias').after(el); }
       el.className = 'chip ' + (p >= 0.9 ? 'good' : p >= 0.7 ? 'warn' : 'bad'); el.textContent = 'Objetivos diarios de ' + CFG.mes.label.split(' ')[0] + ': ' + ok + ' de ' + H.length + ' días · ' + Math.round(p * 100) + '%'; el.title = 'Días de lunes a viernes de ' + CFG.mes.label + ' (feriados incluidos) en los que cargaste tu objetivo del día. Hoy cuenta cuando lo cargás.'; } }
   $('#fSup').innerHTML = '<option value="todos">Todos</option>' + SUPS.map(s => `<option value="${esc(s)}" ${st.sup===s?'selected':''}>${esc(supName(s))}</option>`).join('');
-  $('#filters').hidden = SOLO || ['cierre','ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn','pgq','pgqb'].includes(st.tab);
+  $('#filters').hidden = SOLO || ['fresc','cierre','ficha','reglas','supervisores','objetivos','batalla','gaona','litros','p10','esp','inn','pgq','pgqb'].includes(st.tab);
   ['#stData','#stDias','#stObj'].forEach(s => { const el = $(s); if (el) el.hidden = st.tab === 'pepsico'; });
   if (SOLO) { const v = CFG.vend[0]; $('#soloName').textContent = ' · ' + titleCase(v.nom); $('#stObj').disabled = true; $('#stObj').style.cursor = 'default'; }
   const so = $('#stObj'); if (OBJ) { so.className = 'chip good'; so.textContent = SINM && !OBJ.mes ? 'Objetivos: los de octubre, hasta tener los de ' + CFG.mes.label.split(' ')[0] : 'Objetivos de ' + CFG.mes.label.split(' ')[0] + (OBJ.estimativo ? ' estimativos' : ' cargados'); } else { so.className = 'chip warn'; so.textContent = 'Objetivos provisorios'; so.title = 'Todavía no se cargaron los objetivos de octubre: se usan los del modelo'; }
@@ -727,6 +728,48 @@ function emptyBanner(){
   if (SNAP && SNAP.nMes > 0) return ob;
   const extra = SNAP ? `El último archivo cargado tenía ventas del ${fmtDate(SNAP.minD)} al ${fmtDate(SNAP.maxD)}, pero ninguna de ${CFG.mes.label}.` : 'Los objetivos y la cartera de cada vendedor ya están cargados; falta la venta del mes.';
   return ob + `<div class="empty"><div><h3>Todavía no hay ventas de ${CFG.mes.label}</h3><p>${extra} Todo arranca en 0 y se completa a medida que entran las ventas.</p></div><button class="btn primary edit-only" type="button" data-action="load">Cargar ventas</button></div>`;
+}
+
+/* ===== Frescura (pedido 27/11): CFG.fresc (proc/fresc/fresc.py). Artículos por vencer repartidos en partes iguales entre los vendedores de Pepsico (sin KAF), con objetivo por día hábil. ===== */
+function frescDN(d){ const DN = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; return DN[new Date(d + 'T12:00:00Z').getUTCDay()] + ' ' + d.slice(8, 10) + '/' + d.slice(5, 7); }
+function frescSum(F, k, cods, d){ let o = 0, v = 0; const it = F.items.find(x => x.k === k); for (const c of cods) { o += d ? ((it.obj[c] || {})[d] || 0) : (it.asig[c] || 0); const s = ((F.v || {})[c] || {})[k] || {}; v += d ? (s[d] || 0) : Object.values(s).reduce((a, b) => a + b, 0); } return { o, v }; }
+function frescActivos(F){ return F && F.items ? F.items.filter(it => it.vence >= HOYAR) : []; }
+function viewFresc(){
+  const F = CFG.fresc; if (!F || !F.items) return '';
+  const its0 = frescActivos(F);
+  const cods = SOLO ? [String(SOLO)] : (st.frV && st.frV !== 'todos' && F.vend.includes(String(st.frV)) ? [String(st.frV)] : F.vend.map(String));
+  const its = its0.filter(it => frescSum(F, it.k, cods).o > 0 || frescSum(F, it.k, cods).v > 0); if (!its.length) return '<div class="empty"><div><h3>No hay artículos de frescura vigentes</h3></div></div>';
+  const n0 = n => Math.round(n || 0).toLocaleString('es-AR'), fD = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const cel = (v, o, d) => { if (!o && !v) return '<span class="cell na">—</span>'; const pas = d && d < HOYAR, fut = d && d > HOYAR; const cls = v >= o ? 'good' : fut ? 'na' : v > 0 ? 'warn' : pas ? 'bad' : 'warn'; return `<span class="cell ${cls}">${n0(v)} / ${n0(o)}</span>`; };
+  const hoyH = its.some(it => it.dias.includes(HOYAR)), arranca = HOYAR < F.desde;
+  let h = howto('Cómo funciona', [
+    'Son artículos con <b>vencimiento cercano</b>: hay que venderlos antes. Cada uno se repartió <b>en partes iguales</b> entre los vendedores de Pepsico (los KAF no participan).',
+    'Lo tuyo se vende en partes por día hábil, <b>hasta 5 días antes del vencimiento</b>, para que el cliente tenga tiempo de venderlo.',
+    'Cuenta la venta en unidades por fecha de carga del pedido (venta menos rechazos), desde el ' + fD(F.desde) + '.',
+    'En el detalle por día: <b>vendido / objetivo</b>. Verde = cumplido · ámbar = vendiste algo o es hoy · rojo = día pasado sin venta.'], !SOLO ? false : true);
+  if (!SOLO) h += `<div class="filters" style="margin-bottom:10px"><label for="frV">Vendedor <select id="frV"><option value="todos">Todos</option>${F.vend.map(c => { const v = CFG.vend.find(x => String(x.cod) === String(c)); return `<option value="${c}" ${String(st.frV) === String(c) ? 'selected' : ''}>${c}${v ? ' · ' + esc(titleCase(v.nom)) : ''}</option>`; }).join('')}</select></label></div>`;
+  /* Hoy */
+  const kp = its.map(it => { const t = frescSum(F, it.k, cods), d = frescSum(F, it.k, cods, HOYAR), falta = Math.max(0, t.o - t.v);
+    return `<div class="kpi"><span class="eyebrow">${esc(it.desc)} · vence ${fD(it.vence)}</span><span class="v" style="font-size:24px">${arranca ? n0(t.o) + ' u.' : 'Faltan ' + n0(falta) + ' u.'}</span><span class="s">${arranca ? 'para vender del ' + fD(it.dias[0]) + ' al ' + fD(it.hasta) : (it.dias.includes(HOYAR) ? 'hoy: ' + n0(d.v) + ' de ' + n0(d.o) + ' u. · ' : '') + (HOYAR > it.hasta ? 'plazo de venta cerrado' : 'vendé hasta el ' + fD(it.hasta))}</span>${!arranca && t.o ? `<span>${cel(t.v, t.o)}</span>` : ''}</div>`; }).join('');
+  h += `<div class="section"><div class="panel-h"><h3>${arranca ? 'Frescura · arranca el ' + frescDN(F.desde) : hoyH ? 'Frescura · hoy ' + frescDN(HOYAR) : 'Frescura'}</h3></div><div class="kpis">${kp}</div></div>`;
+  /* Resumen por artículo */
+  h += `<div class="section"><div class="panel-h"><h3>${SOLO ? 'Tu objetivo de frescura' : 'Objetivo de frescura'}</h3><span style="flex:1"></span>${exportBtn('frT', 'frescura')}</div><div class="tw"><table id="frT"><thead><tr><th class="l sticky1">Artículo</th><th>Vence</th><th>Vender hasta</th><th>${SOLO ? 'Te tocan' : 'Unidades'}</th><th>Vendido</th><th>Falta</th><th>Hoy (vendido / objetivo)</th></tr></thead><tbody>${its.map(it => { const t = frescSum(F, it.k, cods), d = frescSum(F, it.k, cods, HOYAR); return `<tr><td class="l sticky1 name">${esc(it.cod)} · ${esc(it.desc)}</td><td>${fD(it.vence)}</td><td>${fD(it.hasta)}</td><td>${n0(t.o)}</td><td class="tot">${n0(t.v)}</td><td>${n0(Math.max(0, t.o - t.v))}</td><td>${it.dias.includes(HOYAR) ? cel(d.v, d.o, HOYAR) : '<span class="cell na">—</span>'}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  /* Por vendedor (link general) */
+  if (!SOLO && cods.length > 1) h += `<div class="section"><div class="panel-h"><h3>Por vendedor (vendido / asignado)</h3><span style="flex:1"></span>${exportBtn('frV2', 'frescura_vendedores')}</div><div class="tw"><table id="frV2"><thead><tr><th class="l sticky1">Vendedor</th>${its.map(it => `<th>${esc(it.desc)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${cods.map(c => { const v = CFG.vend.find(x => String(x.cod) === String(c)); let to = 0, tv = 0; const tds = its.map(it => { const t = frescSum(F, it.k, [c]); to += t.o; tv += t.v; return `<td>${cel(t.v, t.o)}</td>`; }).join(''); return `<tr><td class="l sticky1 name">${c}${v ? ' · ' + esc(titleCase(v.nom)) : ''}</td>${tds}<td class="tot">${cel(tv, to)}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+  /* Detalle por día */
+  const dias = [...new Set(its.flatMap(it => it.dias).concat(...cods.map(c => Object.values((F.v || {})[c] || {}).flatMap(o => Object.keys(o)))))].filter(d => d >= F.desde && its.some(it => { const x = frescSum(F, it.k, cods, d); return x.o || x.v; })).sort();
+  h += `<div class="section"><div class="panel-h"><h3>Detalle por día (vendido / objetivo)</h3><span style="flex:1"></span>${exportBtn('frD', 'frescura_dias')}</div><div class="tw"><table id="frD"><thead><tr><th class="l sticky1">Día</th>${its.map(it => `<th>${esc(it.desc)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${dias.map(d => { let to = 0, tv = 0; const tds = its.map(it => { const x = frescSum(F, it.k, cods, d); to += x.o; tv += x.v; return `<td>${cel(x.v, x.o, d)}</td>`; }).join(''); return `<tr${d === HOYAR ? ' style="font-weight:700"' : ''}><td class="l sticky1 name">${frescDN(d)}${d === HOYAR ? ' · hoy' : ''}</td>${tds}<td class="tot">${cel(tv, to, d)}</td></tr>`; }).join('')}</tbody><tfoot><tr><td class="l sticky1">Total</td>${its.map(it => { const t = frescSum(F, it.k, cods); return `<td>${n0(t.v)} / ${n0(t.o)}</td>`; }).join('')}<td></td></tr></tfoot></table></div></div>`;
+  return h;
+}
+/* Para "📍 Estoy en un cliente": tarjeta de frescura arriba de todo */
+function geoFresc(c, vcod){
+  const F = CFG.fresc; if (!F || !F.items || !F.vend.includes(String(vcod))) return '';
+  const its = frescActivos(F).filter(it => HOYAR <= it.hasta); if (!its.length) return '';
+  const ya = ((F.cli || {})[String(vcod)] || {})[String(c)] || {}, n0 = n => Math.round(n || 0).toLocaleString('es-AR'), fD = d => d.slice(8, 10) + '/' + d.slice(5, 7);
+  const rows = its.filter(it => { const t = frescSum(F, it.k, [String(vcod)]); return t.o > t.v; }); if (!rows.length) return '';
+  const html = rows.map(it => { const t = frescSum(F, it.k, [String(vcod)]), d = frescSum(F, it.k, [String(vcod)], HOYAR), falta = Math.max(0, t.o - t.v);
+    return `<div class="gpr${ya[it.k] ? ' ya' : ''}"><span class="gpc">⏳</span><div><b>${esc(it.desc)}</b> <span class="gmu">vence ${fD(it.vence)}</span><p style="margin:2px 0 0">${it.dias.includes(HOYAR) ? 'Hoy: ' + n0(d.v) + ' de ' + n0(d.o) + ' u. · ' : ''}te faltan <b>${n0(falta)} u.</b> hasta el ${fD(it.hasta)}${ya[it.k] ? ' · este cliente ya llevó ' + n0(ya[it.k]) + ' u.' : ''}</p></div></div>`; }).join('');
+  return `<div class="gcard"><div class="geb"><span>Frescura: ofrecé primero</span><span>${rows.length}</span></div><div class="gprom">${html}</div></div>`;
 }
 
 /* ===================== Resumen ===================== */
@@ -783,6 +826,7 @@ function viewCierre(){
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-czd]'); if (b) { st.czD = b.dataset.czd; saveUI(); render(); } });
 document.addEventListener('change', e => { if (e.target.id === 'czV') { st.czV = e.target.value; saveUI(); render(); } });
+document.addEventListener('change', e => { if (e.target.id === 'frV') { st.frV = e.target.value; saveUI(); render(); } });
 
 function viewResumen(){
   const vs = vendFiltered();
@@ -2049,7 +2093,7 @@ function render(){
   RPV = SNAP && SNAP.pv ? compute(CFG, { ...SNAP, real: SNAP.pv.real || {}, cob: SNAP.pv.cob || {} }) : null;
   if (CFG.ext) { R.sumV = CFG.ext.sumV; R.sumS = CFG.ext.sumS; R.vs.forEach(v => { v.prob = R.sumV ? v.total / R.sumV : null; }); }
   renderHeader(); renderTabs();
-  const v = { om: viewOM, pepsico: viewPepsico, cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, millas: viewMillas, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
+  const v = { fresc: viewFresc, om: viewOM, pepsico: viewPepsico, cierre: viewCierre, resumen: viewResumen, cupones: viewCupones, marcas: viewMarcas, odia: viewOdia, plan: viewPlan, tost: viewTost, millas: viewMillas, cobertura: viewCobertura, batalla: viewBatalla, pgq: viewPGQ, pgqb: viewPGQB, gaona: viewGaona, litros: viewLitros, p10: viewP10, esp: viewEsp, inn: viewInn, analisis: viewAnalisis, supervisores: viewSupervisores, ficha: viewFicha, objetivos: viewObjetivos, reglas: viewReglas }[st.tab] || viewResumen;
   $('#view').innerHTML = v();
   if (st.tab === 'reglas' && SNAP && SNAP.por) showWho(SNAP.por);
 }
@@ -2262,7 +2306,7 @@ function geoFicha(c){
     else { const fb = PC.brands.filter((b, i) => !set.has(i)); if (fb.length) paso('info', 'Peñaflor: marcas para sumar en el trimestre', lst(fb)); } }
   let PRM = null; try { PRM = geoPromos(c); } catch (e) { PRM = null; }
   if (PRM && PRM.paso) paso('ok', PRM.paso.t, PRM.paso.d);
-  let h = '';
+  let h = ''; try { h = geoFresc(c, v.cod); } catch (e) { h = ''; } /* frescura primero (pedido 27/11) */
   if (pasos.length) h += `<div class="gcard"><div class="geb"><span>Qué hacer en esta visita</span><span>${pasos.length} ${pasos.length === 1 ? 'paso' : 'pasos'}</span></div><ol class="gsteps">${pasos.map((p, i) => `<li class="t-${p.tono}"><span class="gn">${i + 1}</span><div><b>${p.t}</b><p>${p.d}</p></div></li>`).join('')}</ol></div>`;
   else h += `<div class="gcard"><div class="geb"><span>Qué hacer en esta visita</span></div><p>Este cliente tiene todo al día. Ofrecé el combo y las promos vigentes.</p></div>`;
   if (PRM) h += PRM.html;
